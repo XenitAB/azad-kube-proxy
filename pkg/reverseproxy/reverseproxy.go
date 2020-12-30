@@ -33,6 +33,7 @@ func Start(ctx context.Context, config config.Config) error {
 	// Configure revers proxy and http server
 	log.Info("Starting reverse proxy", "ListnerAddress", config.ListnerAddress)
 	proxy := httputil.NewSingleHostReverseProxy(config.KubernetesAPIUrl)
+	proxy.ErrorHandler = errorHandler(ctx)
 	proxy.Transport = &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: insecureSkipVerify},
 	}
@@ -66,38 +67,4 @@ func Start(ctx context.Context, config config.Config) error {
 
 	log.Info("Server exited properly")
 	return nil
-}
-
-func readinessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request) {
-	log := logr.FromContext(ctx)
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "application/json")
-		if _, err := w.Write([]byte("{\"status\": \"ok\"}")); err != nil {
-			log.Error(err, "Could not write response data")
-		}
-	}
-}
-
-func livenessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request) {
-	log := logr.FromContext(ctx)
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "application/json")
-		if _, err := w.Write([]byte("{\"status\": \"ok\"}")); err != nil {
-			log.Error(err, "Could not write response data")
-		}
-	}
-}
-
-func proxyHandler(ctx context.Context, p *httputil.ReverseProxy, config config.Config) func(http.ResponseWriter, *http.Request) {
-	log := logr.FromContext(ctx)
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		log.Info("Request", "path", r.URL.Path)
-
-		p.ServeHTTP(w, r)
-	}
 }
