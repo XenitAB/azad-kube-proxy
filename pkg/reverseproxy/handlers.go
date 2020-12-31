@@ -2,13 +2,16 @@ package reverseproxy
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httputil"
+	"strings"
 
 	"github.com/go-logr/logr"
 
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"k8s.io/apiserver/pkg/endpoints/request"
+	"k8s.io/client-go/transport"
 )
 
 func readinessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request) {
@@ -39,6 +42,7 @@ func proxyHandler(ctx context.Context, p *httputil.ReverseProxy, config config.C
 	log := logr.FromContext(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Validate user token
 		info, ok, err := rp.Authenticator.AuthenticateRequest(r)
 		if err != nil {
 			log.Error(err, "Unable to verify user token")
@@ -48,6 +52,23 @@ func proxyHandler(ctx context.Context, p *httputil.ReverseProxy, config config.C
 
 		if !ok {
 			log.Error(err, "User unauthorized")
+			http.Error(w, "User unauthorized", http.StatusForbidden)
+			return
+		}
+
+		// Validate that client isn't sending impersonation headers
+		for h := range r.Header {
+			if strings.ToLower(h) == strings.ToLower(transport.ImpersonateUserHeader) || strings.ToLower(h) == strings.ToLower(transport.ImpersonateGroupHeader) || strings.HasPrefix(strings.ToLower(h), strings.ToLower(transport.ImpersonateUserExtraHeaderPrefix)) {
+				log.Error(errors.New("Client sending impersonation headers"), "Client sending impersonation headers")
+				http.Error(w, "User unauthorized", http.StatusForbidden)
+				return
+			}
+		}
+
+		// Validate that the we are able to get a user
+		user, ok := request.UserFrom(r.Context())
+		if !ok || len(user.GetName()) == 0 {
+			log.Error(errors.New("Unable to get user"), "Unable to get user", "user", user, "ok", ok)
 			http.Error(w, "User unauthorized", http.StatusForbidden)
 			return
 		}

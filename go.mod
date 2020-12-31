@@ -11,4 +11,5 @@ require (
 	go.uber.org/zap v1.16.0
 	gopkg.in/square/go-jose.v2 v2.2.2
 	k8s.io/apiserver v0.20.1
+	k8s.io/client-go v0.20.1
 )

@@ -107,10 +107,15 @@ func getAuthenticator(ctx context.Context, config config.Config) (*bearertoken.A
 	issuerURL := fmt.Sprintf("https://login.microsoftonline.com/%s/v2.0", config.TenantID)
 
 	tokenAuther, err := oidc.New(oidc.Options{
-		ClientID:      config.ClientID,
-		GroupsClaim:   "groups",
-		IssuerURL:     issuerURL,
-		UsernameClaim: "preferred_username",
+		ClientID:             config.ClientID,
+		GroupsClaim:          "groups",
+		GroupsPrefix:         "",
+		IssuerURL:            issuerURL,
+		UsernameClaim:        "preferred_username",
+		UsernamePrefix:       "",
+		SupportedSigningAlgs: []string{"RS256"},
+		CAFile:               "",
+		RequiredClaims:       map[string]string{},
 	})
 	if err != nil {
 		return nil, err
