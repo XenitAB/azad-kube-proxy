@@ -84,6 +84,20 @@ func flags() []cli.Flag {
 			EnvVars:  []string{"KUBERNETES_API_VALIDATE_CERT"},
 			Value:    true,
 		},
+		&cli.StringFlag{
+			Name:     "kubernetes-api-ca-cert-path",
+			Usage:    "The ca certificate path for communication to the Kubernetes API",
+			Required: false,
+			EnvVars:  []string{"KUBERNETES_API_CA_CERT_PATH"},
+			Value:    "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+		},
+		&cli.StringFlag{
+			Name:     "kubernetes-api-token-path",
+			Usage:    "The token for communication to the Kubernetes API",
+			Required: false,
+			EnvVars:  []string{"KUBERNETES_API_TOKEN_PATH"},
+			Value:    "/var/run/secrets/kubernetes.io/serviceaccount/token",
+		},
 	}
 
 	return flags
@@ -100,6 +114,8 @@ func action(ctx context.Context, cli *cli.Context) error {
 		TenantID:                      cli.String("tenant-id"),
 		ListnerAddress:                fmt.Sprintf("%s:%d", cli.String("address"), cli.Int("port")),
 		KubernetesAPIUrl:              kubernetesAPIUrl,
+		KubernetesCaCertPath:          cli.String("kubernetes-api-ca-cert-path"),
+		KubernetesTokenPath:           cli.String("kubernetes-api-token-path"),
 		ValidateKubernetesCertificate: cli.Bool("kubernetes-api-validate-cert"),
 	}
 

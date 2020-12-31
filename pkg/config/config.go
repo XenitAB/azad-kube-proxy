@@ -12,6 +12,8 @@ type Config struct {
 	TenantID                      string   `validate:"uuid"`
 	ListnerAddress                string   `validate:"hostname_port"`
 	KubernetesAPIUrl              *url.URL `validate:"url"`
+	KubernetesCaCertPath          string
+	KubernetesTokenPath           string
 	ValidateKubernetesCertificate bool
 }
 

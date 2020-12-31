@@ -9,4 +9,6 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/urfave/cli/v2 v2.3.0
 	go.uber.org/zap v1.16.0
+	gopkg.in/square/go-jose.v2 v2.2.2
+	k8s.io/apiserver v0.20.1
 )

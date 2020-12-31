@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
+	"k8s.io/apiserver/pkg/endpoints/request"
 )
 
 func readinessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request) {
@@ -34,10 +35,25 @@ func livenessHandler(ctx context.Context) func(http.ResponseWriter, *http.Reques
 	}
 }
 
-func proxyHandler(ctx context.Context, p *httputil.ReverseProxy, config config.Config) func(http.ResponseWriter, *http.Request) {
+func proxyHandler(ctx context.Context, p *httputil.ReverseProxy, config config.Config, rp *ReverseProxy) func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContext(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		info, ok, err := rp.Authenticator.AuthenticateRequest(r)
+		if err != nil {
+			log.Error(err, "Unable to verify user token")
+			http.Error(w, "Unable to verify user token", http.StatusForbidden)
+			return
+		}
+
+		if !ok {
+			log.Error(err, "User unauthorized")
+			http.Error(w, "User unauthorized", http.StatusForbidden)
+			return
+		}
+
+		r = r.WithContext(request.WithUser(r.Context(), info.User))
+
 		log.Info("Request", "path", r.URL.Path)
 
 		p.ServeHTTP(w, r)
