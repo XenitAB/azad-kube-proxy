@@ -3,6 +3,7 @@ module github.com/xenitab/azad-kube-proxy
 go 1.15
 
 require (
+	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/go-logr/logr v0.3.0
 	github.com/go-logr/zapr v0.3.0
 	github.com/go-playground/validator/v10 v10.4.1

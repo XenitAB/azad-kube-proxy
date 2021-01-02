@@ -10,7 +10,6 @@ import (
 	"github.com/go-logr/logr"
 
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
-	"k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/client-go/transport"
 )
 
@@ -65,15 +64,13 @@ func proxyHandler(ctx context.Context, p *httputil.ReverseProxy, config config.C
 			}
 		}
 
-		// Validate that the we are able to get a user
-		user, ok := request.UserFrom(r.Context())
-		if !ok || len(user.GetName()) == 0 {
-			log.Error(errors.New("Unable to get user"), "Unable to get user", "user", user, "ok", ok)
-			http.Error(w, "User unauthorized", http.StatusForbidden)
-			return
+		r.Header.Del("Authorization")
+		// TODO: Insert new Authorization header
+		// r.Header.Add("Authorization", )
+		r.Header.Add("Impersonate-User", info.User.GetName())
+		for _, group := range info.User.GetGroups() {
+			r.Header.Add("Impersonate-Group", group)
 		}
-
-		r = r.WithContext(request.WithUser(r.Context(), info.User))
 
 		log.Info("Request", "path", r.URL.Path)
 

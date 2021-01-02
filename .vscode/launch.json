@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/azad-kube-proxy/main.go",
+            "env": {},
+            "args": [],
+            "envFile": "./tmp/env"
+        }
+    ]
+}
