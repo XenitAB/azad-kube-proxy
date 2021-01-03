@@ -56,7 +56,6 @@ func proxyHandler(ctx context.Context, cache *cache.Cache, p *httputil.ReversePr
 		tokenHashSha256 := sha256.Sum256([]byte(token))
 		tokenHash := hex.EncodeToString(tokenHashSha256[:])
 
-		distributedGroupClaims := false
 		userCacheKey := fmt.Sprintf("%s-username", tokenHash)
 		groupsCacheKey := fmt.Sprintf("%s-groups", tokenHash)
 		var username string
@@ -67,7 +66,7 @@ func proxyHandler(ctx context.Context, cache *cache.Cache, p *httputil.ReversePr
 
 		if !found {
 			// Validate user token
-			verifiedToken, err := rp.Verifier.Verify(r.Context(), token)
+			verifiedToken, err := rp.OIDCVerifier.Verify(r.Context(), token)
 			if err != nil {
 				log.Error(err, "Unable to verify token")
 				http.Error(w, "Unable to verify token", http.StatusForbidden)
@@ -94,21 +93,11 @@ func proxyHandler(ctx context.Context, cache *cache.Cache, p *httputil.ReversePr
 
 			username = tokenClaims.Username
 
-			// TODO: Update tokenClaims.ClaimNames.Groups == "src1" to be more specific if there's another src1?
-			if len(tokenClaims.Groups) == 0 && tokenClaims.ClaimNames.Groups != "" {
-				distributedGroupClaims = true
-			}
-
-			if distributedGroupClaims {
-				groups, err = azure.GetAzureADGroups(ctx, tokenClaims, config)
-				if err != nil {
-					log.Error(err, "Unable to get distributed claims")
-					http.Error(w, "Unable to get distributed claims", http.StatusForbidden)
-					return
-				}
-			}
-			if !distributedGroupClaims {
-				groups = tokenClaims.Groups
+			groups, err = azure.GetAzureADGroupNamesFromCache(ctx, tokenClaims.ObjectID, config, rp.AzureADUsersClient, cache)
+			if err != nil {
+				log.Error(err, "Unable to get user groups")
+				http.Error(w, "Unable to get user groups", http.StatusForbidden)
+				return
 			}
 
 			cache.Set(userCacheKey, username, 5*time.Minute)
@@ -128,6 +117,8 @@ func proxyHandler(ctx context.Context, cache *cache.Cache, p *httputil.ReversePr
 			groups = groupsCacheResponse.([]string)
 		}
 
+		log.Info("Debug info", "username", username, "groupCount", len(groups))
+
 		// Remove the Authorization header that is sent to the server
 		r.Header.Del("Authorization")
 
@@ -138,10 +129,13 @@ func proxyHandler(ctx context.Context, cache *cache.Cache, p *httputil.ReversePr
 		r.Header.Add("Impersonate-User", username)
 
 		// Add a new header per group
+		if len(groups) > config.AzureADMaxGroupCount {
+			log.Error(errors.New("Max groups reached"), "The user is member of more groups than allowed to be passed to the Kubernetes API", "groupCount", len(groups), "username", username, "config.AzureADMaxGroupCount", config.AzureADMaxGroupCount)
+			http.Error(w, "Too many groups", http.StatusForbidden)
+			return
+		}
 		for _, group := range groups {
-			if strings.Contains(group, config.AzureADGroupPrefix) {
-				r.Header.Add("Impersonate-Group", group)
-			}
+			r.Header.Add("Impersonate-Group", group)
 		}
 
 		log.Info("Request", "path", r.URL.Path)

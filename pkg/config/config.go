@@ -9,12 +9,13 @@ import (
 
 // Config contains the configuration that is used for the application
 type Config struct {
-	ClientID           string `validate:"uuid"`
-	ClientSecret       string
-	TenantID           string `validate:"uuid"`
-	ListnerAddress     string `validate:"hostname_port"`
-	AzureADGroupPrefix string
-	KubernetesConfig   KubernetesConfig
+	ClientID             string `validate:"uuid"`
+	ClientSecret         string
+	TenantID             string `validate:"uuid"`
+	ListnerAddress       string `validate:"hostname_port"`
+	AzureADGroupPrefix   string
+	AzureADMaxGroupCount int `validate:"min=1,max=1000"`
+	KubernetesConfig     KubernetesConfig
 }
 
 // KubernetesConfig contains the Kubernetes specific configuration

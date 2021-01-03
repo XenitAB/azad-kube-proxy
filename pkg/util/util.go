@@ -3,9 +3,7 @@ package util
 import (
 	"context"
 	"crypto/x509"
-	"fmt"
 	"io/ioutil"
-	"time"
 
 	"github.com/go-logr/logr"
 )
@@ -39,23 +37,4 @@ func GetStringFromFile(ctx context.Context, path string) (string, error) {
 	stringContent := string(byteContent)
 
 	return stringContent, nil
-}
-
-// Retry will return error if function doesn't succeed within the timeout
-func Retry(attempts int, sleep time.Duration, f func() error) error {
-	var err error
-
-	for i := 0; ; i++ {
-		err = f()
-		if err == nil {
-			return err
-		}
-
-		if i >= (attempts - 1) {
-			break
-		}
-
-		time.Sleep(sleep)
-	}
-	return fmt.Errorf("after %d attempts, last error: %s", attempts, err)
 }

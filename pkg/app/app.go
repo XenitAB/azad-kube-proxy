@@ -119,6 +119,13 @@ func flags() []cli.Flag {
 			EnvVars:  []string{"AZURE_AD_GROUP_PREFIX"},
 			Value:    "",
 		},
+		&cli.IntFlag{
+			Name:     "azure-ad-max-group-count",
+			Usage:    "The maximum of groups allowed to be passed to the Kubernetes API before the proxy will return unauthorized",
+			Required: false,
+			EnvVars:  []string{"AZURE_AD_MAX_GROUP_COUNT"},
+			Value:    50,
+		},
 	}
 
 	return flags
@@ -141,11 +148,12 @@ func action(ctx context.Context, cli *cli.Context) error {
 	}
 
 	config := config.Config{
-		ClientID:           cli.String("client-id"),
-		ClientSecret:       cli.String("client-secret"),
-		TenantID:           cli.String("tenant-id"),
-		ListnerAddress:     fmt.Sprintf("%s:%d", cli.String("address"), cli.Int("port")),
-		AzureADGroupPrefix: cli.String("azure-ad-group-prefix"),
+		ClientID:             cli.String("client-id"),
+		ClientSecret:         cli.String("client-secret"),
+		TenantID:             cli.String("tenant-id"),
+		ListnerAddress:       fmt.Sprintf("%s:%d", cli.String("address"), cli.Int("port")),
+		AzureADGroupPrefix:   cli.String("azure-ad-group-prefix"),
+		AzureADMaxGroupCount: cli.Int("azure-ad-max-group-count"),
 		KubernetesConfig: config.KubernetesConfig{
 			URL:                 kubernetesAPIUrl,
 			RootCA:              kubernetesRootCA,

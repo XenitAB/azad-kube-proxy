@@ -29,6 +29,7 @@ type AzureClaims struct {
 	Subject        string       `json:"sub"`
 	TokenVersion   string       `json:"ver"`
 	TenantID       string       `json:"tid"`
+	ObjectID       string       `json:"oid"`
 	Username       string       `json:"preferred_username"`
 	Groups         []string     `json:"groups"`
 }

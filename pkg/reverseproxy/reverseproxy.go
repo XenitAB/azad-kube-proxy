@@ -11,10 +11,12 @@ import (
 	"syscall"
 	"time"
 
-	gooidc "github.com/coreos/go-oidc"
+	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
+	oidc "github.com/coreos/go-oidc"
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
 	"github.com/patrickmn/go-cache"
+	"github.com/xenitab/azad-kube-proxy/pkg/azure"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -22,7 +24,9 @@ import (
 
 // ReverseProxy returns common functions
 type ReverseProxy struct {
-	Verifier *gooidc.IDTokenVerifier
+	OIDCVerifier        *oidc.IDTokenVerifier
+	AzureADGroupsClient graphrbac.GroupsClient
+	AzureADUsersClient  graphrbac.UsersClient
 }
 
 // Start launches the reverse proxy
@@ -58,20 +62,36 @@ func Start(ctx context.Context, config config.Config) error {
 	router.HandleFunc("/readyz", readinessHandler(ctx)).Methods("GET")
 	router.HandleFunc("/healthz", livenessHandler(ctx)).Methods("GET")
 
-	// log.Info("Waiting for OIDC to initialize", "tenantID", config.TenantID)
-	// auther, err := getAuthenticator(ctx, config)
-	// if err != nil {
-	// 	log.Error(err, "Failed to initialize OIDC", "tenantID", config.TenantID)
-	// 	return err
-	// }
-	// log.Info("OIDC initialized", "tenantID", config.TenantID)
-
-	verifier, err := getOIDCVerifier(ctx, config)
+	oidcVerifier, err := getOIDCVerifier(ctx, config)
 	if err != nil {
 		return err
 	}
+
+	groupsClient, err := azure.GetAzureADGroupsClient(ctx, config)
+	if err != nil {
+		return err
+	}
+
+	usersClient, err := azure.GetAzureADUsersClient(ctx, config)
+	if err != nil {
+		return err
+	}
+
 	rp := &ReverseProxy{
-		Verifier: verifier,
+		OIDCVerifier:        oidcVerifier,
+		AzureADGroupsClient: groupsClient,
+		AzureADUsersClient:  usersClient,
+	}
+
+	// Initiate Azure AD group sync
+	graphFilter := fmt.Sprintf("startswith(displayName,'%s')", config.AzureADGroupPrefix)
+	if config.AzureADGroupPrefix == "" {
+		graphFilter = ""
+	}
+
+	syncTicker, syncChan, err := azure.SyncTickerAzureADGroups(ctx, config, rp.AzureADGroupsClient, graphFilter, 5*time.Minute, cache)
+	if err != nil {
+		return err
 	}
 
 	router.PathPrefix("/").HandlerFunc(proxyHandler(ctx, cache, proxy, config, rp))
@@ -87,6 +107,8 @@ func Start(ctx context.Context, config config.Config) error {
 
 	// Blocks until singal is sent
 	<-done
+	syncTicker.Stop()
+	syncChan <- true
 	log.Info("Server stopped")
 
 	// Shutdown http server
@@ -103,16 +125,16 @@ func Start(ctx context.Context, config config.Config) error {
 	return nil
 }
 
-func getOIDCVerifier(ctx context.Context, config config.Config) (*gooidc.IDTokenVerifier, error) {
+func getOIDCVerifier(ctx context.Context, config config.Config) (*oidc.IDTokenVerifier, error) {
 	log := logr.FromContext(ctx)
 	issuerURL := fmt.Sprintf("https://login.microsoftonline.com/%s/v2.0", config.TenantID)
-	provider, err := gooidc.NewProvider(ctx, issuerURL)
+	provider, err := oidc.NewProvider(ctx, issuerURL)
 	if err != nil {
 		log.Error(err, "Unable to initiate OIDC provider")
 		return nil, err
 	}
 
-	oidcConfig := &gooidc.Config{
+	oidcConfig := &oidc.Config{
 		ClientID: config.ClientID,
 	}
 
