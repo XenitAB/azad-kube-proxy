@@ -13,9 +13,15 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/patrickmn/go-cache"
+	"github.com/xenitab/azad-kube-proxy/pkg/azure"
+	"github.com/xenitab/azad-kube-proxy/pkg/claims"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
-	"k8s.io/apiserver/pkg/authentication/authenticator"
-	"k8s.io/client-go/transport"
+)
+
+const (
+	impersonateUserHeader            = "Impersonate-User"
+	impersonateGroupHeader           = "Impersonate-Group"
+	impersonateUserExtraHeaderPrefix = "Impersonate-Extra-"
 )
 
 func readinessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request) {
@@ -46,13 +52,13 @@ func proxyHandler(ctx context.Context, cache *cache.Cache, p *httputil.ReversePr
 	log := logr.FromContext(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		reqAuthorizationHeaderSha256 := sha256.Sum256([]byte(r.Header.Get("Authorization")))
-		reqAuthorizationHeaderHash := hex.EncodeToString(reqAuthorizationHeaderSha256[:])
+		token := strings.Split(r.Header.Get("Authorization"), "Bearer ")[1]
+		tokenHashSha256 := sha256.Sum256([]byte(token))
+		tokenHash := hex.EncodeToString(tokenHashSha256[:])
 
 		distributedGroupClaims := false
-		userCacheKey := fmt.Sprintf("%s-username", reqAuthorizationHeaderHash)
-		groupsCacheKey := fmt.Sprintf("%s-groups", reqAuthorizationHeaderHash)
-		var info *authenticator.Response
+		userCacheKey := fmt.Sprintf("%s-username", tokenHash)
+		groupsCacheKey := fmt.Sprintf("%s-groups", tokenHash)
 		var username string
 		var groups []string
 		var found bool
@@ -61,44 +67,48 @@ func proxyHandler(ctx context.Context, cache *cache.Cache, p *httputil.ReversePr
 
 		if !found {
 			// Validate user token
-			var ok bool
-			var err error
-
-			info, ok, err = rp.Authenticator.AuthenticateRequest(r)
+			verifiedToken, err := rp.Verifier.Verify(r.Context(), token)
 			if err != nil {
-				if !strings.Contains(err.Error(), "could not expand distributed claims") {
-					log.Error(err, "Unable to verify user token")
-					http.Error(w, "Unable to verify user token", http.StatusForbidden)
-					return
-				}
-				distributedGroupClaims = true
+				log.Error(err, "Unable to verify token")
+				http.Error(w, "Unable to verify token", http.StatusForbidden)
+				return
 			}
 
-			// TODO: Is the user really valid? Should change from "k8s.io/apiserver/pkg/authentication/authenticator" to something more generic
-			if !ok {
-				if !strings.Contains(err.Error(), "could not expand distributed claims") {
-					log.Error(errors.New("User unauthorized"), "User unauthorized")
-					http.Error(w, "User unauthorized", http.StatusForbidden)
-					return
-				}
+			var tokenClaims claims.AzureClaims
+
+			if err := verifiedToken.Claims(&tokenClaims); err != nil {
+				log.Error(err, "Unable to get token claims")
+				http.Error(w, "Unable to get token claims", http.StatusForbidden)
+				return
+
 			}
 
 			// Validate that client isn't sending impersonation headers
 			for h := range r.Header {
-				if strings.ToLower(h) == strings.ToLower(transport.ImpersonateUserHeader) || strings.ToLower(h) == strings.ToLower(transport.ImpersonateGroupHeader) || strings.HasPrefix(strings.ToLower(h), strings.ToLower(transport.ImpersonateUserExtraHeaderPrefix)) {
+				if strings.ToLower(h) == strings.ToLower(impersonateUserHeader) || strings.ToLower(h) == strings.ToLower(impersonateGroupHeader) || strings.HasPrefix(strings.ToLower(h), strings.ToLower(impersonateUserExtraHeaderPrefix)) {
 					log.Error(errors.New("Client sending impersonation headers"), "Client sending impersonation headers")
 					http.Error(w, "User unauthorized", http.StatusForbidden)
 					return
 				}
 			}
 
-			username = info.User.GetName()
+			username = tokenClaims.Username
+
+			// TODO: Update tokenClaims.ClaimNames.Groups == "src1" to be more specific if there's another src1?
+			if len(tokenClaims.Groups) == 0 && tokenClaims.ClaimNames.Groups != "" {
+				distributedGroupClaims = true
+			}
 
 			if distributedGroupClaims {
-				groups = []string{"LOL"}
+				groups, err = azure.GetAzureADGroups(ctx, tokenClaims, config)
+				if err != nil {
+					log.Error(err, "Unable to get distributed claims")
+					http.Error(w, "Unable to get distributed claims", http.StatusForbidden)
+					return
+				}
 			}
 			if !distributedGroupClaims {
-				groups = info.User.GetGroups()
+				groups = tokenClaims.Groups
 			}
 
 			cache.Set(userCacheKey, username, 5*time.Minute)
@@ -127,21 +137,9 @@ func proxyHandler(ctx context.Context, cache *cache.Cache, p *httputil.ReversePr
 		// Add the impersonation header for the users
 		r.Header.Add("Impersonate-User", username)
 
-		// Create variable for the groups object
-
-		// Logic if not using distributed claims
-		groups = info.User.GetGroups()
-
-		// Logic if using distributed claim
-		if distributedGroupClaims {
-
-		}
-
 		// Add a new header per group
-		groups = info.User.GetGroups()
 		for _, group := range groups {
 			if strings.Contains(group, config.AzureADGroupPrefix) {
-				log.Info("Impersonate-Group", "GroupName", group)
 				r.Header.Add("Impersonate-Group", group)
 			}
 		}

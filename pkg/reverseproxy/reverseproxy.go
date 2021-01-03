@@ -8,24 +8,21 @@ import (
 	"net/http/httputil"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
+	gooidc "github.com/coreos/go-oidc"
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
 	"github.com/patrickmn/go-cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
-	"github.com/xenitab/azad-kube-proxy/pkg/util"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
-	"k8s.io/apiserver/pkg/authentication/request/bearertoken"
-	"k8s.io/apiserver/plugin/pkg/authenticator/token/oidc"
 )
 
 // ReverseProxy returns common functions
 type ReverseProxy struct {
-	Authenticator *bearertoken.Authenticator
+	Verifier *gooidc.IDTokenVerifier
 }
 
 // Start launches the reverse proxy
@@ -61,16 +58,20 @@ func Start(ctx context.Context, config config.Config) error {
 	router.HandleFunc("/readyz", readinessHandler(ctx)).Methods("GET")
 	router.HandleFunc("/healthz", livenessHandler(ctx)).Methods("GET")
 
-	log.Info("Waiting for OIDC to initialize", "tenantID", config.TenantID)
-	auther, err := getAuthenticator(ctx, config)
+	// log.Info("Waiting for OIDC to initialize", "tenantID", config.TenantID)
+	// auther, err := getAuthenticator(ctx, config)
+	// if err != nil {
+	// 	log.Error(err, "Failed to initialize OIDC", "tenantID", config.TenantID)
+	// 	return err
+	// }
+	// log.Info("OIDC initialized", "tenantID", config.TenantID)
+
+	verifier, err := getOIDCVerifier(ctx, config)
 	if err != nil {
-		log.Error(err, "Failed to initialize OIDC", "tenantID", config.TenantID)
 		return err
 	}
-	log.Info("OIDC initialized", "tenantID", config.TenantID)
-
 	rp := &ReverseProxy{
-		Authenticator: auther,
+		Verifier: verifier,
 	}
 
 	router.PathPrefix("/").HandlerFunc(proxyHandler(ctx, cache, proxy, config, rp))
@@ -102,48 +103,23 @@ func Start(ctx context.Context, config config.Config) error {
 	return nil
 }
 
-func getAuthenticator(ctx context.Context, config config.Config) (*bearertoken.Authenticator, error) {
+func getOIDCVerifier(ctx context.Context, config config.Config) (*gooidc.IDTokenVerifier, error) {
+	log := logr.FromContext(ctx)
 	issuerURL := fmt.Sprintf("https://login.microsoftonline.com/%s/v2.0", config.TenantID)
-
-	tokenAuther, err := oidc.New(oidc.Options{
-		ClientID:             config.ClientID,
-		GroupsClaim:          "groups",
-		GroupsPrefix:         "",
-		IssuerURL:            issuerURL,
-		UsernameClaim:        "preferred_username",
-		UsernamePrefix:       "",
-		SupportedSigningAlgs: []string{"RS256"},
-		CAFile:               "",
-		RequiredClaims:       map[string]string{},
-	})
+	provider, err := gooidc.NewProvider(ctx, issuerURL)
 	if err != nil {
-		return nil, err
-	}
-	bearerToken := bearertoken.New(tokenAuther)
-
-	fakeJWT, err := getFakeJWT(issuerURL)
-	if err != nil {
+		log.Error(err, "Unable to initiate OIDC provider")
 		return nil, err
 	}
 
-	err = util.Retry(6, 5*time.Second, func() (err error) {
-		fakeReq := &http.Request{
-			RemoteAddr: "fakeRemoteAddress",
-			Header:     http.Header{},
-		}
-		fakeReq.Header.Add("Authorization", fmt.Sprintf("Bearer %s", fakeJWT))
-		_, _, err = bearerToken.AuthenticateRequest(fakeReq)
-		if err != nil && !strings.HasSuffix(err.Error(), "authenticator not initialized") {
-			return nil
-		}
-
-		return err
-	})
-	if err != nil {
-		return nil, err
+	oidcConfig := &gooidc.Config{
+		ClientID: config.ClientID,
 	}
 
-	return bearerToken, nil
+	verifier := provider.Verifier(oidcConfig)
+
+	return verifier, nil
+
 }
 
 // Inspiration: https://github.com/jetstack/kube-oidc-proxy/blob/4a7d0c69ab4316eebdee3e98320292386fe9a42d/pkg/util/token.go#L39-L60

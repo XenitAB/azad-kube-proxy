@@ -38,6 +38,12 @@ func flags() []cli.Flag {
 			EnvVars:  []string{"CLIENT_ID"},
 		},
 		&cli.StringFlag{
+			Name:     "client-secret",
+			Usage:    "Azure AD Application Client Secret",
+			Required: true,
+			EnvVars:  []string{"CLIENT_SECRET"},
+		},
+		&cli.StringFlag{
 			Name:     "tenant-id",
 			Usage:    "Azure AD Tenant ID",
 			Required: true,
@@ -136,6 +142,7 @@ func action(ctx context.Context, cli *cli.Context) error {
 
 	config := config.Config{
 		ClientID:           cli.String("client-id"),
+		ClientSecret:       cli.String("client-secret"),
 		TenantID:           cli.String("tenant-id"),
 		ListnerAddress:     fmt.Sprintf("%s:%d", cli.String("address"), cli.Int("port")),
 		AzureADGroupPrefix: cli.String("azure-ad-group-prefix"),

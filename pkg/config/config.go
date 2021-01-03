@@ -10,6 +10,7 @@ import (
 // Config contains the configuration that is used for the application
 type Config struct {
 	ClientID           string `validate:"uuid"`
+	ClientSecret       string
 	TenantID           string `validate:"uuid"`
 	ListnerAddress     string `validate:"hostname_port"`
 	AzureADGroupPrefix string
