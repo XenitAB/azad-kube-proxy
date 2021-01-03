@@ -14,11 +14,11 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
-	"gopkg.in/square/go-jose.v2"
-	"gopkg.in/square/go-jose.v2/jwt"
-
+	"github.com/patrickmn/go-cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"github.com/xenitab/azad-kube-proxy/pkg/util"
+	"gopkg.in/square/go-jose.v2"
+	"gopkg.in/square/go-jose.v2/jwt"
 	"k8s.io/apiserver/pkg/authentication/request/bearertoken"
 	"k8s.io/apiserver/plugin/pkg/authenticator/token/oidc"
 )
@@ -40,20 +40,19 @@ func Start(ctx context.Context, config config.Config) error {
 		InsecureSkipVerify: true,
 	}
 
-	if config.ValidateKubernetesCertificate {
-		rootCa, err := util.GetCertificate(ctx, config.KubernetesCaCertPath)
-		if err != nil {
-			return err
-		}
+	if config.KubernetesConfig.ValidateCertificate {
 		tlsConfig = &tls.Config{
 			InsecureSkipVerify: false,
-			RootCAs:            rootCa,
+			RootCAs:            config.KubernetesConfig.RootCA,
 		}
 	}
 
+	// Initiate memory cache
+	cache := cache.New(5*time.Minute, 10*time.Minute)
+
 	// Configure revers proxy and http server
 	log.Info("Initializing reverse proxy", "ListnerAddress", config.ListnerAddress)
-	proxy := httputil.NewSingleHostReverseProxy(config.KubernetesAPIUrl)
+	proxy := httputil.NewSingleHostReverseProxy(config.KubernetesConfig.URL)
 	proxy.ErrorHandler = errorHandler(ctx)
 	proxy.Transport = &http.Transport{
 		TLSClientConfig: tlsConfig,
@@ -74,7 +73,7 @@ func Start(ctx context.Context, config config.Config) error {
 		Authenticator: auther,
 	}
 
-	router.PathPrefix("/").HandlerFunc(proxyHandler(ctx, proxy, config, rp))
+	router.PathPrefix("/").HandlerFunc(proxyHandler(ctx, cache, proxy, config, rp))
 	srv := &http.Server{Addr: config.ListnerAddress, Handler: router}
 
 	// Start HTTP server

@@ -26,6 +26,21 @@ func GetCertificate(ctx context.Context, path string) (*x509.CertPool, error) {
 	return certPool, nil
 }
 
+// GetStringFromFile returns a string or error
+func GetStringFromFile(ctx context.Context, path string) (string, error) {
+	log := logr.FromContext(ctx)
+
+	byteContent, err := ioutil.ReadFile(path)
+	if err != nil {
+		log.Error(err, "Unable to read string from file", "file-path", path)
+		return "", err
+	}
+
+	stringContent := string(byteContent)
+
+	return stringContent, nil
+}
+
 // Retry will return error if function doesn't succeed within the timeout
 func Retry(attempts int, sleep time.Duration, f func() error) error {
 	var err error

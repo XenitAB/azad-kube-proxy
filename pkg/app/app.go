@@ -8,6 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"github.com/xenitab/azad-kube-proxy/pkg/reverseproxy"
+	"github.com/xenitab/azad-kube-proxy/pkg/util"
 )
 
 // Get return the main app
@@ -56,6 +57,13 @@ func flags() []cli.Flag {
 			EnvVars:  []string{"Port"},
 			Value:    8080,
 		},
+		&cli.BoolFlag{
+			Name:     "oidc-validate-cert",
+			Usage:    "Should the OpenID Connect CA Certificate be validated?",
+			Required: false,
+			EnvVars:  []string{"OIDC_VALIDATE_CERT"},
+			Value:    true,
+		},
 		&cli.StringFlag{
 			Name:     "kubernetes-api-host",
 			Usage:    "The host for the Kubernetes API",
@@ -98,6 +106,13 @@ func flags() []cli.Flag {
 			EnvVars:  []string{"KUBERNETES_API_TOKEN_PATH"},
 			Value:    "/var/run/secrets/kubernetes.io/serviceaccount/token",
 		},
+		&cli.StringFlag{
+			Name:     "azure-ad-group-prefix",
+			Usage:    "The prefix of the Azure AD groups to be passed to the Kubernetes API",
+			Required: false,
+			EnvVars:  []string{"AZURE_AD_GROUP_PREFIX"},
+			Value:    "",
+		},
 	}
 
 	return flags
@@ -109,14 +124,27 @@ func action(ctx context.Context, cli *cli.Context) error {
 		return err
 	}
 
+	kubernetesRootCA, err := util.GetCertificate(ctx, cli.String("kubernetes-api-ca-cert-path"))
+	if err != nil {
+		return err
+	}
+
+	kubernetesToken, err := util.GetStringFromFile(ctx, cli.String("kubernetes-api-token-path"))
+	if err != nil {
+		return err
+	}
+
 	config := config.Config{
-		ClientID:                      cli.String("client-id"),
-		TenantID:                      cli.String("tenant-id"),
-		ListnerAddress:                fmt.Sprintf("%s:%d", cli.String("address"), cli.Int("port")),
-		KubernetesAPIUrl:              kubernetesAPIUrl,
-		KubernetesCaCertPath:          cli.String("kubernetes-api-ca-cert-path"),
-		KubernetesTokenPath:           cli.String("kubernetes-api-token-path"),
-		ValidateKubernetesCertificate: cli.Bool("kubernetes-api-validate-cert"),
+		ClientID:           cli.String("client-id"),
+		TenantID:           cli.String("tenant-id"),
+		ListnerAddress:     fmt.Sprintf("%s:%d", cli.String("address"), cli.Int("port")),
+		AzureADGroupPrefix: cli.String("azure-ad-group-prefix"),
+		KubernetesConfig: config.KubernetesConfig{
+			URL:                 kubernetesAPIUrl,
+			RootCA:              kubernetesRootCA,
+			Token:               kubernetesToken,
+			ValidateCertificate: cli.Bool("kubernetes-api-validate-cert"),
+		},
 	}
 
 	err = config.Validate()
