@@ -26,24 +26,94 @@ az ad app permission add --id ${AZ_APP_ID} --api 00000002-0000-0000-c000-0000000
 az ad app permission admin-consent --id ${AZ_APP_ID}
 ```
 
+### Generating self signed certificate for development
+
+*NOTE*: You need to run the application using certificates since `kubectl` won't send Authorization header when not using TLS.
+
+```shell
+mkdir tmp
+cd tmp
+
+openssl req -newkey rsa:4096 \
+            -x509 \
+            -sha256
+            -days 3650 \
+            -nodes \
+            -out tmp/cert.crt \
+            -keyout tmp/cert.key \
+            -subj "/C=SE/ST=LOCALHOST/L=LOCALHOST/O=LOCALHOST/OU=LOCALHOST/CN=localhost"
+
+CERT_PATH="${PWD}/tmp/cert.crt"
+KEY_PATH="${PWD}/tmp/cert.key"
+```
+
+### Setting up Kind cluster
+
+```shell
+kind create cluster --name azad-kube-proxy
+CLUSTER_URL=$(kubectl config view --output json | jq -r '.clusters[] | select(.name | test("kind-azad-kube-proxy")).cluster.server')
+HOST_PORT=$(echo ${CLUSTER_URL} | sed -e "s|https://||g")
+HOST=$(echo ${HOST_PORT} | awk -F':' '{print $1}')
+PORT=$(echo ${HOST_PORT} | awk -F':' '{print $2}')
+```
+
+### Configuring service account
+
+```shell
+kubectl config set-context kind-azad-kube-proxy
+kubectl apply -f deploy/yaml/azad-kube-proxy.yaml
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: temp
+  namespace: azad-kube-proxy
+spec:
+  serviceAccountName: azad-kube-proxy
+  containers:
+  - image: busybox
+    name: test
+    command: ["sleep"]
+    args: ["3000"]
+EOF
+kubectl exec -n azad-kube-proxy temp -- cat "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt" > tmp/ca.crt
+kubectl exec -n azad-kube-proxy temp -- cat "/var/run/secrets/kubernetes.io/serviceaccount/token" > tmp/token
+kubectl delete -n azad-kube-proxy pod temp
+KUBE_CA_PATH="${PWD}/tmp/ca.crt"
+KUBE_TOKEN_PATH="${PWD}/tmp/token"
+```
+
 ### Running the application
 
 ```shell
 export CLIENT_ID=${AZ_APP_ID}
 export CLIENT_SECRET=${AZ_APP_SECRET}
 export TENANT_ID=$(az account show --output tsv --query tenantId)
-export AZURE_AD_GROUP_PREFIX="<prefix>"
-export KUBERNETES_API_HOST="<ip / hostname>"
-export KUBERNETES_API_PORT="<port>"
-export KUBERNETES_API_CA_CERT_PATH="<ca cert>"
-export KUBERNETES_API_TOKEN_PATH="<token file>"
+export AZURE_AD_GROUP_PREFIX=""
+export KUBERNETES_API_HOST=${HOST}
+export KUBERNETES_API_PORT=${PORT}
+export KUBERNETES_API_CA_CERT_PATH=${KUBE_CA_PATH}
+export KUBERNETES_API_TOKEN_PATH=${KUBE_TOKEN_PATH}
+export TLS_ENABLED="true"
+export TLS_CERTIFICATE_PATH=${CERT_PATH}
+export TLS_KEY_PATH=${KEY_PATH}
+export PORT="8443"
 
 go run cmd/azad-kube-proxy/main.go
 ```
 
 ### Authentication for end user
 
+#### Curl
+
 ```shell
 TOKEN=$(az account get-access-token --resource ${AZ_APP_URI} --query accessToken --output tsv)
-curl -H "Authorization: Bearer ${TOKEN}" http://localhost:8080/api/v1/namespaces/default/pods
+curl -k -H "Authorization: Bearer ${TOKEN}" https://localhost:8443/api/v1/namespaces/default/pods
+```
+
+#### Kubectl
+
+```shell
+TOKEN=$(az account get-access-token --resource ${AZ_APP_URI} --query accessToken --output tsv)
+kubectl --token="${TOKEN}" --server https://127.0.0.1:8443 --insecure-skip-tls-verify get pods
 ```
