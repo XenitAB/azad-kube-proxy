@@ -11,27 +11,34 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	oidc "github.com/coreos/go-oidc"
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
-	"github.com/patrickmn/go-cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/azure"
+	"github.com/xenitab/azad-kube-proxy/pkg/cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
+	"github.com/xenitab/azad-kube-proxy/pkg/user"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
 
-// ReverseProxy returns common functions
+// ReverseProxy ...
 type ReverseProxy struct {
-	OIDCVerifier        *oidc.IDTokenVerifier
-	AzureADGroupsClient graphrbac.GroupsClient
-	AzureADUsersClient  graphrbac.UsersClient
+	Context      context.Context
+	Config       config.Config
+	Cache        cache.Client
+	OIDCVerifier *oidc.IDTokenVerifier
+	UserClient   user.User
 }
 
 // Start launches the reverse proxy
 func Start(ctx context.Context, config config.Config) error {
 	log := logr.FromContext(ctx)
+
+	rp, err := newReverseProxyClient(ctx, config)
+	if err != nil {
+		return err
+	}
 
 	// Signal handler
 	done := make(chan os.Signal, 1)
@@ -48,53 +55,25 @@ func Start(ctx context.Context, config config.Config) error {
 		}
 	}
 
-	// Initiate memory cache
-	cache := cache.New(5*time.Minute, 10*time.Minute)
-
 	// Configure revers proxy and http server
 	log.Info("Initializing reverse proxy", "ListenerAddress", config.ListenerAddress)
 	proxy := httputil.NewSingleHostReverseProxy(config.KubernetesConfig.URL)
-	proxy.ErrorHandler = errorHandler(ctx)
+	proxy.ErrorHandler = rp.errorHandler(ctx)
 	proxy.Transport = &http.Transport{
 		TLSClientConfig: tlsConfig,
 	}
+
 	router := mux.NewRouter()
-	router.HandleFunc("/readyz", readinessHandler(ctx)).Methods("GET")
-	router.HandleFunc("/healthz", livenessHandler(ctx)).Methods("GET")
-
-	oidcVerifier, err := getOIDCVerifier(ctx, config)
-	if err != nil {
-		return err
-	}
-
-	groupsClient, err := azure.GetAzureADGroupsClient(ctx, config)
-	if err != nil {
-		return err
-	}
-
-	usersClient, err := azure.GetAzureADUsersClient(ctx, config)
-	if err != nil {
-		return err
-	}
-
-	rp := &ReverseProxy{
-		OIDCVerifier:        oidcVerifier,
-		AzureADGroupsClient: groupsClient,
-		AzureADUsersClient:  usersClient,
-	}
+	router.HandleFunc("/readyz", rp.readinessHandler()).Methods("GET")
+	router.HandleFunc("/healthz", rp.livenessHandler()).Methods("GET")
 
 	// Initiate Azure AD group sync
-	graphFilter := fmt.Sprintf("startswith(displayName,'%s')", config.AzureADGroupPrefix)
-	if config.AzureADGroupPrefix == "" {
-		graphFilter = ""
-	}
-
-	syncTicker, syncChan, err := azure.SyncTickerAzureADGroups(ctx, config, rp.AzureADGroupsClient, graphFilter, 5*time.Minute, cache)
+	syncTicker, syncChan, err := rp.UserClient.AzureClient.StartSyncTickerAzureADGroups(5 * time.Minute)
 	if err != nil {
 		return err
 	}
 
-	router.PathPrefix("/").HandlerFunc(proxyHandler(ctx, cache, proxy, config, rp))
+	router.PathPrefix("/").HandlerFunc(rp.proxyHandler(proxy))
 	srv := &http.Server{Addr: config.ListenerAddress, Handler: router}
 
 	// Start HTTP server
@@ -131,6 +110,52 @@ func Start(ctx context.Context, config config.Config) error {
 
 	log.Info("Server exited properly")
 	return nil
+}
+
+func newReverseProxyClient(ctx context.Context, config config.Config) (ReverseProxy, error) {
+	// Initiate memory cache
+	var c cache.Client
+	cacheType := "Memory"
+
+	switch cacheType {
+	case "redis":
+		c = &cache.RedisCache{
+			Address:    "localhost:6379",
+			Context:    ctx,
+			Expiration: 5 * time.Minute,
+		}
+
+		c.NewCache()
+	default:
+		c = &cache.MemoryCache{
+			DefaultExpiration: 5 * time.Minute,
+			CleanupInterval:   10 * time.Minute,
+		}
+
+		c.NewCache()
+	}
+
+	oidcVerifier, err := getOIDCVerifier(ctx, config)
+	if err != nil {
+		return ReverseProxy{}, err
+	}
+
+	azureClient, err := azure.NewAzureClient(ctx, config.ClientID, config.ClientSecret, config.TenantID, config.AzureADGroupPrefix, c)
+	if err != nil {
+		return ReverseProxy{}, err
+	}
+
+	userClient := user.NewUserClient(ctx, config, c, azureClient)
+
+	rp := ReverseProxy{
+		Context:      ctx,
+		Config:       config,
+		Cache:        c,
+		OIDCVerifier: oidcVerifier,
+		UserClient:   userClient,
+	}
+
+	return rp, nil
 }
 
 func getOIDCVerifier(ctx context.Context, config config.Config) (*oidc.IDTokenVerifier, error) {

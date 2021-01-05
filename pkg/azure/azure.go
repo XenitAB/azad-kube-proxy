@@ -2,6 +2,7 @@ package azure
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -11,51 +12,99 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/go-logr/logr"
 	"github.com/jongio/azidext/go/azidext"
-	"github.com/patrickmn/go-cache"
-	"github.com/xenitab/azad-kube-proxy/pkg/config"
+	"github.com/xenitab/azad-kube-proxy/pkg/cache"
+	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
 
-// GetAzureADGroupNamesFromCache returns the group names the user is a member of
-func GetAzureADGroupNamesFromCache(ctx context.Context, objectID string, config config.Config, usersClient graphrbac.UsersClient, cache *cache.Cache) ([]string, error) {
-	groupIDs, err := GetUserAzureADGroups(ctx, objectID, config, usersClient)
+// Client is the Azure Client interface
+type Client interface {
+	GetUserGroupsFromCache(userObjectID string) ([]models.Group, error)
+	StartSyncTickerAzureADGroups(syncInterval time.Duration) (*time.Ticker, chan bool, error)
+}
+
+// Azure ...
+type Azure struct {
+	Context      context.Context
+	ClientID     string
+	ClientSecret string
+	TenantID     string
+	GraphFilter  string
+	Cache        cache.Client
+	UsersClient  graphrbac.UsersClient
+	GroupsClient graphrbac.GroupsClient
+}
+
+// NewAzureClient returns an Azure client or error
+func NewAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graphFilter string, c cache.Client) (Azure, error) {
+	a := Azure{
+		Context:      ctx,
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		TenantID:     tenantID,
+		Cache:        c,
+	}
+
+	var err error
+
+	a.UsersClient, err = a.getAzureADUsersClient()
+	if err != nil {
+		return Azure{}, err
+
+	}
+
+	a.GroupsClient, err = a.getAzureADGroupsClient()
+	if err != nil {
+		return Azure{}, err
+	}
+
+	if graphFilter != "" {
+		graphFilter = fmt.Sprintf("startswith(displayName,'%s')", graphFilter)
+	}
+	a.GraphFilter = graphFilter
+
+	return a, nil
+
+}
+
+// GetUserGroupsFromCache returns the group names the user is a member of
+func (a *Azure) GetUserGroupsFromCache(userObjectID string) ([]models.Group, error) {
+	groupIDs, err := a.getUserGroups(userObjectID)
 	if err != nil {
 		return nil, err
 	}
 
-	var groupNames []string
+	var groupNames []models.Group
 	for _, groupID := range groupIDs {
-		cacheResponse, found := cache.Get(groupID)
+		group, found := a.Cache.GetGroup(groupID)
 		if found {
-			groupNames = append(groupNames, cacheResponse.(string))
+			groupNames = append(groupNames, group)
 		}
 	}
 
 	return groupNames, nil
 }
 
-// GetUserAzureADGroups returns the groups the user is a member of
-func GetUserAzureADGroups(ctx context.Context, objectID string, config config.Config, usersClient graphrbac.UsersClient) ([]string, error) {
-	log := logr.FromContext(ctx)
+func (a *Azure) getUserGroups(userObjectID string) ([]string, error) {
+	log := logr.FromContext(a.Context)
 
-	groupsResponse, err := usersClient.GetMemberGroups(ctx, objectID, graphrbac.UserGetMemberGroupsParameters{
+	groupsResponse, err := a.UsersClient.GetMemberGroups(a.Context, userObjectID, graphrbac.UserGetMemberGroupsParameters{
 		SecurityEnabledOnly: to.BoolPtr(false),
 	})
 	if err != nil {
-		log.Error(err, "Unable to get Azure AD groups from user", "UserObjectID", objectID)
+		log.Error(err, "Unable to get Azure AD groups for user", "userObjectID", userObjectID)
 		return nil, err
 	}
 
 	return *groupsResponse.Value, nil
 }
 
-// GetAzureADGroups returns the groups in Azure AD
-func GetAzureADGroups(ctx context.Context, config config.Config, groupsClient graphrbac.GroupsClient, graphFilter string) ([]graphrbac.ADGroup, error) {
-	log := logr.FromContext(ctx)
+func (a *Azure) getAllGroups() ([]graphrbac.ADGroup, error) {
+	log := logr.FromContext(a.Context)
 
 	var groups []graphrbac.ADGroup
-	for list, err := groupsClient.List(ctx, graphFilter); list.NotDone(); err = list.NextWithContext(ctx) {
+	for list, err := a.GroupsClient.List(a.Context, a.GraphFilter); list.NotDone(); err = list.NextWithContext(a.Context) {
 		if err != nil {
-			log.Error(err, "Unable to list Azure AD groups", "graphFilter", graphFilter)
+			log.Error(err, "Unable to list Azure AD groups", "graphFilter", a.GraphFilter)
 			return nil, err
 		}
 		for _, group := range list.Values() {
@@ -66,10 +115,10 @@ func GetAzureADGroups(ctx context.Context, config config.Config, groupsClient gr
 	return groups, nil
 }
 
-func getGraphAuthorizer(ctx context.Context, config config.Config) (autorest.Authorizer, error) {
-	log := logr.FromContext(ctx)
+func (a *Azure) getGraphAuthorizer() (autorest.Authorizer, error) {
+	log := logr.FromContext(a.Context)
 
-	cred, err := azidentity.NewClientSecretCredential(config.TenantID, config.ClientID, config.ClientSecret, nil)
+	cred, err := azidentity.NewClientSecretCredential(a.TenantID, a.ClientID, a.ClientSecret, nil)
 	if err != nil {
 		log.Error(err, "azidentity.NewClientSecretCredential")
 		return nil, err
@@ -84,10 +133,9 @@ func getGraphAuthorizer(ctx context.Context, config config.Config) (autorest.Aut
 	return authorizer, nil
 }
 
-// GetAzureADGroupsClient returns an Azure graphrbac.GroupsClient or error
-func GetAzureADGroupsClient(ctx context.Context, config config.Config) (graphrbac.GroupsClient, error) {
-	groupsClient := graphrbac.NewGroupsClient(config.TenantID)
-	authorizer, err := getGraphAuthorizer(ctx, config)
+func (a *Azure) getAzureADGroupsClient() (graphrbac.GroupsClient, error) {
+	groupsClient := graphrbac.NewGroupsClient(a.TenantID)
+	authorizer, err := a.getGraphAuthorizer()
 	if err != nil {
 		return graphrbac.GroupsClient{}, err
 	}
@@ -97,10 +145,9 @@ func GetAzureADGroupsClient(ctx context.Context, config config.Config) (graphrba
 	return groupsClient, nil
 }
 
-// GetAzureADUsersClient returns an Azure graphrbac.UsersClient or error
-func GetAzureADUsersClient(ctx context.Context, config config.Config) (graphrbac.UsersClient, error) {
-	usersClient := graphrbac.NewUsersClient(config.TenantID)
-	authorizer, err := getGraphAuthorizer(ctx, config)
+func (a *Azure) getAzureADUsersClient() (graphrbac.UsersClient, error) {
+	usersClient := graphrbac.NewUsersClient(a.TenantID)
+	authorizer, err := a.getGraphAuthorizer()
 	if err != nil {
 		return graphrbac.UsersClient{}, err
 	}
@@ -110,14 +157,14 @@ func GetAzureADUsersClient(ctx context.Context, config config.Config) (graphrbac
 	return usersClient, nil
 }
 
-// SyncTickerAzureADGroups initiates a ticker that will sync Azure AD Groups
-func SyncTickerAzureADGroups(ctx context.Context, config config.Config, groupsClient graphrbac.GroupsClient, graphFilter string, syncInterval time.Duration, cache *cache.Cache) (*time.Ticker, chan bool, error) {
-	log := logr.FromContext(ctx)
+// StartSyncTickerAzureADGroups initiates a ticker that will sync Azure AD Groups
+func (a *Azure) StartSyncTickerAzureADGroups(syncInterval time.Duration) (*time.Ticker, chan bool, error) {
+	log := logr.FromContext(a.Context)
 
 	ticker := time.NewTicker(syncInterval)
 	syncChan := make(chan bool)
 
-	err := syncAzureADGroupsCache(ctx, config, groupsClient, graphFilter, cache, "initial")
+	err := a.syncAzureADGroupsCache("initial")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -126,10 +173,10 @@ func SyncTickerAzureADGroups(ctx context.Context, config config.Config, groupsCl
 		for {
 			select {
 			case <-syncChan:
-				log.Info("Stopped SyncTickerAzureADGroups")
+				log.Info("Stopped StartSyncTickerAzureADGroups")
 				return
 			case _ = <-ticker.C:
-				_ = syncAzureADGroupsCache(ctx, config, groupsClient, graphFilter, cache, "ticker")
+				_ = a.syncAzureADGroupsCache("ticker")
 			}
 		}
 	}()
@@ -137,19 +184,19 @@ func SyncTickerAzureADGroups(ctx context.Context, config config.Config, groupsCl
 	return ticker, syncChan, nil
 }
 
-func syncAzureADGroupsCache(ctx context.Context, config config.Config, groupsClient graphrbac.GroupsClient, graphFilter string, cache *cache.Cache, syncReason string) error {
-	log := logr.FromContext(ctx)
+func (a *Azure) syncAzureADGroupsCache(syncReason string) error {
+	log := logr.FromContext(a.Context)
 
-	groups, err := GetAzureADGroups(ctx, config, groupsClient, graphFilter)
+	groups, err := a.getAllGroups()
 	if err != nil {
 		log.Error(err, "Unable to syncronize groups")
 		return err
 	}
 
 	for _, group := range groups {
-		_, found := cache.Get(*group.ObjectID)
+		_, found := a.Cache.GetGroup(*group.ObjectID)
 		if !found {
-			cache.Set(*group.ObjectID, *group.DisplayName, 5*time.Minute)
+			a.Cache.SetGroup(*group.ObjectID, models.Group{Name: *group.DisplayName})
 		}
 	}
 
