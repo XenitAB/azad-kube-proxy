@@ -52,7 +52,7 @@ func Start(ctx context.Context, config config.Config) error {
 	cache := cache.New(5*time.Minute, 10*time.Minute)
 
 	// Configure revers proxy and http server
-	log.Info("Initializing reverse proxy", "ListnerAddress", config.ListnerAddress)
+	log.Info("Initializing reverse proxy", "ListenerAddress", config.ListenerAddress)
 	proxy := httputil.NewSingleHostReverseProxy(config.KubernetesConfig.URL)
 	proxy.ErrorHandler = errorHandler(ctx)
 	proxy.Transport = &http.Transport{
@@ -95,13 +95,21 @@ func Start(ctx context.Context, config config.Config) error {
 	}
 
 	router.PathPrefix("/").HandlerFunc(proxyHandler(ctx, cache, proxy, config, rp))
-	srv := &http.Server{Addr: config.ListnerAddress, Handler: router}
+	srv := &http.Server{Addr: config.ListenerAddress, Handler: router}
 
 	// Start HTTP server
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Error(err, "Http Server Error")
+		switch config.ListenerTLSConfig.Enabled {
+		case true:
+			if err := srv.ListenAndServeTLS(config.ListenerTLSConfig.CertificatePath, config.ListenerTLSConfig.KeyPath); err != nil && err != http.ErrServerClosed {
+				log.Error(err, "Http Server Error")
+			}
+		case false:
+			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Error(err, "Http Server Error")
+			}
 		}
+
 	}()
 	log.Info("Server started")
 

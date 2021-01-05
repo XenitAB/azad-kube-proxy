@@ -12,7 +12,8 @@ type Config struct {
 	ClientID             string `validate:"uuid"`
 	ClientSecret         string
 	TenantID             string `validate:"uuid"`
-	ListnerAddress       string `validate:"hostname_port"`
+	ListenerAddress      string `validate:"hostname_port"`
+	ListenerTLSConfig    ListenerTLSConfig
 	AzureADGroupPrefix   string
 	AzureADMaxGroupCount int `validate:"min=1,max=1000"`
 	KubernetesConfig     KubernetesConfig
@@ -26,6 +27,13 @@ type KubernetesConfig struct {
 	ValidateCertificate bool
 }
 
+// ListenerTLSConfig contains the TLS configuration for the listener
+type ListenerTLSConfig struct {
+	Enabled         bool
+	CertificatePath string
+	KeyPath         string
+}
+
 // Validate validates AppConfig struct
 func (config Config) Validate() error {
 	validate := validator.New()
@@ -36,6 +44,11 @@ func (config Config) Validate() error {
 	}
 
 	err = validate.Struct(config.KubernetesConfig)
+	if err != nil {
+		return err
+	}
+
+	err = validate.Struct(config.ListenerTLSConfig)
 	if err != nil {
 		return err
 	}

@@ -60,8 +60,29 @@ func flags() []cli.Flag {
 			Name:     "port",
 			Usage:    "Port number to listen on",
 			Required: false,
-			EnvVars:  []string{"Port"},
+			EnvVars:  []string{"PORT"},
 			Value:    8080,
+		},
+		&cli.StringFlag{
+			Name:     "tls-certificate-path",
+			Usage:    "Path for the TLS Certificate",
+			Required: false,
+			EnvVars:  []string{"TLS_CERTIFICATE_PATH"},
+			Value:    "",
+		},
+		&cli.StringFlag{
+			Name:     "tls-key-path",
+			Usage:    "Path for the TLS KEY",
+			Required: false,
+			EnvVars:  []string{"TLS_KEY_PATH"},
+			Value:    "",
+		},
+		&cli.BoolFlag{
+			Name:     "tls-enabled",
+			Usage:    "Should TLS be enabled for the listner?",
+			Required: false,
+			EnvVars:  []string{"TLS_ENABLED"},
+			Value:    false,
 		},
 		&cli.BoolFlag{
 			Name:     "oidc-validate-cert",
@@ -148,10 +169,15 @@ func action(ctx context.Context, cli *cli.Context) error {
 	}
 
 	config := config.Config{
-		ClientID:             cli.String("client-id"),
-		ClientSecret:         cli.String("client-secret"),
-		TenantID:             cli.String("tenant-id"),
-		ListnerAddress:       fmt.Sprintf("%s:%d", cli.String("address"), cli.Int("port")),
+		ClientID:        cli.String("client-id"),
+		ClientSecret:    cli.String("client-secret"),
+		TenantID:        cli.String("tenant-id"),
+		ListenerAddress: fmt.Sprintf("%s:%d", cli.String("address"), cli.Int("port")),
+		ListenerTLSConfig: config.ListenerTLSConfig{
+			Enabled:         cli.Bool("tls-enabled"),
+			CertificatePath: cli.String("tls-certificate-path"),
+			KeyPath:         cli.String("tls-key-path"),
+		},
 		AzureADGroupPrefix:   cli.String("azure-ad-group-prefix"),
 		AzureADMaxGroupCount: cli.Int("azure-ad-max-group-count"),
 		KubernetesConfig: config.KubernetesConfig{

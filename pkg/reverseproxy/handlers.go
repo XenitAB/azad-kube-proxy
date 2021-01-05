@@ -2,8 +2,6 @@ package reverseproxy
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
@@ -13,12 +11,13 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/patrickmn/go-cache"
-	"github.com/xenitab/azad-kube-proxy/pkg/azure"
-	"github.com/xenitab/azad-kube-proxy/pkg/claims"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
+	"github.com/xenitab/azad-kube-proxy/pkg/user"
+	"github.com/xenitab/azad-kube-proxy/pkg/util"
 )
 
 const (
+	authorizationHeader              = "Authorization"
 	impersonateUserHeader            = "Impersonate-User"
 	impersonateGroupHeader           = "Impersonate-Group"
 	impersonateUserExtraHeaderPrefix = "Impersonate-Extra-"
@@ -52,20 +51,24 @@ func proxyHandler(ctx context.Context, cache *cache.Cache, p *httputil.ReversePr
 	log := logr.FromContext(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		token := strings.Split(r.Header.Get("Authorization"), "Bearer ")[1]
-		tokenHashSha256 := sha256.Sum256([]byte(token))
-		tokenHash := hex.EncodeToString(tokenHashSha256[:])
+		// Extract token from Authorization header
+		token, err := util.GetBearerToken(r)
+		if err != nil {
+			log.Error(err, "Unable to extract Bearer token")
+			http.Error(w, "Unable to extract Bearer token", http.StatusForbidden)
+			return
+		}
+		tokenHash := util.GetEncodedHash(token)
 
-		userCacheKey := fmt.Sprintf("%s-username", tokenHash)
-		groupsCacheKey := fmt.Sprintf("%s-groups", tokenHash)
-		var username string
-		var groups []string
-		var found bool
+		// Define the user object
+		var u user.User
 
-		userCacheResponse, found := cache.Get(userCacheKey)
+		// Use the token hash to get the user object from cache
+		userCache, found := cache.Get(tokenHash)
 
+		// Get the user from the token if no cache was found
 		if !found {
-			// Validate user token
+			// Verify user token
 			verifiedToken, err := rp.OIDCVerifier.Verify(r.Context(), token)
 			if err != nil {
 				log.Error(err, "Unable to verify token")
@@ -73,16 +76,7 @@ func proxyHandler(ctx context.Context, cache *cache.Cache, p *httputil.ReversePr
 				return
 			}
 
-			var tokenClaims claims.AzureClaims
-
-			if err := verifiedToken.Claims(&tokenClaims); err != nil {
-				log.Error(err, "Unable to get token claims")
-				http.Error(w, "Unable to get token claims", http.StatusForbidden)
-				return
-
-			}
-
-			// Validate that client isn't sending impersonation headers
+			// Verify that client isn't sending impersonation headers
 			for h := range r.Header {
 				if strings.ToLower(h) == strings.ToLower(impersonateUserHeader) || strings.ToLower(h) == strings.ToLower(impersonateGroupHeader) || strings.HasPrefix(strings.ToLower(h), strings.ToLower(impersonateUserExtraHeaderPrefix)) {
 					log.Error(errors.New("Client sending impersonation headers"), "Client sending impersonation headers")
@@ -91,54 +85,44 @@ func proxyHandler(ctx context.Context, cache *cache.Cache, p *httputil.ReversePr
 				}
 			}
 
-			username = tokenClaims.Username
-
-			groups, err = azure.GetAzureADGroupNamesFromCache(ctx, tokenClaims.ObjectID, config, rp.AzureADUsersClient, cache)
+			// Get the user object
+			u, err = u.GetUser(ctx, config, rp.AzureADUsersClient, cache, verifiedToken)
 			if err != nil {
-				log.Error(err, "Unable to get user groups")
-				http.Error(w, "Unable to get user groups", http.StatusForbidden)
+				log.Error(err, "Unable to get user")
+				http.Error(w, "Unable to get user", http.StatusForbidden)
 				return
 			}
 
-			cache.Set(userCacheKey, username, 5*time.Minute)
-			cache.Set(groupsCacheKey, groups, 5*time.Minute)
+			// Check if number of groups more than the configured limit
+			if len(u.Groups) > config.AzureADMaxGroupCount {
+				log.Error(errors.New("Max groups reached"), "The user is member of more groups than allowed to be passed to the Kubernetes API", "groupCount", len(u.Groups), "username", u.Username, "config.AzureADMaxGroupCount", config.AzureADMaxGroupCount)
+				http.Error(w, "Too many groups", http.StatusForbidden)
+				return
+			}
+
+			cache.Set(tokenHash, u, 5*time.Minute)
 		}
 
+		// Extract the user from the cache if it was found
 		if found {
-			username = userCacheResponse.(string)
-
-			groupsCacheResponse, found := cache.Get(groupsCacheKey)
-			if !found {
-				log.Error(errors.New("Cache"), "Unable to find groups in cache", "groupsCacheKey", groupsCacheKey)
-				http.Error(w, "Unable to find groups", http.StatusForbidden)
-				return
-			}
-
-			groups = groupsCacheResponse.([]string)
+			u = userCache.(user.User)
 		}
-
-		log.Info("Debug info", "username", username, "groupCount", len(groups))
 
 		// Remove the Authorization header that is sent to the server
-		r.Header.Del("Authorization")
+		r.Header.Del(authorizationHeader)
 
 		// Add a new Authorization header with the token from the token path
-		r.Header.Add("Authorization", fmt.Sprintf("Bearer %s", config.KubernetesConfig.Token))
+		r.Header.Add(authorizationHeader, fmt.Sprintf("Bearer %s", config.KubernetesConfig.Token))
 
 		// Add the impersonation header for the users
-		r.Header.Add("Impersonate-User", username)
+		r.Header.Add(impersonateUserHeader, u.Username)
 
 		// Add a new header per group
-		if len(groups) > config.AzureADMaxGroupCount {
-			log.Error(errors.New("Max groups reached"), "The user is member of more groups than allowed to be passed to the Kubernetes API", "groupCount", len(groups), "username", username, "config.AzureADMaxGroupCount", config.AzureADMaxGroupCount)
-			http.Error(w, "Too many groups", http.StatusForbidden)
-			return
-		}
-		for _, group := range groups {
-			r.Header.Add("Impersonate-Group", group)
+		for _, group := range u.Groups {
+			r.Header.Add(impersonateGroupHeader, group)
 		}
 
-		log.Info("Request", "path", r.URL.Path)
+		log.Info("Request", "path", r.URL.Path, "username", u.Username, "groupCount", len(u.Groups), "cachedUser", found)
 
 		p.ServeHTTP(w, r)
 	}
