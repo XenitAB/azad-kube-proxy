@@ -7,12 +7,8 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"strings"
-	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/patrickmn/go-cache"
-	"github.com/xenitab/azad-kube-proxy/pkg/config"
-	"github.com/xenitab/azad-kube-proxy/pkg/user"
 	"github.com/xenitab/azad-kube-proxy/pkg/util"
 )
 
@@ -23,8 +19,8 @@ const (
 	impersonateUserExtraHeaderPrefix = "Impersonate-Extra-"
 )
 
-func readinessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request) {
-	log := logr.FromContext(ctx)
+func (rp *ReverseProxy) readinessHandler() func(http.ResponseWriter, *http.Request) {
+	log := logr.FromContext(rp.Context)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -35,8 +31,8 @@ func readinessHandler(ctx context.Context) func(http.ResponseWriter, *http.Reque
 	}
 }
 
-func livenessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request) {
-	log := logr.FromContext(ctx)
+func (rp *ReverseProxy) livenessHandler() func(http.ResponseWriter, *http.Request) {
+	log := logr.FromContext(rp.Context)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -47,8 +43,8 @@ func livenessHandler(ctx context.Context) func(http.ResponseWriter, *http.Reques
 	}
 }
 
-func proxyHandler(ctx context.Context, cache *cache.Cache, p *httputil.ReverseProxy, config config.Config, rp *ReverseProxy) func(http.ResponseWriter, *http.Request) {
-	log := logr.FromContext(ctx)
+func (rp *ReverseProxy) proxyHandler(p *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
+	log := logr.FromContext(rp.Context)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract token from Authorization header
@@ -58,13 +54,11 @@ func proxyHandler(ctx context.Context, cache *cache.Cache, p *httputil.ReversePr
 			http.Error(w, "Unable to extract Bearer token", http.StatusForbidden)
 			return
 		}
+
 		tokenHash := util.GetEncodedHash(token)
 
-		// Define the user object
-		var u user.User
-
 		// Use the token hash to get the user object from cache
-		userCache, found := cache.Get(tokenHash)
+		u, found := rp.Cache.GetUser(tokenHash)
 
 		// Get the user from the token if no cache was found
 		if !found {
@@ -86,7 +80,7 @@ func proxyHandler(ctx context.Context, cache *cache.Cache, p *httputil.ReversePr
 			}
 
 			// Get the user object
-			u, err = u.GetUser(ctx, config, rp.AzureADUsersClient, cache, verifiedToken)
+			u, err = rp.UserClient.GetUser(verifiedToken)
 			if err != nil {
 				log.Error(err, "Unable to get user")
 				http.Error(w, "Unable to get user", http.StatusForbidden)
@@ -94,32 +88,27 @@ func proxyHandler(ctx context.Context, cache *cache.Cache, p *httputil.ReversePr
 			}
 
 			// Check if number of groups more than the configured limit
-			if len(u.Groups) > config.AzureADMaxGroupCount {
-				log.Error(errors.New("Max groups reached"), "The user is member of more groups than allowed to be passed to the Kubernetes API", "groupCount", len(u.Groups), "username", u.Username, "config.AzureADMaxGroupCount", config.AzureADMaxGroupCount)
+			if len(u.Groups) > rp.Config.AzureADMaxGroupCount {
+				log.Error(errors.New("Max groups reached"), "The user is member of more groups than allowed to be passed to the Kubernetes API", "groupCount", len(u.Groups), "username", u.Username, "config.AzureADMaxGroupCount", rp.Config.AzureADMaxGroupCount)
 				http.Error(w, "Too many groups", http.StatusForbidden)
 				return
 			}
 
-			cache.Set(tokenHash, u, 5*time.Minute)
-		}
-
-		// Extract the user from the cache if it was found
-		if found {
-			u = userCache.(user.User)
+			rp.Cache.SetUser(tokenHash, u)
 		}
 
 		// Remove the Authorization header that is sent to the server
 		r.Header.Del(authorizationHeader)
 
 		// Add a new Authorization header with the token from the token path
-		r.Header.Add(authorizationHeader, fmt.Sprintf("Bearer %s", config.KubernetesConfig.Token))
+		r.Header.Add(authorizationHeader, fmt.Sprintf("Bearer %s", rp.Config.KubernetesConfig.Token))
 
 		// Add the impersonation header for the users
 		r.Header.Add(impersonateUserHeader, u.Username)
 
 		// Add a new header per group
 		for _, group := range u.Groups {
-			r.Header.Add(impersonateGroupHeader, group)
+			r.Header.Add(impersonateGroupHeader, group.Name)
 		}
 
 		log.Info("Request", "path", r.URL.Path, "username", u.Username, "groupCount", len(u.Groups), "cachedUser", found)
@@ -128,7 +117,7 @@ func proxyHandler(ctx context.Context, cache *cache.Cache, p *httputil.ReversePr
 	}
 }
 
-func errorHandler(ctx context.Context) func(w http.ResponseWriter, r *http.Request, err error) {
+func (rp *ReverseProxy) errorHandler(ctx context.Context) func(w http.ResponseWriter, r *http.Request, err error) {
 	log := logr.FromContext(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request, err error) {
