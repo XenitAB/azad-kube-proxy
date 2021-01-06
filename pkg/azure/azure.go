@@ -67,10 +67,18 @@ func NewAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graph
 }
 
 // GetUserGroupsFromCache returns the group names the user is a member of
-func (a *Azure) GetUserGroupsFromCache(userObjectID string) ([]models.Group, error) {
-	groupIDs, err := a.getUserGroups(userObjectID)
-	if err != nil {
-		return nil, err
+func (a *Azure) GetUserGroupsFromCache(userObjectID string, username string, tokenGroups []string) ([]models.Group, error) {
+	var groupIDs []string
+	var err error
+	if username != "" {
+		groupIDs, err = a.getUserGroups(userObjectID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if username == "" {
+		groupIDs = tokenGroups
 	}
 
 	var groupNames []models.Group
