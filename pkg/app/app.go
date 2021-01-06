@@ -7,7 +7,8 @@ import (
 
 	"github.com/urfave/cli/v2"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
-	"github.com/xenitab/azad-kube-proxy/pkg/reverseproxy"
+	"github.com/xenitab/azad-kube-proxy/pkg/models"
+	"github.com/xenitab/azad-kube-proxy/pkg/proxy"
 	"github.com/xenitab/azad-kube-proxy/pkg/util"
 )
 
@@ -147,6 +148,13 @@ func flags() []cli.Flag {
 			EnvVars:  []string{"AZURE_AD_MAX_GROUP_COUNT"},
 			Value:    50,
 		},
+		&cli.StringFlag{
+			Name:     "cache-engine",
+			Usage:    "What cache engine to use",
+			Required: false,
+			EnvVars:  []string{"CACHE_ENGINE"},
+			Value:    "MEMORY",
+		},
 	}
 
 	return flags
@@ -168,6 +176,11 @@ func action(ctx context.Context, cli *cli.Context) error {
 		return err
 	}
 
+	cacheEngine, err := models.GetCacheEngine(cli.String("cache-engine"))
+	if err != nil {
+		return err
+	}
+
 	config := config.Config{
 		ClientID:        cli.String("client-id"),
 		ClientSecret:    cli.String("client-secret"),
@@ -178,6 +191,7 @@ func action(ctx context.Context, cli *cli.Context) error {
 			CertificatePath: cli.String("tls-certificate-path"),
 			KeyPath:         cli.String("tls-key-path"),
 		},
+		CacheEngine:          cacheEngine,
 		AzureADGroupPrefix:   cli.String("azure-ad-group-prefix"),
 		AzureADMaxGroupCount: cli.Int("azure-ad-max-group-count"),
 		KubernetesConfig: config.KubernetesConfig{
@@ -193,7 +207,7 @@ func action(ctx context.Context, cli *cli.Context) error {
 		return err
 	}
 
-	err = reverseproxy.Start(ctx, config)
+	err = proxy.Start(ctx, config)
 	if err != nil {
 		return err
 	}

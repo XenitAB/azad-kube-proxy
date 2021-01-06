@@ -1,4 +1,4 @@
-package reverseproxy
+package proxy
 
 import (
 	"context"
@@ -17,13 +17,14 @@ import (
 	"github.com/xenitab/azad-kube-proxy/pkg/azure"
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
+	"github.com/xenitab/azad-kube-proxy/pkg/models"
 	"github.com/xenitab/azad-kube-proxy/pkg/user"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
 
-// ReverseProxy ...
-type ReverseProxy struct {
+// Proxy ...
+type Proxy struct {
 	Context      context.Context
 	Config       config.Config
 	Cache        cache.Client
@@ -35,7 +36,7 @@ type ReverseProxy struct {
 func Start(ctx context.Context, config config.Config) error {
 	log := logr.FromContext(ctx)
 
-	rp, err := newReverseProxyClient(ctx, config)
+	rp, err := newProxyClient(ctx, config)
 	if err != nil {
 		return err
 	}
@@ -112,21 +113,22 @@ func Start(ctx context.Context, config config.Config) error {
 	return nil
 }
 
-func newReverseProxyClient(ctx context.Context, config config.Config) (ReverseProxy, error) {
+func newProxyClient(ctx context.Context, config config.Config) (Proxy, error) {
 	// Initiate memory cache
 	var c cache.Client
-	cacheType := "Memory"
 
-	switch cacheType {
-	case "redis":
+	switch config.CacheEngine {
+	case models.RedisCacheEngine:
 		c = &cache.RedisCache{
-			Address:    "localhost:6379",
+			Address:    "127.0.0.1:6379",
+			Password:   "",
+			Database:   0,
 			Context:    ctx,
 			Expiration: 5 * time.Minute,
 		}
 
 		c.NewCache()
-	default:
+	case models.MemoryCacheEngine:
 		c = &cache.MemoryCache{
 			DefaultExpiration: 5 * time.Minute,
 			CleanupInterval:   10 * time.Minute,
@@ -137,17 +139,17 @@ func newReverseProxyClient(ctx context.Context, config config.Config) (ReversePr
 
 	oidcVerifier, err := getOIDCVerifier(ctx, config)
 	if err != nil {
-		return ReverseProxy{}, err
+		return Proxy{}, err
 	}
 
 	azureClient, err := azure.NewAzureClient(ctx, config.ClientID, config.ClientSecret, config.TenantID, config.AzureADGroupPrefix, c)
 	if err != nil {
-		return ReverseProxy{}, err
+		return Proxy{}, err
 	}
 
 	userClient := user.NewUserClient(ctx, config, c, azureClient)
 
-	rp := ReverseProxy{
+	rp := Proxy{
 		Context:      ctx,
 		Config:       config,
 		Cache:        c,

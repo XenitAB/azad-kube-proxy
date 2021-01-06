@@ -1,4 +1,4 @@
-package reverseproxy
+package proxy
 
 import (
 	"context"
@@ -19,7 +19,7 @@ const (
 	impersonateUserExtraHeaderPrefix = "Impersonate-Extra-"
 )
 
-func (rp *ReverseProxy) readinessHandler() func(http.ResponseWriter, *http.Request) {
+func (rp *Proxy) readinessHandler() func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContext(rp.Context)
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -31,7 +31,7 @@ func (rp *ReverseProxy) readinessHandler() func(http.ResponseWriter, *http.Reque
 	}
 }
 
-func (rp *ReverseProxy) livenessHandler() func(http.ResponseWriter, *http.Request) {
+func (rp *Proxy) livenessHandler() func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContext(rp.Context)
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -43,7 +43,7 @@ func (rp *ReverseProxy) livenessHandler() func(http.ResponseWriter, *http.Reques
 	}
 }
 
-func (rp *ReverseProxy) proxyHandler(p *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
+func (rp *Proxy) proxyHandler(p *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContext(rp.Context)
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -117,7 +117,7 @@ func (rp *ReverseProxy) proxyHandler(p *httputil.ReverseProxy) func(http.Respons
 	}
 }
 
-func (rp *ReverseProxy) errorHandler(ctx context.Context) func(w http.ResponseWriter, r *http.Request, err error) {
+func (rp *Proxy) errorHandler(ctx context.Context) func(w http.ResponseWriter, r *http.Request, err error) {
 	log := logr.FromContext(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request, err error) {

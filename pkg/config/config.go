@@ -5,6 +5,7 @@ import (
 	"net/url"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
 
 // Config contains the configuration that is used for the application
@@ -14,6 +15,7 @@ type Config struct {
 	TenantID             string `validate:"uuid"`
 	ListenerAddress      string `validate:"hostname_port"`
 	ListenerTLSConfig    ListenerTLSConfig
+	CacheEngine          models.CacheEngine
 	AzureADGroupPrefix   string
 	AzureADMaxGroupCount int `validate:"min=1,max=1000"`
 	KubernetesConfig     KubernetesConfig
