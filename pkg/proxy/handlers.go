@@ -58,7 +58,12 @@ func (rp *Proxy) proxyHandler(p *httputil.ReverseProxy) func(http.ResponseWriter
 		tokenHash := util.GetEncodedHash(token)
 
 		// Use the token hash to get the user object from cache
-		u, found := rp.Cache.GetUser(tokenHash)
+		u, found, err := rp.Cache.GetUser(tokenHash)
+		if err != nil {
+			log.Error(err, "Unable to get cached user object")
+			http.Error(w, "Unexpected error", http.StatusInternalServerError)
+			return
+		}
 
 		// Get the user from the token if no cache was found
 		if !found {

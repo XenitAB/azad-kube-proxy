@@ -75,7 +75,10 @@ func (a *Azure) GetUserGroupsFromCache(userObjectID string) ([]models.Group, err
 
 	var groupNames []models.Group
 	for _, groupID := range groupIDs {
-		group, found := a.Cache.GetGroup(groupID)
+		group, found, err := a.Cache.GetGroup(groupID)
+		if err != nil {
+			return nil, err
+		}
 		if found {
 			groupNames = append(groupNames, group)
 		}
@@ -194,7 +197,10 @@ func (a *Azure) syncAzureADGroupsCache(syncReason string) error {
 	}
 
 	for _, group := range groups {
-		_, found := a.Cache.GetGroup(*group.ObjectID)
+		_, found, err := a.Cache.GetGroup(*group.ObjectID)
+		if err != nil {
+			return err
+		}
 		if !found {
 			a.Cache.SetGroup(*group.ObjectID, models.Group{Name: *group.DisplayName})
 		}

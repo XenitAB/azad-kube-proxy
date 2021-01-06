@@ -21,12 +21,12 @@ func (c *MemoryCache) NewCache() {
 }
 
 // GetUser ...
-func (c *MemoryCache) GetUser(s string) (models.User, bool) {
+func (c *MemoryCache) GetUser(s string) (models.User, bool, error) {
 	u, f := c.Cache.Get(s)
 	if !f {
-		return models.User{}, false
+		return models.User{}, false, nil
 	}
-	return u.(models.User), true
+	return u.(models.User), true, nil
 }
 
 // SetUser ...
@@ -37,12 +37,12 @@ func (c *MemoryCache) SetUser(s string, u models.User) error {
 }
 
 // GetGroup ...
-func (c *MemoryCache) GetGroup(s string) (models.Group, bool) {
+func (c *MemoryCache) GetGroup(s string) (models.Group, bool, error) {
 	g, f := c.Cache.Get(s)
 	if !f {
-		return models.Group{}, false
+		return models.Group{}, false, nil
 	}
-	return g.(models.Group), true
+	return g.(models.Group), true, nil
 }
 
 // SetGroup ...
