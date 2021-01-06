@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	"github.com/xenitab/azad-kube-proxy/pkg/claims"
 	"github.com/xenitab/azad-kube-proxy/pkg/util"
 )
 
@@ -84,8 +85,15 @@ func (rp *Proxy) proxyHandler(p *httputil.ReverseProxy) func(http.ResponseWriter
 				}
 			}
 
+			c, err := claims.NewClaims(verifiedToken)
+			if err != nil {
+				log.Error(err, "Unable to get claims")
+				http.Error(w, "Unable to get claims", http.StatusForbidden)
+				return
+			}
+
 			// Get the user object
-			u, err = rp.UserClient.GetUser(verifiedToken)
+			u, err = rp.UserClient.GetUser(c.Username, c.ObjectID, c.Groups)
 			if err != nil {
 				log.Error(err, "Unable to get user")
 				http.Error(w, "Unable to get user", http.StatusForbidden)

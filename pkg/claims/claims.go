@@ -1,5 +1,9 @@
 package claims
 
+import (
+	"github.com/coreos/go-oidc"
+)
+
 // ClaimNames contains the _claim_names struct
 type ClaimNames struct {
 	Groups string `json:"groups"`
@@ -32,4 +36,15 @@ type AzureClaims struct {
 	ObjectID       string       `json:"oid"`
 	Username       string       `json:"preferred_username"`
 	Groups         []string     `json:"groups"`
+}
+
+// NewClaims returns AzureClaims
+func NewClaims(t *oidc.IDToken) (AzureClaims, error) {
+	var c AzureClaims
+
+	if err := t.Claims(&c); err != nil {
+		return AzureClaims{}, err
+	}
+
+	return c, nil
 }

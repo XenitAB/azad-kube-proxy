@@ -2,10 +2,20 @@ package models
 
 import "encoding/json"
 
+// UserType is the type of user
+type UserType string
+
+// NormalUserType is a normal user
+var NormalUserType UserType = "User"
+
+// ServicePrincipalUserType is a serivce principal
+var ServicePrincipalUserType UserType = "ServicePrincipal"
+
 // User is the struct for a currently logged in user
 type User struct {
 	Username string
 	Groups   []Group
+	Type     UserType
 }
 
 // MarshalBinary to marshal User object
