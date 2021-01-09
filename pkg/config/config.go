@@ -51,10 +51,12 @@ func GetConfig(ctx context.Context, osArgs []string) (Config, error) {
 		Flags: flags(),
 		Action: func(cli *cli.Context) error {
 			var err error
+
 			config, err = action(ctx, cli)
 			if err != nil {
 				return err
 			}
+
 			return nil
 		},
 	}
