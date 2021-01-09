@@ -71,5 +71,4 @@ func GetBearerToken(r *http.Request) (string, error) {
 	token := a[1]
 
 	return token, nil
-
 }
