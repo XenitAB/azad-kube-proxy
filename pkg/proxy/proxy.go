@@ -28,7 +28,7 @@ type Proxy struct {
 	Config       config.Config
 	Cache        cache.Cache
 	OIDCVerifier *oidc.IDTokenVerifier
-	UserClient   user.Client
+	UserClient   *user.Client
 }
 
 // Start launches the reverse proxy

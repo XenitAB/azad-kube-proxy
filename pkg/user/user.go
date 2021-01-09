@@ -14,16 +14,16 @@ type Client struct {
 	Context     context.Context
 	Config      config.Config
 	Cache       cache.Cache
-	AzureClient azure.Client
+	AzureClient *azure.Client
 }
 
 // NewUserClient ...
-func NewUserClient(ctx context.Context, config config.Config, c cache.Cache, a azure.Client) Client {
-	return Client{
+func NewUserClient(ctx context.Context, config config.Config, c cache.Cache, azureClient *azure.Client) *Client {
+	return &Client{
 		Context:     ctx,
 		Config:      config,
 		Cache:       c,
-		AzureClient: a,
+		AzureClient: azureClient,
 	}
 }
 
@@ -35,7 +35,7 @@ func (client *Client) GetUser(ctx context.Context, username, objectID string, to
 		userType = models.ServicePrincipalUserType
 	}
 
-	groups, err := client.getGroups(ctx, objectID, userType)
+	groups, err := client.AzureClient.GetUserGroups(ctx, objectID, userType)
 	if err != nil {
 		return models.User{}, err
 	}
@@ -48,13 +48,4 @@ func (client *Client) GetUser(ctx context.Context, username, objectID string, to
 	}
 
 	return user, nil
-}
-
-func (client *Client) getGroups(ctx context.Context, objectID string, userType models.UserType) ([]models.Group, error) {
-	groups, err := client.AzureClient.GetUserGroupsFromCache(ctx, objectID, userType)
-	if err != nil {
-		return nil, err
-	}
-
-	return groups, nil
 }
