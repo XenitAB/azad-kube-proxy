@@ -3,7 +3,6 @@ package user
 import (
 	"context"
 
-	"github.com/coreos/go-oidc"
 	"github.com/xenitab/azad-kube-proxy/pkg/azure"
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
@@ -11,55 +10,42 @@ import (
 )
 
 // Client ...
-type Client interface {
-	GetUser(token *oidc.IDToken) (models.User, error)
-}
-
-// User ...
-type User struct {
+type Client struct {
 	Context     context.Context
 	Config      config.Config
-	Cache       cache.Client
-	AzureClient azure.Azure
+	Cache       cache.Cache
+	AzureClient *azure.Client
 }
 
 // NewUserClient ...
-func NewUserClient(ctx context.Context, config config.Config, c cache.Client, a azure.Azure) User {
-	return User{
+func NewUserClient(ctx context.Context, config config.Config, c cache.Cache, azureClient *azure.Client) *Client {
+	return &Client{
 		Context:     ctx,
 		Config:      config,
 		Cache:       c,
-		AzureClient: a,
+		AzureClient: azureClient,
 	}
 }
 
 // GetUser returns the user or an error
-func (u *User) GetUser(username, objectID string, tokenGroups []string) (models.User, error) {
+func (client *Client) GetUser(ctx context.Context, username, objectID string, tokenGroups []string) (models.User, error) {
 	userType := models.NormalUserType
 	if username == "" {
 		username = objectID
 		userType = models.ServicePrincipalUserType
 	}
 
-	groups, err := u.getGroups(objectID, userType)
+	groups, err := client.AzureClient.GetUserGroups(ctx, objectID, userType)
 	if err != nil {
 		return models.User{}, err
 	}
 
 	user := models.User{
 		Username: username,
+		ObjectID: objectID,
 		Groups:   groups,
 		Type:     userType,
 	}
 
 	return user, nil
-}
-
-func (u *User) getGroups(objectID string, userType models.UserType) ([]models.Group, error) {
-	groups, err := u.AzureClient.GetUserGroupsFromCache(objectID, userType)
-	if err != nil {
-		return nil, err
-	}
-
-	return groups, nil
 }

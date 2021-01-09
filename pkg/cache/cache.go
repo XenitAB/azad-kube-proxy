@@ -1,14 +1,30 @@
 package cache
 
 import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
 
-// Client ...
-type Client interface {
-	GetUser(s string) (models.User, bool, error)
-	SetUser(s string, u models.User) error
-	GetGroup(s string) (models.Group, bool, error)
-	SetGroup(s string, g models.Group) error
-	NewCache()
+// Cache ...
+type Cache interface {
+	GetUser(ctx context.Context, s string) (models.User, bool, error)
+	SetUser(ctx context.Context, s string, u models.User) error
+	GetGroup(ctx context.Context, s string) (models.Group, bool, error)
+	SetGroup(ctx context.Context, s string, g models.Group) error
+}
+
+// NewCache ...
+func NewCache(cacheEngine models.CacheEngine, config config.Config) (Cache, error) {
+	switch cacheEngine {
+	case models.RedisCacheEngine:
+		return NewRedisCache(config.RedisURI, 5*time.Minute)
+	case models.MemoryCacheEngine:
+		return NewMemoryCache(5*time.Minute, 10*time.Minute)
+	default:
+		return nil, fmt.Errorf("Unknown cache engine: %s", cacheEngine)
+	}
 }

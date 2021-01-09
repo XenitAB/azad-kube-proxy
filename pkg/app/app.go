@@ -155,6 +155,13 @@ func flags() []cli.Flag {
 			EnvVars:  []string{"CACHE_ENGINE"},
 			Value:    "MEMORY",
 		},
+		&cli.StringFlag{
+			Name:     "redis-uri",
+			Usage:    "The redis uri (redis://<user>:<password>@<host>:<port>/<db_number>)",
+			Required: false,
+			EnvVars:  []string{"REDIS_URI"},
+			Value:    "redis://127.0.0.1:6379/0",
+		},
 	}
 
 	return flags
@@ -192,6 +199,7 @@ func action(ctx context.Context, cli *cli.Context) error {
 			KeyPath:         cli.String("tls-key-path"),
 		},
 		CacheEngine:          cacheEngine,
+		RedisURI:             cli.String("redis-uri"),
 		AzureADGroupPrefix:   cli.String("azure-ad-group-prefix"),
 		AzureADMaxGroupCount: cli.Int("azure-ad-max-group-count"),
 		KubernetesConfig: config.KubernetesConfig{

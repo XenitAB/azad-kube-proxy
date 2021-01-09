@@ -14,6 +14,7 @@ var ServicePrincipalUserType UserType = "ServicePrincipal"
 // User is the struct for a currently logged in user
 type User struct {
 	Username string
+	ObjectID string
 	Groups   []Group
 	Type     UserType
 }

@@ -59,7 +59,7 @@ func (rp *Proxy) proxyHandler(p *httputil.ReverseProxy) func(http.ResponseWriter
 		tokenHash := util.GetEncodedHash(token)
 
 		// Use the token hash to get the user object from cache
-		u, found, err := rp.Cache.GetUser(tokenHash)
+		u, found, err := rp.Cache.GetUser(r.Context(), tokenHash)
 		if err != nil {
 			log.Error(err, "Unable to get cached user object")
 			http.Error(w, "Unexpected error", http.StatusInternalServerError)
@@ -93,7 +93,7 @@ func (rp *Proxy) proxyHandler(p *httputil.ReverseProxy) func(http.ResponseWriter
 			}
 
 			// Get the user object
-			u, err = rp.UserClient.GetUser(c.Username, c.ObjectID, c.Groups)
+			u, err = rp.UserClient.GetUser(r.Context(), c.Username, c.ObjectID, c.Groups)
 			if err != nil {
 				log.Error(err, "Unable to get user")
 				http.Error(w, "Unable to get user", http.StatusForbidden)
@@ -107,7 +107,7 @@ func (rp *Proxy) proxyHandler(p *httputil.ReverseProxy) func(http.ResponseWriter
 				return
 			}
 
-			rp.Cache.SetUser(tokenHash, u)
+			rp.Cache.SetUser(r.Context(), tokenHash, u)
 		}
 
 		// Remove the Authorization header that is sent to the server
@@ -124,7 +124,7 @@ func (rp *Proxy) proxyHandler(p *httputil.ReverseProxy) func(http.ResponseWriter
 			r.Header.Add(impersonateGroupHeader, group.Name)
 		}
 
-		log.Info("Request", "path", r.URL.Path, "username", u.Username, "groupCount", len(u.Groups), "cachedUser", found)
+		log.Info("Request", "path", r.URL.Path, "username", u.Username, "userType", u.Type, "groupCount", len(u.Groups), "cachedUser", found)
 
 		p.ServeHTTP(w, r)
 	}

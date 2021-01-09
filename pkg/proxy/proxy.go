@@ -17,7 +17,6 @@ import (
 	"github.com/xenitab/azad-kube-proxy/pkg/azure"
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
-	"github.com/xenitab/azad-kube-proxy/pkg/models"
 	"github.com/xenitab/azad-kube-proxy/pkg/user"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -27,9 +26,9 @@ import (
 type Proxy struct {
 	Context      context.Context
 	Config       config.Config
-	Cache        cache.Client
+	Cache        cache.Cache
 	OIDCVerifier *oidc.IDTokenVerifier
-	UserClient   user.User
+	UserClient   *user.Client
 }
 
 // Start launches the reverse proxy
@@ -69,7 +68,7 @@ func Start(ctx context.Context, config config.Config) error {
 	router.HandleFunc("/healthz", rp.livenessHandler()).Methods("GET")
 
 	// Initiate Azure AD group sync
-	syncTicker, syncChan, err := rp.UserClient.AzureClient.StartSyncTickerAzureADGroups(5 * time.Minute)
+	syncTicker, syncChan, err := rp.UserClient.AzureClient.StartSyncTickerAzureADGroups(ctx, 5*time.Minute)
 	if err != nil {
 		return err
 	}
@@ -115,26 +114,9 @@ func Start(ctx context.Context, config config.Config) error {
 
 func newProxyClient(ctx context.Context, config config.Config) (Proxy, error) {
 	// Initiate memory cache
-	var c cache.Client
-
-	switch config.CacheEngine {
-	case models.RedisCacheEngine:
-		c = &cache.RedisCache{
-			Address:    "127.0.0.1:6379",
-			Password:   "",
-			Database:   0,
-			Context:    ctx,
-			Expiration: 5 * time.Minute,
-		}
-
-		c.NewCache()
-	case models.MemoryCacheEngine:
-		c = &cache.MemoryCache{
-			DefaultExpiration: 5 * time.Minute,
-			CleanupInterval:   10 * time.Minute,
-		}
-
-		c.NewCache()
+	cache, err := cache.NewCache(config.CacheEngine, config)
+	if err != nil {
+		return Proxy{}, err
 	}
 
 	oidcVerifier, err := getOIDCVerifier(ctx, config)
@@ -142,17 +124,17 @@ func newProxyClient(ctx context.Context, config config.Config) (Proxy, error) {
 		return Proxy{}, err
 	}
 
-	azureClient, err := azure.NewAzureClient(ctx, config.ClientID, config.ClientSecret, config.TenantID, config.AzureADGroupPrefix, c)
+	azureClient, err := azure.NewAzureClient(ctx, config.ClientID, config.ClientSecret, config.TenantID, config.AzureADGroupPrefix, cache)
 	if err != nil {
 		return Proxy{}, err
 	}
 
-	userClient := user.NewUserClient(ctx, config, c, azureClient)
+	userClient := user.NewUserClient(ctx, config, cache, azureClient)
 
 	rp := Proxy{
 		Context:      ctx,
 		Config:       config,
-		Cache:        c,
+		Cache:        cache,
 		OIDCVerifier: oidcVerifier,
 		UserClient:   userClient,
 	}
