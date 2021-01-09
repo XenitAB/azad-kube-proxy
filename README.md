@@ -7,6 +7,10 @@ Azure AD Kubernetes API Proxy
 
 This reverse proxy will run in front of a Kubernetes API and accept tokens from Azure AD and using these and the Graph API, use impersonation headers to authenticate the end user to the API.
 
+## Overview
+
+![overview](assets/azad-kube-proxy-overview.png)
+
 ## Local development
 
 ### Creating the Azure AD Application
