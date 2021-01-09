@@ -18,10 +18,10 @@ type Cache interface {
 }
 
 // NewCache ...
-func NewCache(cacheEngine models.CacheEngine, config config.Config) (Cache, error) {
+func NewCache(ctx context.Context, cacheEngine models.CacheEngine, config config.Config) (Cache, error) {
 	switch cacheEngine {
 	case models.RedisCacheEngine:
-		return NewRedisCache(config.RedisURI, 5*time.Minute)
+		return NewRedisCache(ctx, config.RedisURI, 5*time.Minute)
 	case models.MemoryCacheEngine:
 		return NewMemoryCache(5*time.Minute, 10*time.Minute)
 	default:

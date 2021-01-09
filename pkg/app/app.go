@@ -215,7 +215,12 @@ func action(ctx context.Context, cli *cli.Context) error {
 		return err
 	}
 
-	err = proxy.Start(ctx, config)
+	server, err := proxy.NewProxyServer(ctx, config)
+	if err != nil {
+		return err
+	}
+
+	err = server.Start(ctx)
 	if err != nil {
 		return err
 	}

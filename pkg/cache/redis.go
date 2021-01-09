@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/go-redis/redis/v8"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
@@ -15,9 +16,12 @@ type RedisCache struct {
 }
 
 // NewRedisCache ...
-func NewRedisCache(redisURL string, expiration time.Duration) (*RedisCache, error) {
+func NewRedisCache(ctx context.Context, redisURL string, expiration time.Duration) (*RedisCache, error) {
+	log := logr.FromContext(ctx)
+
 	opt, err := redis.ParseURL(redisURL)
 	if err != nil {
+		log.Error(err, "Unable to parse Redis URL", "redisURL", redisURL)
 		return nil, err
 	}
 
@@ -29,11 +33,14 @@ func NewRedisCache(redisURL string, expiration time.Duration) (*RedisCache, erro
 
 // GetUser ...
 func (c *RedisCache) GetUser(ctx context.Context, s string) (models.User, bool, error) {
+	log := logr.FromContext(ctx)
+
 	res := c.Cache.Get(ctx, s)
 	if err := res.Err(); err != nil {
 		if err == redis.Nil {
 			return models.User{}, false, nil
 		}
+		log.Error(err, "Unable to get user key from Redis cache", "keyName", s)
 		return models.User{}, false, err
 	}
 
@@ -41,6 +48,7 @@ func (c *RedisCache) GetUser(ctx context.Context, s string) (models.User, bool, 
 
 	err := res.Scan(&u)
 	if err != nil {
+		log.Error(err, "Unable to unmarshal models.User from Redis cache value", "keyName", s)
 		return models.User{}, false, err
 	}
 
@@ -49,8 +57,11 @@ func (c *RedisCache) GetUser(ctx context.Context, s string) (models.User, bool, 
 
 // SetUser ...
 func (c *RedisCache) SetUser(ctx context.Context, s string, u models.User) error {
+	log := logr.FromContext(ctx)
+
 	err := c.Cache.SetNX(ctx, s, u, c.Expiration).Err()
 	if err != nil {
+		log.Error(err, "Unable to cache user object to Redis", "keyName", s)
 		return err
 	}
 
@@ -59,11 +70,15 @@ func (c *RedisCache) SetUser(ctx context.Context, s string, u models.User) error
 
 // GetGroup ...
 func (c *RedisCache) GetGroup(ctx context.Context, s string) (models.Group, bool, error) {
+	log := logr.FromContext(ctx)
+
 	res := c.Cache.Get(ctx, s)
 	if err := res.Err(); err != nil {
 		if err == redis.Nil {
 			return models.Group{}, false, nil
 		}
+
+		log.Error(err, "Unable to get group key from Redis cache", "keyName", s)
 		return models.Group{}, false, err
 	}
 
@@ -71,6 +86,7 @@ func (c *RedisCache) GetGroup(ctx context.Context, s string) (models.Group, bool
 
 	err := res.Scan(&g)
 	if err != nil {
+		log.Error(err, "Unable to unmarshal models.Group from Redis cache value", "keyName", s)
 		return models.Group{}, false, err
 	}
 
@@ -79,8 +95,11 @@ func (c *RedisCache) GetGroup(ctx context.Context, s string) (models.Group, bool
 
 // SetGroup ...
 func (c *RedisCache) SetGroup(ctx context.Context, s string, g models.Group) error {
+	log := logr.FromContext(ctx)
+
 	err := c.Cache.SetNX(ctx, s, g, c.Expiration).Err()
 	if err != nil {
+		log.Error(err, "Unable to cache group object to Redis", "keyName", s)
 		return err
 	}
 

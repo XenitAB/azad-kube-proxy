@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	// Logs
+	// Initiate the logging
 	var log logr.Logger
 
 	zapLog, err := zap.NewProduction()
@@ -22,7 +22,7 @@ func main() {
 	log = zapr.NewLogger(zapLog)
 	ctx := logr.NewContext(context.Background(), log)
 
-	// Run
+	// Run the application
 	err = app.Get(ctx).Run(os.Args)
 	if err != nil {
 		log.Error(err, "Application returned error")

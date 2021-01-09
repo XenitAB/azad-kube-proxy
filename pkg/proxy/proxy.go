@@ -3,7 +3,6 @@ package proxy
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"os"
@@ -16,29 +15,53 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/xenitab/azad-kube-proxy/pkg/azure"
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
+	"github.com/xenitab/azad-kube-proxy/pkg/claims"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"github.com/xenitab/azad-kube-proxy/pkg/user"
-	"gopkg.in/square/go-jose.v2"
-	"gopkg.in/square/go-jose.v2/jwt"
 )
 
-// Proxy ...
-type Proxy struct {
-	Context      context.Context
+// Server ...
+type Server struct {
 	Config       config.Config
 	Cache        cache.Cache
 	OIDCVerifier *oidc.IDTokenVerifier
 	UserClient   *user.Client
 }
 
-// Start launches the reverse proxy
-func Start(ctx context.Context, config config.Config) error {
-	log := logr.FromContext(ctx)
-
-	rp, err := newProxyClient(ctx, config)
+// NewProxyServer returns a proxy client or an error
+func NewProxyServer(ctx context.Context, config config.Config) (*Server, error) {
+	// Initiate memory cache
+	cache, err := cache.NewCache(ctx, config.CacheEngine, config)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	oidcVerifier, err := claims.GetOIDCVerifier(ctx, config.TenantID, config.ClientID)
+	if err != nil {
+		return nil, err
+	}
+
+	azureClient, err := azure.NewAzureClient(ctx, config.ClientID, config.ClientSecret, config.TenantID, config.AzureADGroupPrefix, cache)
+	if err != nil {
+		return nil, err
+	}
+
+	userClient := user.NewUserClient(ctx, config, cache, azureClient)
+
+	rp := Server{
+		Config:       config,
+		Cache:        cache,
+		OIDCVerifier: oidcVerifier,
+		UserClient:   userClient,
+	}
+
+	return &rp, nil
+}
+
+// Start launches the reverse proxy
+func (server *Server) Start(ctx context.Context) error {
+	log := logr.FromContext(ctx)
+	config := server.Config
 
 	// Signal handler
 	done := make(chan os.Signal, 1)
@@ -58,22 +81,22 @@ func Start(ctx context.Context, config config.Config) error {
 	// Configure revers proxy and http server
 	log.Info("Initializing reverse proxy", "ListenerAddress", config.ListenerAddress)
 	proxy := httputil.NewSingleHostReverseProxy(config.KubernetesConfig.URL)
-	proxy.ErrorHandler = rp.errorHandler(ctx)
+	proxy.ErrorHandler = server.errorHandler(ctx)
 	proxy.Transport = &http.Transport{
 		TLSClientConfig: tlsConfig,
 	}
 
 	router := mux.NewRouter()
-	router.HandleFunc("/readyz", rp.readinessHandler()).Methods("GET")
-	router.HandleFunc("/healthz", rp.livenessHandler()).Methods("GET")
+	router.HandleFunc("/readyz", server.readinessHandler(ctx)).Methods("GET")
+	router.HandleFunc("/healthz", server.livenessHandler(ctx)).Methods("GET")
 
 	// Initiate Azure AD group sync
-	syncTicker, syncChan, err := rp.UserClient.AzureClient.StartSyncTickerAzureADGroups(ctx, 5*time.Minute)
+	syncTicker, syncChan, err := server.UserClient.AzureClient.StartSyncTickerAzureADGroups(ctx, 5*time.Minute)
 	if err != nil {
 		return err
 	}
 
-	router.PathPrefix("/").HandlerFunc(rp.proxyHandler(proxy))
+	router.PathPrefix("/").HandlerFunc(server.proxyHandler(ctx, proxy))
 	srv := &http.Server{Addr: config.ListenerAddress, Handler: router}
 
 	// Start HTTP server
@@ -110,79 +133,4 @@ func Start(ctx context.Context, config config.Config) error {
 
 	log.Info("Server exited properly")
 	return nil
-}
-
-func newProxyClient(ctx context.Context, config config.Config) (Proxy, error) {
-	// Initiate memory cache
-	cache, err := cache.NewCache(config.CacheEngine, config)
-	if err != nil {
-		return Proxy{}, err
-	}
-
-	oidcVerifier, err := getOIDCVerifier(ctx, config)
-	if err != nil {
-		return Proxy{}, err
-	}
-
-	azureClient, err := azure.NewAzureClient(ctx, config.ClientID, config.ClientSecret, config.TenantID, config.AzureADGroupPrefix, cache)
-	if err != nil {
-		return Proxy{}, err
-	}
-
-	userClient := user.NewUserClient(ctx, config, cache, azureClient)
-
-	rp := Proxy{
-		Context:      ctx,
-		Config:       config,
-		Cache:        cache,
-		OIDCVerifier: oidcVerifier,
-		UserClient:   userClient,
-	}
-
-	return rp, nil
-}
-
-func getOIDCVerifier(ctx context.Context, config config.Config) (*oidc.IDTokenVerifier, error) {
-	log := logr.FromContext(ctx)
-	issuerURL := fmt.Sprintf("https://login.microsoftonline.com/%s/v2.0", config.TenantID)
-	provider, err := oidc.NewProvider(ctx, issuerURL)
-	if err != nil {
-		log.Error(err, "Unable to initiate OIDC provider")
-		return nil, err
-	}
-
-	oidcConfig := &oidc.Config{
-		ClientID: config.ClientID,
-	}
-
-	verifier := provider.Verifier(oidcConfig)
-
-	return verifier, nil
-
-}
-
-// Inspiration: https://github.com/jetstack/kube-oidc-proxy/blob/4a7d0c69ab4316eebdee3e98320292386fe9a42d/pkg/util/token.go#L39-L60
-func getFakeJWT(issuerURL string) (string, error) {
-	fakeKey := []byte("fake-key")
-	signingKey := jose.SigningKey{Algorithm: jose.HS256, Key: fakeKey}
-	signingOptions := (&jose.SignerOptions{}).WithType("JWT")
-
-	signer, err := jose.NewSigner(signingKey, signingOptions)
-	if err != nil {
-		return "", err
-	}
-
-	fakeClaims := jwt.Claims{
-		Subject:   "fakeissuer",
-		Issuer:    issuerURL,
-		NotBefore: jwt.NewNumericDate(time.Date(2016, 1, 1, 0, 0, 0, 0, time.UTC)),
-		Audience:  jwt.Audience(nil),
-	}
-
-	fakeJWT, err := jwt.Signed(signer).Claims(fakeClaims).CompactSerialize()
-	if err != nil {
-		return "", err
-	}
-
-	return fakeJWT, nil
 }

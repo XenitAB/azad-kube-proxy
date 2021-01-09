@@ -1,7 +1,11 @@
 package claims
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/coreos/go-oidc"
+	"github.com/go-logr/logr"
 )
 
 // ClaimNames contains the _claim_names struct
@@ -48,4 +52,24 @@ func NewClaims(t *oidc.IDToken) (AzureClaims, error) {
 	}
 
 	return c, nil
+}
+
+// GetOIDCVerifier returns an ID Token Verifier or an error
+func GetOIDCVerifier(ctx context.Context, tenantID, clientID string) (*oidc.IDTokenVerifier, error) {
+	log := logr.FromContext(ctx)
+	issuerURL := fmt.Sprintf("https://login.microsoftonline.com/%s/v2.0", tenantID)
+	provider, err := oidc.NewProvider(ctx, issuerURL)
+	if err != nil {
+		log.Error(err, "Unable to initiate OIDC provider")
+		return nil, err
+	}
+
+	oidcConfig := &oidc.Config{
+		ClientID: clientID,
+	}
+
+	verifier := provider.Verifier(oidcConfig)
+
+	return verifier, nil
+
 }
