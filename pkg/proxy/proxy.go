@@ -61,7 +61,6 @@ func NewProxyServer(ctx context.Context, config config.Config) (*Server, error) 
 // Start launches the reverse proxy
 func (server *Server) Start(ctx context.Context) error {
 	log := logr.FromContext(ctx)
-	config := server.Config
 
 	// Signal handler
 	done := make(chan os.Signal, 1)
@@ -71,16 +70,16 @@ func (server *Server) Start(ctx context.Context) error {
 		InsecureSkipVerify: true,
 	}
 
-	if config.KubernetesConfig.ValidateCertificate {
+	if server.Config.KubernetesConfig.ValidateCertificate {
 		tlsConfig = &tls.Config{
 			InsecureSkipVerify: false,
-			RootCAs:            config.KubernetesConfig.RootCA,
+			RootCAs:            server.Config.KubernetesConfig.RootCA,
 		}
 	}
 
 	// Configure revers proxy and http server
-	log.Info("Initializing reverse proxy", "ListenerAddress", config.ListenerAddress)
-	proxy := httputil.NewSingleHostReverseProxy(config.KubernetesConfig.URL)
+	log.Info("Initializing reverse proxy", "ListenerAddress", server.Config.ListenerAddress)
+	proxy := httputil.NewSingleHostReverseProxy(server.Config.KubernetesConfig.URL)
 	proxy.ErrorHandler = server.errorHandler(ctx)
 	proxy.Transport = &http.Transport{
 		TLSClientConfig: tlsConfig,
@@ -97,21 +96,21 @@ func (server *Server) Start(ctx context.Context) error {
 	}
 
 	router.PathPrefix("/").HandlerFunc(server.proxyHandler(ctx, proxy))
-	srv := &http.Server{Addr: config.ListenerAddress, Handler: router}
+	srv := &http.Server{Addr: server.Config.ListenerAddress, Handler: router}
 
 	// Start HTTP server
 	go func() {
-		switch config.ListenerTLSConfig.Enabled {
-		case true:
-			if err := srv.ListenAndServeTLS(config.ListenerTLSConfig.CertificatePath, config.ListenerTLSConfig.KeyPath); err != nil && err != http.ErrServerClosed {
+		if server.Config.ListenerTLSConfig.Enabled {
+			err := srv.ListenAndServeTLS(server.Config.ListenerTLSConfig.CertificatePath, server.Config.ListenerTLSConfig.KeyPath)
+			if err != nil && err != http.ErrServerClosed {
 				log.Error(err, "Http Server Error")
 			}
-		case false:
-			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		} else {
+			err := srv.ListenAndServe()
+			if err != nil && err != http.ErrServerClosed {
 				log.Error(err, "Http Server Error")
 			}
 		}
-
 	}()
 	log.Info("Server started")
 
