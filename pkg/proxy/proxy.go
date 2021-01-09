@@ -125,7 +125,9 @@ func (server *Server) Start(ctx context.Context) error {
 	defer func() {
 		cancel()
 	}()
-	if err := srv.Shutdown(ctx); err != nil {
+
+	err = srv.Shutdown(ctx)
+	if err != nil {
 		log.Error(err, "Server shutdown failed")
 		return err
 	}
