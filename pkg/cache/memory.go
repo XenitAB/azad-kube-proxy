@@ -14,10 +14,10 @@ type MemoryCache struct {
 }
 
 // NewMemoryCache ...
-func NewMemoryCache(defaultExpiration, cleanupInterval time.Duration) *MemoryCache {
+func NewMemoryCache(defaultExpiration, cleanupInterval time.Duration) (*MemoryCache, error) {
 	return &MemoryCache{
 		Cache: gocache.New(defaultExpiration, cleanupInterval),
-	}
+	}, nil
 }
 
 // GetUser ...

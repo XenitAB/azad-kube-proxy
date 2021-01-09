@@ -16,6 +16,7 @@ type Config struct {
 	ListenerAddress      string `validate:"hostname_port"`
 	ListenerTLSConfig    ListenerTLSConfig
 	CacheEngine          models.CacheEngine
+	RedisURI             string `validate:"uri"`
 	AzureADGroupPrefix   string
 	AzureADMaxGroupCount int `validate:"min=1,max=1000"`
 	KubernetesConfig     KubernetesConfig

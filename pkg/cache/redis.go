@@ -15,15 +15,16 @@ type RedisCache struct {
 }
 
 // NewRedisCache ...
-func NewRedisCache(address, password string, database int, expiration time.Duration) *RedisCache {
-	return &RedisCache{
-		Cache: redis.NewClient(&redis.Options{
-			Addr:     address,
-			Password: password,
-			DB:       database,
-		}),
-		Expiration: expiration,
+func NewRedisCache(redisURL string, expiration time.Duration) (*RedisCache, error) {
+	opt, err := redis.ParseURL(redisURL)
+	if err != nil {
+		return nil, err
 	}
+
+	return &RedisCache{
+		Cache:      redis.NewClient(opt),
+		Expiration: expiration,
+	}, nil
 }
 
 // GetUser ...

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
 
@@ -17,12 +18,12 @@ type Cache interface {
 }
 
 // NewCache ...
-func NewCache(cacheEngine models.CacheEngine) (Cache, error) {
+func NewCache(cacheEngine models.CacheEngine, config config.Config) (Cache, error) {
 	switch cacheEngine {
 	case models.RedisCacheEngine:
-		return NewRedisCache("127.0.0.1:6379", "", 0, 5*time.Minute), nil
+		return NewRedisCache(config.RedisURI, 5*time.Minute)
 	case models.MemoryCacheEngine:
-		return NewMemoryCache(5*time.Minute, 10*time.Minute), nil
+		return NewMemoryCache(5*time.Minute, 10*time.Minute)
 	default:
 		return nil, fmt.Errorf("Unknown cache engine: %s", cacheEngine)
 	}

@@ -114,7 +114,7 @@ func Start(ctx context.Context, config config.Config) error {
 
 func newProxyClient(ctx context.Context, config config.Config) (Proxy, error) {
 	// Initiate memory cache
-	cache, err := cache.NewCache(config.CacheEngine)
+	cache, err := cache.NewCache(config.CacheEngine, config)
 	if err != nil {
 		return Proxy{}, err
 	}
