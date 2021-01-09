@@ -30,7 +30,6 @@ type Server struct {
 
 // NewProxyServer returns a proxy client or an error
 func NewProxyServer(ctx context.Context, config config.Config) (*Server, error) {
-	// Initiate memory cache
 	cache, err := cache.NewCache(ctx, config.CacheEngine, config)
 	if err != nil {
 		return nil, err
@@ -77,7 +76,7 @@ func (server *Server) Start(ctx context.Context) error {
 		}
 	}
 
-	// Configure revers proxy and http server
+	// Configure reverse proxy and http server
 	log.Info("Initializing reverse proxy", "ListenerAddress", server.Config.ListenerAddress)
 	proxy := httputil.NewSingleHostReverseProxy(server.Config.KubernetesConfig.URL)
 	proxy.ErrorHandler = server.errorHandler(ctx)
@@ -95,6 +94,7 @@ func (server *Server) Start(ctx context.Context) error {
 		return err
 	}
 
+	// Initiate proxy handler and create http server
 	router.PathPrefix("/").HandlerFunc(server.proxyHandler(ctx, proxy))
 	srv := &http.Server{Addr: server.Config.ListenerAddress, Handler: router}
 
@@ -112,6 +112,7 @@ func (server *Server) Start(ctx context.Context) error {
 			}
 		}
 	}()
+
 	log.Info("Server started")
 
 	// Blocks until singal is sent
@@ -133,5 +134,6 @@ func (server *Server) Start(ctx context.Context) error {
 	}
 
 	log.Info("Server exited properly")
+
 	return nil
 }
