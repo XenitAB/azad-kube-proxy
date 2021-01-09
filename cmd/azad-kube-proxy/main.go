@@ -7,7 +7,8 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
-	"github.com/xenitab/azad-kube-proxy/pkg/app"
+	"github.com/xenitab/azad-kube-proxy/pkg/config"
+	"github.com/xenitab/azad-kube-proxy/pkg/proxy"
 	"go.uber.org/zap"
 )
 
@@ -22,10 +23,23 @@ func main() {
 	log = zapr.NewLogger(zapLog)
 	ctx := logr.NewContext(context.Background(), log)
 
-	// Run the application
-	err = app.Get(ctx).Run(os.Args)
+	// Get configuration
+	config, err := config.GetConfig(ctx, os.Args)
 	if err != nil {
-		log.Error(err, "Application returned error")
+		log.Error(err, "Unable to generate config")
+		os.Exit(1)
+	}
+
+	// Start reverse proxy
+	server, err := proxy.NewProxyServer(ctx, config)
+	if err != nil {
+		log.Error(err, "Unable to initialize proxy server")
+		os.Exit(1)
+	}
+
+	err = server.Start(ctx)
+	if err != nil {
+		log.Error(err, "Proxy server returned error")
 		os.Exit(1)
 	}
 
