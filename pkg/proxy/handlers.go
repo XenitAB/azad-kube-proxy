@@ -44,7 +44,7 @@ func (server *Server) livenessHandler(ctx context.Context) func(http.ResponseWri
 	}
 }
 
-func (server *Server) proxyHandler(ctx context.Context, p *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
+func (server *Server) azadKubeProxyHandler(ctx context.Context, p *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContext(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {

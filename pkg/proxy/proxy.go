@@ -79,7 +79,7 @@ func (server *Server) Start(ctx context.Context) error {
 	router := mux.NewRouter()
 	router.HandleFunc("/readyz", server.readinessHandler(ctx)).Methods("GET")
 	router.HandleFunc("/healthz", server.livenessHandler(ctx)).Methods("GET")
-	router.PathPrefix("/").HandlerFunc(server.proxyHandler(ctx, proxy))
+	router.PathPrefix("/").HandlerFunc(server.azadKubeProxyHandler(ctx, proxy))
 	httpServer := server.getHTTPServer(router)
 
 	// Start HTTP server
