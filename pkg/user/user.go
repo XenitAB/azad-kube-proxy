@@ -18,11 +18,9 @@ type Client struct {
 }
 
 // NewUserClient ...
-func NewUserClient(ctx context.Context, config config.Config, c cache.Cache, azureClient *azure.Client) *Client {
+func NewUserClient(config config.Config, azureClient *azure.Client) *Client {
 	return &Client{
-		Context:     ctx,
 		Config:      config,
-		Cache:       c,
 		AzureClient: azureClient,
 	}
 }

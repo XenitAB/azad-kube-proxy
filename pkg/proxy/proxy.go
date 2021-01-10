@@ -46,7 +46,7 @@ func NewProxyServer(ctx context.Context, config config.Config) (*Server, error) 
 		return nil, err
 	}
 
-	userClient := user.NewUserClient(ctx, config, cache, azureClient)
+	userClient := user.NewUserClient(config, azureClient)
 
 	proxyServer := Server{
 		Config:       config,
