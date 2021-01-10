@@ -28,7 +28,7 @@ func NewUserClient(ctx context.Context, config config.Config, c cache.Cache, azu
 }
 
 // GetUser returns the user or an error
-func (client *Client) GetUser(ctx context.Context, username, objectID string, tokenGroups []string) (models.User, error) {
+func (client *Client) GetUser(ctx context.Context, username, objectID string) (models.User, error) {
 	userType := models.NormalUserType
 	if username == "" {
 		username = objectID

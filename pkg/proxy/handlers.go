@@ -93,7 +93,7 @@ func (server *Server) azadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 			}
 
 			// Get the user object
-			user, err = server.UserClient.GetUser(r.Context(), claims.Username, claims.ObjectID, claims.Groups)
+			user, err = server.UserClient.GetUser(r.Context(), claims.Username, claims.ObjectID)
 			if err != nil {
 				log.Error(err, "Unable to get user")
 				http.Error(w, "Unable to get user", http.StatusForbidden)
