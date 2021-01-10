@@ -18,6 +18,8 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/jongio/azidext/go/azidext v0.1.0
 	github.com/kr/pretty v0.2.0 // indirect
+	github.com/onsi/ginkgo v1.14.2
+	github.com/onsi/gomega v1.10.4
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pquerna/cachecontrol v0.0.0-20171018203845-0dec1b30a021 // indirect
