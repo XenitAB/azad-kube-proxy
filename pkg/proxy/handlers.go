@@ -58,8 +58,16 @@ func (server *Server) azadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 
 		tokenHash := util.GetEncodedHash(token)
 
+		// Verify user token
+		verifiedToken, err := server.OIDCVerifier.Verify(r.Context(), token)
+		if err != nil {
+			log.Error(err, "Unable to verify token")
+			http.Error(w, "Unable to verify token", http.StatusForbidden)
+			return
+		}
+
 		// Use the token hash to get the user object from cache
-		u, found, err := server.Cache.GetUser(r.Context(), tokenHash)
+		user, found, err := server.Cache.GetUser(r.Context(), tokenHash)
 		if err != nil {
 			log.Error(err, "Unable to get cached user object")
 			http.Error(w, "Unexpected error", http.StatusInternalServerError)
@@ -68,14 +76,6 @@ func (server *Server) azadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 
 		// Get the user from the token if no cache was found
 		if !found {
-			// Verify user token
-			verifiedToken, err := server.OIDCVerifier.Verify(r.Context(), token)
-			if err != nil {
-				log.Error(err, "Unable to verify token")
-				http.Error(w, "Unable to verify token", http.StatusForbidden)
-				return
-			}
-
 			// Verify that client isn't sending impersonation headers
 			for h := range r.Header {
 				if strings.ToLower(h) == strings.ToLower(impersonateUserHeader) || strings.ToLower(h) == strings.ToLower(impersonateGroupHeader) || strings.HasPrefix(strings.ToLower(h), strings.ToLower(impersonateUserExtraHeaderPrefix)) {
@@ -85,7 +85,7 @@ func (server *Server) azadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 				}
 			}
 
-			c, err := claims.NewClaims(verifiedToken)
+			claims, err := claims.NewClaims(verifiedToken)
 			if err != nil {
 				log.Error(err, "Unable to get claims")
 				http.Error(w, "Unable to get claims", http.StatusForbidden)
@@ -93,7 +93,7 @@ func (server *Server) azadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 			}
 
 			// Get the user object
-			u, err = server.UserClient.GetUser(r.Context(), c.Username, c.ObjectID, c.Groups)
+			user, err = server.UserClient.GetUser(r.Context(), claims.Username, claims.ObjectID, claims.Groups)
 			if err != nil {
 				log.Error(err, "Unable to get user")
 				http.Error(w, "Unable to get user", http.StatusForbidden)
@@ -101,13 +101,13 @@ func (server *Server) azadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 			}
 
 			// Check if number of groups more than the configured limit
-			if len(u.Groups) > server.Config.AzureADMaxGroupCount {
-				log.Error(errors.New("Max groups reached"), "The user is member of more groups than allowed to be passed to the Kubernetes API", "groupCount", len(u.Groups), "username", u.Username, "config.AzureADMaxGroupCount", server.Config.AzureADMaxGroupCount)
+			if len(user.Groups) > server.Config.AzureADMaxGroupCount {
+				log.Error(errors.New("Max groups reached"), "The user is member of more groups than allowed to be passed to the Kubernetes API", "groupCount", len(user.Groups), "username", user.Username, "config.AzureADMaxGroupCount", server.Config.AzureADMaxGroupCount)
 				http.Error(w, "Too many groups", http.StatusForbidden)
 				return
 			}
 
-			server.Cache.SetUser(r.Context(), tokenHash, u)
+			server.Cache.SetUser(r.Context(), tokenHash, user)
 		}
 
 		// Remove the Authorization header that is sent to the server
@@ -117,14 +117,14 @@ func (server *Server) azadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 		r.Header.Add(authorizationHeader, fmt.Sprintf("Bearer %s", server.Config.KubernetesConfig.Token))
 
 		// Add the impersonation header for the users
-		r.Header.Add(impersonateUserHeader, u.Username)
+		r.Header.Add(impersonateUserHeader, user.Username)
 
-		// Add a new header per group
-		for _, group := range u.Groups {
+		// Add a new impersonation header per group
+		for _, group := range user.Groups {
 			r.Header.Add(impersonateGroupHeader, group.Name)
 		}
 
-		log.Info("Request", "path", r.URL.Path, "username", u.Username, "userType", u.Type, "groupCount", len(u.Groups), "cachedUser", found)
+		log.Info("Request", "path", r.URL.Path, "username", user.Username, "userType", user.Type, "groupCount", len(user.Groups), "cachedUser", found)
 
 		p.ServeHTTP(w, r)
 	}
