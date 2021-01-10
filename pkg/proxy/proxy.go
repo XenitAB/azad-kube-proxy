@@ -145,13 +145,8 @@ func (server *Server) getProxyTransport() *http.Transport {
 
 func getProxyTLSClientConfig(validateCertificate bool, rootCA *x509.CertPool) *tls.Config {
 	if !validateCertificate {
-		return &tls.Config{
-			InsecureSkipVerify: true,
-		}
+		return &tls.Config{InsecureSkipVerify: true}
 	}
 
-	return &tls.Config{
-		InsecureSkipVerify: false,
-		RootCAs:            rootCA,
-	}
+	return &tls.Config{InsecureSkipVerify: false, RootCAs: rootCA}
 }
