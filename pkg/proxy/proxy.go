@@ -3,6 +3,7 @@ package proxy
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"net/http"
 	"net/http/httputil"
 	"os"
@@ -47,14 +48,14 @@ func NewProxyServer(ctx context.Context, config config.Config) (*Server, error) 
 
 	userClient := user.NewUserClient(ctx, config, cache, azureClient)
 
-	rp := Server{
+	proxyServer := Server{
 		Config:       config,
 		Cache:        cache,
 		OIDCVerifier: oidcVerifier,
 		UserClient:   userClient,
 	}
 
-	return &rp, nil
+	return &proxyServer, nil
 }
 
 // Start launches the reverse proxy
@@ -65,69 +66,48 @@ func (server *Server) Start(ctx context.Context) error {
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
-	tlsConfig := &tls.Config{
-		InsecureSkipVerify: true,
-	}
-
-	if server.Config.KubernetesConfig.ValidateCertificate {
-		tlsConfig = &tls.Config{
-			InsecureSkipVerify: false,
-			RootCAs:            server.Config.KubernetesConfig.RootCA,
-		}
-	}
-
-	// Configure reverse proxy and http server
-	log.Info("Initializing reverse proxy", "ListenerAddress", server.Config.ListenerAddress)
-	proxy := httputil.NewSingleHostReverseProxy(server.Config.KubernetesConfig.URL)
-	proxy.ErrorHandler = server.errorHandler(ctx)
-	proxy.Transport = &http.Transport{
-		TLSClientConfig: tlsConfig,
-	}
-
-	router := mux.NewRouter()
-	router.HandleFunc("/readyz", server.readinessHandler(ctx)).Methods("GET")
-	router.HandleFunc("/healthz", server.livenessHandler(ctx)).Methods("GET")
-
-	// Initiate Azure AD group sync
+	// Initiate group sync
+	log.Info("Starting group sync")
 	syncTicker, syncChan, err := server.UserClient.AzureClient.StartSyncTickerAzureADGroups(ctx, 5*time.Minute)
 	if err != nil {
 		return err
 	}
 
-	// Initiate proxy handler and create http server
+	// Configure reverse proxy and http server
+	log.Info("Initializing reverse proxy", "ListenerAddress", server.Config.ListenerAddress)
+	proxy := server.getReverseProxy(ctx)
+	router := mux.NewRouter()
+	router.HandleFunc("/readyz", server.readinessHandler(ctx)).Methods("GET")
+	router.HandleFunc("/healthz", server.livenessHandler(ctx)).Methods("GET")
 	router.PathPrefix("/").HandlerFunc(server.proxyHandler(ctx, proxy))
-	srv := &http.Server{Addr: server.Config.ListenerAddress, Handler: router}
+	httpServer := server.getHTTPServer(router)
 
 	// Start HTTP server
 	go func() {
-		if server.Config.ListenerTLSConfig.Enabled {
-			err := srv.ListenAndServeTLS(server.Config.ListenerTLSConfig.CertificatePath, server.Config.ListenerTLSConfig.KeyPath)
-			if err != nil && err != http.ErrServerClosed {
-				log.Error(err, "Http Server Error")
-			}
-		} else {
-			err := srv.ListenAndServe()
-			if err != nil && err != http.ErrServerClosed {
-				log.Error(err, "Http Server Error")
-			}
+		err := server.listenAndServe(httpServer)
+		if err != nil && err != http.ErrServerClosed {
+			log.Error(err, "Server error")
 		}
 	}()
 
 	log.Info("Server started")
 
-	// Blocks until singal is sent
+	// Blocks until signal is sent
 	<-done
+
+	// Stop group sync
 	syncTicker.Stop()
 	syncChan <- true
-	log.Info("Server stopped")
+
+	log.Info("Server shutdown initiated")
 
 	// Shutdown http server
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer func() {
 		cancel()
 	}()
 
-	err = srv.Shutdown(ctx)
+	err = httpServer.Shutdown(shutdownCtx)
 	if err != nil {
 		log.Error(err, "Server shutdown failed")
 		return err
@@ -136,4 +116,42 @@ func (server *Server) Start(ctx context.Context) error {
 	log.Info("Server exited properly")
 
 	return nil
+}
+
+func (server *Server) listenAndServe(httpServer *http.Server) error {
+	if server.Config.ListenerTLSConfig.Enabled {
+		return httpServer.ListenAndServeTLS(server.Config.ListenerTLSConfig.CertificatePath, server.Config.ListenerTLSConfig.KeyPath)
+	}
+
+	return httpServer.ListenAndServe()
+}
+
+func (server *Server) getHTTPServer(handler http.Handler) *http.Server {
+	return &http.Server{Addr: server.Config.ListenerAddress, Handler: handler}
+}
+
+func (server *Server) getReverseProxy(ctx context.Context) *httputil.ReverseProxy {
+	reverseProxy := httputil.NewSingleHostReverseProxy(server.Config.KubernetesConfig.URL)
+	reverseProxy.ErrorHandler = server.errorHandler(ctx)
+	reverseProxy.Transport = server.getProxyTransport()
+	return reverseProxy
+}
+
+func (server *Server) getProxyTransport() *http.Transport {
+	return &http.Transport{
+		TLSClientConfig: getProxyTLSClientConfig(server.Config.KubernetesConfig.ValidateCertificate, server.Config.KubernetesConfig.RootCA),
+	}
+}
+
+func getProxyTLSClientConfig(validateCertificate bool, rootCA *x509.CertPool) *tls.Config {
+	if !validateCertificate {
+		return &tls.Config{
+			InsecureSkipVerify: true,
+		}
+	}
+
+	return &tls.Config{
+		InsecureSkipVerify: false,
+		RootCAs:            rootCA,
+	}
 }
