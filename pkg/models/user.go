@@ -6,7 +6,7 @@ import "encoding/json"
 type UserType string
 
 // NormalUserType is a normal user
-var NormalUserType UserType = "User"
+var NormalUserType UserType = "NormalUser"
 
 // ServicePrincipalUserType is a serivce principal
 var ServicePrincipalUserType UserType = "ServicePrincipal"

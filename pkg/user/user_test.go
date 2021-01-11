@@ -9,38 +9,52 @@ import (
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
 
-type FakeAzureClient struct{}
+type fakeAzureClient struct{}
 
 // GetUserGroups ...
-func (client *FakeAzureClient) GetUserGroups(ctx context.Context, objectID string, userType models.UserType) ([]models.Group, error) {
+func (client *fakeAzureClient) GetUserGroups(ctx context.Context, objectID string, userType models.UserType) ([]models.Group, error) {
 	return nil, nil
 }
 
-// StartSyncGroups initiates a ticker that will sync Azure AD Groups
-func (client *FakeAzureClient) StartSyncGroups(ctx context.Context, syncInterval time.Duration) (*time.Ticker, chan bool, error) {
+// StartSyncGroups ...
+func (client *fakeAzureClient) StartSyncGroups(ctx context.Context, syncInterval time.Duration) (*time.Ticker, chan bool, error) {
 	return nil, nil, nil
 }
 
 func TestGetUser(t *testing.T) {
 	config := config.Config{}
-	azureClient := &FakeAzureClient{}
-	userClient := NewUserClient(config, azureClient)
+	azureClient := &fakeAzureClient{}
 
-	ctx := context.Background()
-	user, userErr := userClient.GetUser(ctx, "username", "00000000-0000-0000-0000-000000000000")
+	cases := []struct {
+		userClient       *Client
+		username         string
+		objectID         string
+		expectedUserType models.UserType
+	}{
+		{
+			userClient:       NewUserClient(config, azureClient),
+			username:         "",
+			objectID:         "00000000-0000-0000-0000-000000000000",
+			expectedUserType: models.ServicePrincipalUserType,
+		},
+		{
+			userClient:       NewUserClient(config, azureClient),
+			username:         "username",
+			objectID:         "00000000-0000-0000-0000-000000000000",
+			expectedUserType: models.NormalUserType,
+		},
+	}
 
-	if user.Type != models.NormalUserType {
-		t.Errorf("Normal user: Expected user type was not returned: %s", user.Type)
-	}
-	if userErr != nil {
-		t.Errorf("Normal user returned error: %s", userErr)
-	}
+	for _, c := range cases {
+		ctx := context.Background()
+		user, err := c.userClient.GetUser(ctx, c.username, c.objectID)
 
-	spUser, spErr := userClient.GetUser(ctx, "", "00000000-0000-0000-0000-000000000000")
-	if spUser.Type != models.ServicePrincipalUserType {
-		t.Errorf("Service principal: Expected user type was not returned: %s", spUser.Type)
-	}
-	if spErr != nil {
-		t.Errorf("Service principal returned error: %s", spErr)
+		if user.Type != c.expectedUserType {
+			t.Errorf("Expected user type (%s) was not returned: %s", c.expectedUserType, user.Type)
+		}
+
+		if err != nil {
+			t.Errorf("Expected err to be nil but it was %q", err)
+		}
 	}
 }
