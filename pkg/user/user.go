@@ -11,14 +11,13 @@ import (
 
 // Client ...
 type Client struct {
-	Context     context.Context
 	Config      config.Config
 	Cache       cache.Cache
-	AzureClient *azure.Client
+	AzureClient azure.ClientInterface
 }
 
 // NewUserClient ...
-func NewUserClient(config config.Config, azureClient *azure.Client) *Client {
+func NewUserClient(config config.Config, azureClient azure.ClientInterface) *Client {
 	return &Client{
 		Config:      config,
 		AzureClient: azureClient,

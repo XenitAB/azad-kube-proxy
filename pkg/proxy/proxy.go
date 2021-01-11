@@ -68,7 +68,7 @@ func (server *Server) Start(ctx context.Context) error {
 
 	// Initiate group sync
 	log.Info("Starting group sync")
-	syncTicker, syncChan, err := server.UserClient.AzureClient.StartSyncTickerAzureADGroups(ctx, 5*time.Minute)
+	syncTicker, syncChan, err := server.UserClient.AzureClient.StartSyncGroups(ctx, 5*time.Minute)
 	if err != nil {
 		return err
 	}

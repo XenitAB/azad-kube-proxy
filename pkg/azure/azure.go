@@ -15,8 +15,14 @@ import (
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
 
-type azure interface {
+type userInterface interface {
 	getGroups(ctx context.Context, objectID string) ([]models.Group, error)
+}
+
+// ClientInterface ...
+type ClientInterface interface {
+	GetUserGroups(ctx context.Context, objectID string, userType models.UserType) ([]models.Group, error)
+	StartSyncGroups(ctx context.Context, syncInterval time.Duration) (*time.Ticker, chan bool, error)
 }
 
 // Client ...
@@ -78,7 +84,7 @@ func NewAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graph
 
 // GetUserGroups ...
 func (client *Client) GetUserGroups(ctx context.Context, objectID string, userType models.UserType) ([]models.Group, error) {
-	var user azure
+	var user userInterface
 
 	switch userType {
 	case models.NormalUserType:
@@ -92,8 +98,8 @@ func (client *Client) GetUserGroups(ctx context.Context, objectID string, userTy
 	return user.getGroups(ctx, objectID)
 }
 
-// StartSyncTickerAzureADGroups initiates a ticker that will sync Azure AD Groups
-func (client *Client) StartSyncTickerAzureADGroups(ctx context.Context, syncInterval time.Duration) (*time.Ticker, chan bool, error) {
+// StartSyncGroups initiates a ticker that will sync Azure AD Groups
+func (client *Client) StartSyncGroups(ctx context.Context, syncInterval time.Duration) (*time.Ticker, chan bool, error) {
 	log := logr.FromContext(ctx)
 
 	ticker := time.NewTicker(syncInterval)
