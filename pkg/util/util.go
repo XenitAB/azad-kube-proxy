@@ -69,6 +69,9 @@ func GetBearerToken(r *http.Request) (string, error) {
 	}
 
 	token := a[1]
+	if token == "" {
+		return "", fmt.Errorf("Empty token")
+	}
 
 	return token, nil
 }

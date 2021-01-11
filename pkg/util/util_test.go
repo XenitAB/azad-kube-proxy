@@ -7,10 +7,12 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"math/big"
+	"net/http"
 	"os"
 	"strconv"
 	"testing"
@@ -79,6 +81,73 @@ func TestGetEncodedHash(t *testing.T) {
 	expectedHash := "f6774519d1c7a3389ef327e9c04766b999db8cdfb85d1346c471ee86d65885bc"
 	if testStringHash != expectedHash {
 		t.Errorf("testStringHash (%s) doesn't equal expectedHash: %s", testStringHash, expectedHash)
+	}
+}
+
+func TestGetBearerToken(t *testing.T) {
+	cases := []struct {
+		token                  string
+		addAuthorizationHeader bool
+		headerTemplate         string
+		expectedErr            error
+	}{
+		{
+			token:                  "token",
+			addAuthorizationHeader: true,
+			headerTemplate:         "Bearer %s",
+			expectedErr:            nil,
+		},
+		{
+			token:                  "",
+			addAuthorizationHeader: false,
+			headerTemplate:         "",
+			expectedErr:            errors.New("No Authorization header present in request"),
+		},
+		{
+			token:                  "token",
+			addAuthorizationHeader: true,
+			headerTemplate:         "%s",
+			expectedErr:            errors.New("Authorization header does not contain Bearer in request"),
+		},
+		{
+			token:                  "Bearer ",
+			addAuthorizationHeader: true,
+			headerTemplate:         "%s",
+			expectedErr:            errors.New("Empty token"),
+		},
+		{
+			token:                  "Bearer Bearer Bearer ",
+			addAuthorizationHeader: true,
+			headerTemplate:         "%s",
+			expectedErr:            errors.New("Authorization split by 'Bearer ' isn't length of 2 (actual lenght: 4)"),
+		},
+	}
+
+	for _, c := range cases {
+		req := &http.Request{}
+		if c.addAuthorizationHeader {
+			authorizationHeader := fmt.Sprintf(c.headerTemplate, c.token)
+			req = &http.Request{
+				Header: map[string][]string{
+					"Authorization": {authorizationHeader},
+				},
+			}
+		}
+
+		tokenResponse, err := GetBearerToken(req)
+		if tokenResponse != c.token && c.expectedErr == nil {
+			t.Errorf("Expected token (%s) was not returned: %s", c.token, tokenResponse)
+		}
+
+		if err != nil && c.expectedErr == nil {
+			t.Errorf("Expected err to be nil but it was %q", err)
+		}
+
+		if c.expectedErr != nil {
+			if err.Error() != c.expectedErr.Error() {
+				t.Errorf("Expected err to be %q but it was %q", c.expectedErr, err)
+			}
+		}
 	}
 }
 
