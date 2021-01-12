@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -32,6 +33,17 @@ func TestNewRedisCache(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
+
+	_, err = NewRedisCache(ctx, "", redisTimeout)
+	if err.Error() != "redis: invalid URL scheme: " {
+		t.Errorf("Expected err to contain 'redis: invalid URL scheme: ' but was: %q", err)
+	}
+
+	redisServer.Close()
+	_, err = NewRedisCache(ctx, redisURL, redisTimeout)
+	if !strings.Contains(err.Error(), "connect: connection refused") {
+		t.Errorf("Expected err to contain 'connect: connection refused' but was: %q", err)
+	}
 }
 
 func TestRedisGetUser(t *testing.T) {
@@ -40,13 +52,13 @@ func TestRedisGetUser(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
-	defer redisServer.Close()
 
 	redisURL := fmt.Sprintf("redis://%s/0", redisServer.Addr())
 	miniredisClient, err := getMiniredisClient(redisURL)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
+	defer redisServer.Close()
 
 	cache, err := NewRedisCache(ctx, redisURL, redisTimeout)
 	if err != nil {
@@ -76,6 +88,12 @@ func TestRedisGetUser(t *testing.T) {
 	if found {
 		t.Errorf("Expected cached user not to be found")
 	}
+
+	redisServer.Close()
+	_, _, err = cache.GetUser(ctx, "no-redis-server")
+	if !strings.Contains(err.Error(), "connect: connection refused") {
+		t.Errorf("Expected error to contain 'connect: connection refused' but it was: %q", err)
+	}
 }
 
 func TestRedisSetUser(t *testing.T) {
@@ -100,10 +118,14 @@ func TestRedisSetUser(t *testing.T) {
 	cases, _ := getRedisCases()
 
 	for _, c := range cases {
-		cache.SetUser(ctx, c.Key, c.User)
+		err := cache.SetUser(ctx, c.Key, c.User)
+		if err != nil {
+			t.Errorf("Expected err to be nil but it was %q", err)
+		}
+
 		res := miniredisClient.Get(ctx, c.Key)
 		found := true
-		err := res.Err()
+		err = res.Err()
 		if err != nil {
 			if err == redis.Nil {
 				found = false
@@ -129,84 +151,126 @@ func TestRedisSetUser(t *testing.T) {
 			t.Errorf("Expected cached user to be found")
 		}
 	}
+
+	redisServer.Close()
+	err = cache.SetUser(ctx, "no-redis-server", models.User{})
+	if !strings.Contains(err.Error(), "connect: connection refused") {
+		t.Errorf("Expected error to contain 'connect: connection refused' but it was: %q", err)
+	}
 }
 
-// func TestRedisGetGroup(t *testing.T) {
-// 	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
-// 	redisServer, err := miniredis.Run()
-// 	if err != nil {
-// 		t.Errorf("Expected err to be nil but it was %q", err)
-// 	}
-// 	defer redisServer.Close()
+func TestRedisGetGroup(t *testing.T) {
+	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	redisServer, err := miniredis.Run()
+	if err != nil {
+		t.Errorf("Expected err to be nil but it was %q", err)
+	}
+	defer redisServer.Close()
 
-// 	redisURL := fmt.Sprintf("redis://%s/0", redisServer.Addr())
-// 	miniredisClient, err := getMiniredisClient(redisURL)
-// 	if err != nil {
-// 		t.Errorf("Expected err to be nil but it was %q", err)
-// 	}
+	redisURL := fmt.Sprintf("redis://%s/0", redisServer.Addr())
+	miniredisClient, err := getMiniredisClient(redisURL)
+	if err != nil {
+		t.Errorf("Expected err to be nil but it was %q", err)
+	}
 
-// 	cache, err := NewRedisCache(ctx, redisURL, redisTimeout)
-// 	if err != nil {
-// 		t.Errorf("Expected err to be nil but it was %q", err)
-// 	}
+	cache, err := NewRedisCache(ctx, redisURL, redisTimeout)
+	if err != nil {
+		t.Errorf("Expected err to be nil but it was %q", err)
+	}
 
-// 	_, cases := getRedisCases()
+	_, cases := getRedisCases()
 
-// 	for _, c := range cases {
-// 		cache.Cache.Set(c.Key, c.Group, 0)
-// 		cacheRes, found, err := cache.GetGroup(ctx, c.Key)
-// 		if !cmp.Equal(c.Group, cacheRes) {
-// 			t.Errorf("Expected response was not returned.\nExpected: %s\nActual:   %s", c.Group, cacheRes)
-// 		}
-// 		if err != nil {
-// 			t.Errorf("Did not expect error: %q", err)
-// 		}
-// 		if !found {
-// 			t.Errorf("Expected cached user to be found")
-// 		}
-// 	}
+	for _, c := range cases {
+		err := miniredisClient.SetNX(ctx, c.Key, c.Group, redisTimeout).Err()
+		if err != nil {
+			t.Errorf("Expected err to be nil but it was %q", err)
+		}
+		cacheRes, found, err := cache.GetGroup(ctx, c.Key)
+		if !cmp.Equal(c.Group, cacheRes) {
+			t.Errorf("Expected response was not returned.\nExpected: %s\nActual:   %s", c.Group, cacheRes)
+		}
+		if err != nil {
+			t.Errorf("Did not expect error: %q", err)
+		}
+		if !found {
+			t.Errorf("Expected cached group to be found")
+		}
+	}
 
-// 	_, found, _ := cache.GetGroup(ctx, "does-not-exist")
-// 	if found {
-// 		t.Errorf("Expected cached group not to be found")
-// 	}
-// }
+	_, found, _ := cache.GetGroup(ctx, "does-not-exist")
+	if found {
+		t.Errorf("Expected cached group not to be found")
+	}
 
-// func TestRedisSetGroup(t *testing.T) {
-// 	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
-// 	redisServer, err := miniredis.Run()
-// 	if err != nil {
-// 		t.Errorf("Expected err to be nil but it was %q", err)
-// 	}
-// 	defer redisServer.Close()
+	redisServer.Close()
+	_, _, err = cache.GetGroup(ctx, "no-redis-server")
+	if !strings.Contains(err.Error(), "connect: connection refused") {
+		t.Errorf("Expected error to contain 'connect: connection refused' but it was: %q", err)
+	}
+}
 
-// 	redisURL := fmt.Sprintf("redis://%s/0", redisServer.Addr())
-// 	miniredisClient, err := getMiniredisClient(redisURL)
-// 	if err != nil {
-// 		t.Errorf("Expected err to be nil but it was %q", err)
-// 	}
+func TestRedisSetGroup(t *testing.T) {
+	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	redisServer, err := miniredis.Run()
+	if err != nil {
+		t.Errorf("Expected err to be nil but it was %q", err)
+	}
+	defer redisServer.Close()
 
-// 	cache, err := NewRedisCache(ctx, redisURL, redisTimeout)
-// 	if err != nil {
-// 		t.Errorf("Expected err to be nil but it was %q", err)
-// 	}
+	redisURL := fmt.Sprintf("redis://%s/0", redisServer.Addr())
+	miniredisClient, err := getMiniredisClient(redisURL)
+	if err != nil {
+		t.Errorf("Expected err to be nil but it was %q", err)
+	}
 
-// 	_, cases := getRedisCases()
+	cache, err := NewRedisCache(ctx, redisURL, redisTimeout)
+	if err != nil {
+		t.Errorf("Expected err to be nil but it was %q", err)
+	}
 
-// 	for _, c := range cases {
-// 		cache.SetGroup(ctx, c.Key, c.Group)
-// 		cacheRes, found := cache.Cache.Get(c.Key)
-// 		if !cmp.Equal(c.Group, cacheRes) {
-// 			t.Errorf("Expected response was not returned.\nExpected: %s\nActual:   %s", c.Group, cacheRes)
-// 		}
-// 		if err != nil {
-// 			t.Errorf("Did not expect error: %q", err)
-// 		}
-// 		if !found {
-// 			t.Errorf("Expected cached group to be found")
-// 		}
-// 	}
-// }
+	_, cases := getRedisCases()
+
+	for _, c := range cases {
+		err := cache.SetGroup(ctx, c.Key, c.Group)
+		if err != nil {
+			t.Errorf("Expected err to be nil but it was %q", err)
+		}
+
+		res := miniredisClient.Get(ctx, c.Key)
+		found := true
+		err = res.Err()
+		if err != nil {
+			if err == redis.Nil {
+				found = false
+			} else {
+				t.Errorf("Expected err to be nil but it was %q", err)
+			}
+		}
+
+		var g models.Group
+
+		err = res.Scan(&g)
+		if err != nil {
+			t.Errorf("Expected err to be nil but it was %q", err)
+		}
+
+		if !cmp.Equal(c.Group, g) {
+			t.Errorf("Expected response was not returned.\nExpected: %s\nActual:   %s", c.Group, g)
+		}
+		if err != nil {
+			t.Errorf("Did not expect error: %q", err)
+		}
+		if !found {
+			t.Errorf("Expected cached group to be found")
+		}
+	}
+
+	redisServer.Close()
+	err = cache.SetGroup(ctx, "no-redis-server", models.Group{})
+	if !strings.Contains(err.Error(), "connect: connection refused") {
+		t.Errorf("Expected error to contain 'connect: connection refused' but it was: %q", err)
+	}
+}
 
 func getMiniredisClient(redisURL string) (*redis.Client, error) {
 	opt, err := redis.ParseURL(redisURL)

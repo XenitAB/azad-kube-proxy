@@ -25,8 +25,14 @@ func NewRedisCache(ctx context.Context, redisURL string, expiration time.Duratio
 		return nil, err
 	}
 
+	redisClient := redis.NewClient(opt)
+	err = redisClient.Ping(ctx).Err()
+	if err != nil {
+		return nil, err
+	}
+
 	return &RedisCache{
-		Cache:      redis.NewClient(opt),
+		Cache:      redisClient,
 		Expiration: expiration,
 	}, nil
 }
@@ -36,7 +42,8 @@ func (c *RedisCache) GetUser(ctx context.Context, s string) (models.User, bool, 
 	log := logr.FromContext(ctx)
 
 	res := c.Cache.Get(ctx, s)
-	if err := res.Err(); err != nil {
+	err := res.Err()
+	if err != nil {
 		if err == redis.Nil {
 			return models.User{}, false, nil
 		}
@@ -46,8 +53,8 @@ func (c *RedisCache) GetUser(ctx context.Context, s string) (models.User, bool, 
 
 	var u models.User
 
-	err := res.Scan(&u)
-	if err != nil {
+	err = res.Scan(&u)
+	if err != nil { // no coverage in test
 		log.Error(err, "Unable to unmarshal models.User from Redis cache value", "keyName", s)
 		return models.User{}, false, err
 	}
@@ -73,7 +80,8 @@ func (c *RedisCache) GetGroup(ctx context.Context, s string) (models.Group, bool
 	log := logr.FromContext(ctx)
 
 	res := c.Cache.Get(ctx, s)
-	if err := res.Err(); err != nil {
+	err := res.Err()
+	if err != nil {
 		if err == redis.Nil {
 			return models.Group{}, false, nil
 		}
@@ -84,8 +92,8 @@ func (c *RedisCache) GetGroup(ctx context.Context, s string) (models.Group, bool
 
 	var g models.Group
 
-	err := res.Scan(&g)
-	if err != nil {
+	err = res.Scan(&g)
+	if err != nil { // no coverage in test
 		log.Error(err, "Unable to unmarshal models.Group from Redis cache value", "keyName", s)
 		return models.Group{}, false, err
 	}
