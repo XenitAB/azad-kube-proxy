@@ -2,6 +2,7 @@ package claims
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/coreos/go-oidc"
@@ -47,7 +48,12 @@ type AzureClaims struct {
 func NewClaims(t *oidc.IDToken) (AzureClaims, error) {
 	var c AzureClaims
 
-	if err := t.Claims(&c); err != nil {
+	if t == nil {
+		return AzureClaims{}, errors.New("Token nil")
+	}
+
+	err := t.Claims(&c)
+	if err != nil {
 		return AzureClaims{}, err
 	}
 
@@ -71,5 +77,4 @@ func GetOIDCVerifier(ctx context.Context, tenantID, clientID string) (*oidc.IDTo
 	verifier := provider.Verifier(oidcConfig)
 
 	return verifier, nil
-
 }

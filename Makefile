@@ -1,11 +1,12 @@
+SHELL:=/bin/bash
+
 TAG = dev
 IMG ?= azad-kube-proxy:$(TAG)
+TEST_ENV_FILE = tmp/env
 
-ifeq (run,$(firstword $(MAKECMDGOALS)))
-  # use the rest as arguments for "run"
-  RUN_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
-  # ...and turn them into do-nothing targets
-  $(eval $(RUN_ARGS):;@:)
+ifneq (,$(wildcard $(TEST_ENV_FILE)))
+    include $(TEST_ENV_FILE)
+    export
 endif
 
 lint:
@@ -18,7 +19,8 @@ vet:
 	go vet ./...
 
 test:
-	go test -timeout 1m ./...
+	echo $(TENANT_ID)
+	go test -timeout 1m ./... -cover -v
 
 docker-build:
 	docker build -t $(IMG) .
