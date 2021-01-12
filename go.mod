@@ -8,6 +8,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v0.7.0
 	github.com/Azure/azure-sdk-for-go/sdk/to v0.1.1
 	github.com/Azure/go-autorest/autorest v0.11.4
+	github.com/alicebob/miniredis/v2 v2.14.1
 	github.com/coreos/go-oidc v2.1.0+incompatible
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/go-logr/logr v0.3.0
@@ -34,6 +35,5 @@ require (
 	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/square/go-jose.v2 v2.2.2 // indirect
-	gotest.tools v2.2.0+incompatible
 	honnef.co/go/tools v0.0.1-2020.1.3 // indirect
 )
