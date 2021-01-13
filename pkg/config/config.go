@@ -5,8 +5,11 @@ import (
 	"crypto/x509"
 	"fmt"
 	"net/url"
+	"os"
+	"strconv"
 
 	"github.com/go-playground/validator/v10"
+	flag "github.com/spf13/pflag"
 	"github.com/urfave/cli/v2"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 	"github.com/xenitab/azad-kube-proxy/pkg/util"
@@ -41,6 +44,71 @@ type ListenerTLSConfig struct {
 	KeyPath         string
 }
 
+func newGetConfig(ctx context.Context) (Config, error) {
+	clientID := getConfigString("client-id", "", []string{"CLIENT_ID"}, "Azure AD Application Client ID")
+	clientSecret := getConfigString()
+	tenantID := getConfigString()
+	address := getConfigString()
+	port := getConfigInt()
+	tlsCertificatePath := getConfigString()
+
+	return Config{}, nil
+}
+
+func getConfigString(name string, defaultValue string, envVars []string, description string) string {
+	var flagResult string
+	flag.StringVar(&flagResult, name, defaultValue, description)
+	flag.Parse()
+	if flag.Lookup(name).Changed {
+		return flagResult
+	}
+
+	for _, env := range envVars {
+		envResult := os.Getenv(env)
+		if envResult != "" {
+			return envResult
+		}
+	}
+
+	return defaultValue
+}
+
+func getConfigInt(name string, defaultValue int, envVars []string, description string) int {
+	var flagResult int
+	flag.IntVar(&flagResult, name, defaultValue, description)
+	flag.Parse()
+	if flag.Lookup(name).Changed {
+		return flagResult
+	}
+
+	for _, env := range envVars {
+		envResult, err := strconv.Atoi(os.Getenv(env))
+		if err == nil {
+			return envResult
+		}
+	}
+
+	return defaultValue
+}
+
+func getConfigBool(name string, defaultValue bool, envVars []string, description string) bool {
+	var flagResult bool
+	flag.BoolVar(&flagResult, name, defaultValue, description)
+	flag.Parse()
+	if flag.Lookup(name).Changed {
+		return flagResult
+	}
+
+	for _, env := range envVars {
+		envResult, err := strconv.ParseBool(os.Getenv(env))
+		if err == nil {
+			return envResult
+		}
+	}
+
+	return defaultValue
+}
+
 // GetConfig returns the configuration or an error
 func GetConfig(ctx context.Context, osArgs []string) (Config, error) {
 	var config Config
@@ -60,6 +128,8 @@ func GetConfig(ctx context.Context, osArgs []string) (Config, error) {
 			return nil
 		},
 	}
+
+	_, _ = newGetConfig(ctx)
 
 	err := app.Run(osArgs)
 	if err != nil {
