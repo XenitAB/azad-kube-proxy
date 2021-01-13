@@ -3,8 +3,10 @@ package cache
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/go-logr/logr"
 	logrTesting "github.com/go-logr/logr/testing"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
@@ -13,6 +15,13 @@ import (
 
 func TestNewCache(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	redisServer, err := miniredis.Run()
+	if err != nil {
+		t.Errorf("Expected err to be nil but it was %q", err)
+	}
+	defer redisServer.Close()
+
+	redisURL := fmt.Sprintf("redis://%s/0", redisServer.Addr())
 
 	cases := []struct {
 		cacheEngine models.CacheEngine
@@ -27,7 +36,7 @@ func TestNewCache(t *testing.T) {
 		{
 			cacheEngine: models.RedisCacheEngine,
 			config: config.Config{
-				RedisURI: "redis://127.0.0.1:6379/0",
+				RedisURI: redisURL,
 			},
 			expectedErr: nil,
 		},

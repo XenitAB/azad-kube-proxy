@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -18,6 +19,22 @@ import (
 var (
 	redisTimeout = 5 * time.Minute
 )
+
+type fakeErrorUser struct {
+	Username bool
+}
+
+func (i fakeErrorUser) MarshalBinary() ([]byte, error) {
+	return json.Marshal(i)
+}
+
+type fakeErrorGroup struct {
+	Name bool
+}
+
+func (i fakeErrorGroup) MarshalBinary() ([]byte, error) {
+	return json.Marshal(i)
+}
 
 func TestNewRedisCache(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
@@ -84,11 +101,27 @@ func TestRedisGetUser(t *testing.T) {
 		}
 	}
 
+	// Not found
 	_, found, _ := cache.GetUser(ctx, "does-not-exist")
 	if found {
 		t.Errorf("Expected cached user not to be found")
 	}
 
+	// Unmarshal error
+	fakeErrorUser := fakeErrorUser{
+		Username: false,
+	}
+	err = miniredisClient.SetNX(ctx, "fake-error-user", fakeErrorUser, redisTimeout).Err()
+	if err != nil {
+		t.Errorf("Expected err to be nil but it was %q", err)
+	}
+
+	_, _, err = cache.GetUser(ctx, "fake-error-user")
+	if !strings.Contains(err.Error(), "json: cannot unmarshal") {
+		t.Errorf("Expected error to contain 'json: cannot unmarshal' but it was: %q", err)
+	}
+
+	// Connection error
 	redisServer.Close()
 	_, _, err = cache.GetUser(ctx, "no-redis-server")
 	if !strings.Contains(err.Error(), "connect: connection refused") {
@@ -197,11 +230,27 @@ func TestRedisGetGroup(t *testing.T) {
 		}
 	}
 
+	// Not found
 	_, found, _ := cache.GetGroup(ctx, "does-not-exist")
 	if found {
 		t.Errorf("Expected cached group not to be found")
 	}
 
+	// Unmarshal error
+	fakeErrorGroup := fakeErrorGroup{
+		Name: false,
+	}
+	err = miniredisClient.SetNX(ctx, "fake-error-group", fakeErrorGroup, redisTimeout).Err()
+	if err != nil {
+		t.Errorf("Expected err to be nil but it was %q", err)
+	}
+
+	_, _, err = cache.GetGroup(ctx, "fake-error-group")
+	if !strings.Contains(err.Error(), "json: cannot unmarshal") {
+		t.Errorf("Expected error to contain 'json: cannot unmarshal' but it was: %q", err)
+	}
+
+	// Connection error
 	redisServer.Close()
 	_, _, err = cache.GetGroup(ctx, "no-redis-server")
 	if !strings.Contains(err.Error(), "connect: connection refused") {
