@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -13,6 +14,11 @@ import (
 // [./azad-kube-proxy --test abc --hejsan 123]
 func TestGetConfig(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	oldOSArgs := os.Args
+	var setOldArgs func() = func() {
+		os.Args = oldOSArgs
+	}
+	defer setOldArgs()
 
 	cases := []struct {
 		osArgs         []string
@@ -27,7 +33,13 @@ func TestGetConfig(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		_, _ = GetConfig(ctx, c.osArgs)
+		os.Args = c.osArgs
+		config, err := GetConfig(ctx)
+		if err != nil && c.expectedErr == nil {
+			t.Errorf("Expected err to be nil but it was %q", err)
+		}
+
+		t.Log(config)
 		if !cmp.Equal(c.expectedConfig, Config{}) {
 			t.Log("Config is empty")
 			// if config[c.expectedKey] != c.expectedUserType && c.expectedErr == nil {
