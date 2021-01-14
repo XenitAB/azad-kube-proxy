@@ -104,7 +104,7 @@ export TLS_CERTIFICATE_PATH=${CERT_PATH}
 export TLS_KEY_PATH=${KEY_PATH}
 export PORT="8443"
 
-go run cmd/azad-kube-proxy/main.go
+go run cmd/azad-kube-proxy/main.go --client-id="${CLIENT_ID}" --client-secret="${CLIENT_SECRET}" --tenant-id="${TENANT_ID}" --azure-ad-group-prefix="${AZURE_AD_GROUP_PREFIX}" --azure-ad-group-prefix="${AZURE_AD_GROUP_PREFIX}" --kubernetes-api-host="${KUBERNETES_API_HOST}" --kubernetes-api-port="${KUBERNETES_API_PORT}" --kubernetes-api-validate-cert="${KUBERNETES_API_CA_CERT_PATH}" --kubernetes-api-ca-cert-path="${KUBERNETES_API_TOKEN_PATH}" --tls-enabled="${TLS_ENABLED}" --tls-certificate-path="${TLS_CERTIFICATE_PATH}" --tls-key-path="${TLS_KEY_PATH}" --port="${PORT}"
 ```
 
 ### Authentication for end user
