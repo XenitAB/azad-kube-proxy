@@ -24,7 +24,7 @@ func main() {
 	ctx := logr.NewContext(context.Background(), log)
 
 	// Get configuration
-	config, err := config.GetConfig(ctx)
+	config, err := config.GetConfig(ctx, os.Args)
 	if err != nil {
 		log.Error(err, "Unable to generate config")
 		os.Exit(1)

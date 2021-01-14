@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"strconv"
 
 	"github.com/go-playground/validator/v10"
 	flag "github.com/spf13/pflag"
@@ -16,9 +15,9 @@ import (
 
 // Config contains the configuration that is used for the application
 type Config struct {
-	ClientID             string `validate:"uuid"`
-	ClientSecret         string
-	TenantID             string `validate:"uuid"`
+	ClientID             string `validate:"required,uuid"`
+	ClientSecret         string `validate:"required,min=1"`
+	TenantID             string `validate:"required,uuid"`
 	ListenerAddress      string `validate:"hostname_port"`
 	ListenerTLSConfig    ListenerTLSConfig
 	CacheEngine          models.CacheEngine
@@ -30,7 +29,7 @@ type Config struct {
 
 // KubernetesConfig contains the Kubernetes specific configuration
 type KubernetesConfig struct {
-	URL                 *url.URL `validate:"url"`
+	URL                 *url.URL
 	RootCA              *x509.CertPool
 	Token               string
 	ValidateCertificate bool
@@ -44,65 +43,72 @@ type ListenerTLSConfig struct {
 }
 
 // GetConfig returns the configuration or an error
-func GetConfig(ctx context.Context) (Config, error) {
-	clientID := getConfigString("client-id", "", []string{"CLIENT_ID"}, "Azure AD Application Client ID")
-	clientSecret := getConfigString("client-secret", "", []string{"CLIENT_SECRET"}, "Azure AD Application Client Secret")
-	tenantID := getConfigString("tenant-id", "", []string{"TENANT_ID"}, "Azure AD Tenant ID")
-	address := getConfigString("address", "0.0.0.0", []string{"ADDRESS"}, "Address to listen on")
-	port := getConfigInt("port", 8080, []string{"PORT"}, "Port number to listen on")
-	tlsCertificatePath := getConfigString("tls-certificate-path", "", []string{"TLS_CERTIFICATE_PATH"}, "Path for the TLS Certificate")
-	tlsKeyPath := getConfigString("tls-key-path", "", []string{"TLS_KEY_PATH"}, "Path for the TLS KEY")
-	tlsEnabled := getConfigBool("tls-enabled", false, []string{"TLS_ENABLED"}, "Should TLS be enabled for the listner?")
-	kubernetesAPIHost := getConfigString("kubernetes-api-host", "kubernetes.default", []string{"KUBERNETES_API_HOST", "KUBERNETES_SERVICE_HOST"}, "The host for the Kubernetes API")
-	kubernetesAPIPort := getConfigInt("kubernetes-api-port", 443, []string{"KUBERNETES_API_PORT", "KUBERNETES_SERVICE_PORT"}, "The port for the Kubernetes API")
-	kubernetesAPITLS := getConfigBool("kubernetes-api-tls", true, []string{"KUBERNETES_API_TLS"}, "Use TLS to communicate with the Kubernetes API?")
-	kubernetesAPIValidateCert := getConfigBool("kubernetes-api-validate-cert", true, []string{"KUBERNETES_API_VALIDATE_CERT"}, "Should the Kubernetes API Certificate be validated?")
-	kubernetesAPICACertPath := getConfigString("kubernetes-api-ca-cert-path", "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt", []string{"KUBERNETES_API_CA_CERT_PATH"}, "The ca certificate path for communication to the Kubernetes API")
-	kubernetesAPITokenPath := getConfigString("kubernetes-api-token-path", "/var/run/secrets/kubernetes.io/serviceaccount/token", []string{"KUBERNETES_API_TOKEN_PATH"}, "The token for communication to the Kubernetes API")
-	azureADGroupPrefix := getConfigString("azure-ad-group-prefix", "", []string{"AZURE_AD_GROUP_PREFIX"}, "The prefix of the Azure AD groups to be passed to the Kubernetes API")
-	azureADMaxGroupCount := getConfigInt("azure-ad-max-group-count", 50, []string{"AZURE_AD_MAX_GROUP_COUNT"}, "The maximum of groups allowed to be passed to the Kubernetes API before the proxy will return unauthorized")
-	cacheEngine := getConfigString("cache-engine", "MEMORY", []string{"CACHE_ENGINE"}, "What cache engine to use")
-	redisURI := getConfigString("redis-uri", "redis://127.0.0.1:6379/0", []string{"REDIS_URI"}, "The redis uri (redis://<user>:<password>@<host>:<port>/<db_number>)")
+func GetConfig(ctx context.Context, args []string) (Config, error) {
+	fs := flag.NewFlagSet("azad-kube-proxy", flag.ContinueOnError)
 
-	kubernetesAPIUrl, err := getKubernetesAPIUrl(kubernetesAPIHost, kubernetesAPIPort, kubernetesAPITLS)
+	clientID := fs.String("client-id", "", "Azure AD Application Client ID")
+	clientSecret := fs.String("client-secret", "", "Azure AD Application Client Secret")
+	tenantID := fs.String("tenant-id", "", "Azure AD Tenant ID")
+	address := fs.String("address", "0.0.0.0", "Address to listen on")
+	port := fs.Int("port", 8080, "Port number to listen on")
+	tlsCertificatePath := fs.String("tls-certificate-path", "", "Path for the TLS Certificate")
+	tlsKeyPath := fs.String("tls-key-path", "", "Path for the TLS KEY")
+	tlsEnabled := fs.Bool("tls-enabled", false, "Should TLS be enabled for the listner?")
+	kubernetesAPIHost := fs.String("kubernetes-api-host", "kubernetes.default", "The host for the Kubernetes API")
+	kubernetesAPIPort := fs.Int("kubernetes-api-port", 443, "The port for the Kubernetes API")
+	kubernetesAPITLS := fs.Bool("kubernetes-api-tls", true, "Use TLS to communicate with the Kubernetes API?")
+	kubernetesAPIValidateCert := fs.Bool("kubernetes-api-validate-cert", true, "Should the Kubernetes API Certificate be validated?")
+	kubernetesAPICACertPath := fs.String("kubernetes-api-ca-cert-path", "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt", "The ca certificate path for communication to the Kubernetes API")
+	kubernetesAPITokenPath := fs.String("kubernetes-api-token-path", "/var/run/secrets/kubernetes.io/serviceaccount/token", "The token for communication to the Kubernetes API")
+	azureADGroupPrefix := fs.String("azure-ad-group-prefix", "", "The prefix of the Azure AD groups to be passed to the Kubernetes API")
+	azureADMaxGroupCount := fs.Int("azure-ad-max-group-count", 50, "The maximum of groups allowed to be passed to the Kubernetes API before the proxy will return unauthorized")
+	cacheEngine := fs.String("cache-engine", "MEMORY", "What cache engine to use")
+	redisURI := fs.String("redis-uri", "redis://127.0.0.1:6379/0", "The redis uri (redis://<user>:<password>@<host>:<port>/<db_number>)")
+
+	err := fs.Parse(args)
 	if err != nil {
 		return Config{}, err
 	}
 
-	kubernetesRootCA, err := util.GetCertificate(ctx, kubernetesAPICACertPath)
+	kubernetesAPIUrl, err := getKubernetesAPIUrl(*kubernetesAPIHost, *kubernetesAPIPort, *kubernetesAPITLS)
 	if err != nil {
 		return Config{}, err
 	}
 
-	kubernetesToken, err := util.GetStringFromFile(ctx, kubernetesAPITokenPath)
+	kubernetesRootCA, err := util.GetCertificate(ctx, *kubernetesAPICACertPath)
 	if err != nil {
 		return Config{}, err
 	}
 
-	cacheEng, err := models.GetCacheEngine(cacheEngine)
+	kubernetesToken, err := util.GetStringFromFile(ctx, *kubernetesAPITokenPath)
+	if err != nil {
+		return Config{}, err
+	}
+
+	cacheEng, err := models.GetCacheEngine(*cacheEngine)
 	if err != nil {
 		return Config{}, err
 	}
 
 	config := Config{
-		ClientID:        clientID,
-		ClientSecret:    clientSecret,
-		TenantID:        tenantID,
-		ListenerAddress: fmt.Sprintf("%s:%d", address, port),
+		ClientID:        *clientID,
+		ClientSecret:    *clientSecret,
+		TenantID:        *tenantID,
+		ListenerAddress: fmt.Sprintf("%s:%d", *address, *port),
 		ListenerTLSConfig: ListenerTLSConfig{
-			Enabled:         tlsEnabled,
-			CertificatePath: tlsCertificatePath,
-			KeyPath:         tlsKeyPath,
+			Enabled:         *tlsEnabled,
+			CertificatePath: *tlsCertificatePath,
+			KeyPath:         *tlsKeyPath,
 		},
 		CacheEngine:          cacheEng,
-		RedisURI:             redisURI,
-		AzureADGroupPrefix:   azureADGroupPrefix,
-		AzureADMaxGroupCount: azureADMaxGroupCount,
+		RedisURI:             *redisURI,
+		AzureADGroupPrefix:   *azureADGroupPrefix,
+		AzureADMaxGroupCount: *azureADMaxGroupCount,
 		KubernetesConfig: KubernetesConfig{
 			URL:                 kubernetesAPIUrl,
 			RootCA:              kubernetesRootCA,
 			Token:               kubernetesToken,
-			ValidateCertificate: kubernetesAPIValidateCert,
+			ValidateCertificate: *kubernetesAPIValidateCert,
 		},
 	}
 
@@ -114,60 +120,6 @@ func GetConfig(ctx context.Context) (Config, error) {
 	return config, nil
 }
 
-func getConfigString(name string, defaultValue string, envVars []string, description string) string {
-	var flagResult string
-	flag.StringVar(&flagResult, name, defaultValue, description)
-	flag.Parse()
-	if flag.Lookup(name).Changed {
-		return flagResult
-	}
-
-	for _, env := range envVars {
-		envResult := os.Getenv(env)
-		if envResult != "" {
-			return envResult
-		}
-	}
-
-	return defaultValue
-}
-
-func getConfigInt(name string, defaultValue int, envVars []string, description string) int {
-	var flagResult int
-	flag.IntVar(&flagResult, name, defaultValue, description)
-	flag.Parse()
-	if flag.Lookup(name).Changed {
-		return flagResult
-	}
-
-	for _, env := range envVars {
-		envResult, err := strconv.Atoi(os.Getenv(env))
-		if err == nil {
-			return envResult
-		}
-	}
-
-	return defaultValue
-}
-
-func getConfigBool(name string, defaultValue bool, envVars []string, description string) bool {
-	var flagResult bool
-	flag.BoolVar(&flagResult, name, defaultValue, description)
-	flag.Parse()
-	if flag.Lookup(name).Changed {
-		return flagResult
-	}
-
-	for _, env := range envVars {
-		envResult, err := strconv.ParseBool(os.Getenv(env))
-		if err == nil {
-			return envResult
-		}
-	}
-
-	return defaultValue
-}
-
 // Validate validates AppConfig struct
 func (config Config) Validate() error {
 	validate := validator.New()
@@ -177,14 +129,19 @@ func (config Config) Validate() error {
 		return err
 	}
 
-	err = validate.Struct(config.KubernetesConfig)
-	if err != nil {
-		return err
-	}
-
-	err = validate.Struct(config.ListenerTLSConfig)
-	if err != nil {
-		return err
+	if config.ListenerTLSConfig.Enabled {
+		if len(config.ListenerTLSConfig.CertificatePath) == 0 {
+			return fmt.Errorf("config.ListenerTLSConfig.CertificatePath is not set")
+		}
+		if !fileExists(config.ListenerTLSConfig.CertificatePath) {
+			return fmt.Errorf("config.ListenerTLSConfig.CertificatePath is not a file: %s", config.ListenerTLSConfig.CertificatePath)
+		}
+		if len(config.ListenerTLSConfig.KeyPath) == 0 {
+			return fmt.Errorf("config.ListenerTLSConfig.KeyPath is not set")
+		}
+		if !fileExists(config.ListenerTLSConfig.KeyPath) {
+			return fmt.Errorf("config.ListenerTLSConfig.KeyPath is not a file: %s", config.ListenerTLSConfig.KeyPath)
+		}
 	}
 
 	return nil
@@ -201,4 +158,12 @@ func getHTTPScheme(tls bool) string {
 	}
 
 	return "http"
+}
+
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
 }
