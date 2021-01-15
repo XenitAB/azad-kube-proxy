@@ -139,6 +139,12 @@ func TestGetUserGroups(t *testing.T) {
 			}
 		}
 	}
+
+	emptyAzureClient := Client{}
+	_, err = emptyAzureClient.GetUserGroups(ctx, "", "FAKE")
+	if !strings.Contains(err.Error(), "Unknown userType: FAKE") {
+		t.Errorf("Expected err to contain 'Unknown userType: FAKE' but was %q", err)
+	}
 }
 
 func TestStartSyncGroups(t *testing.T) {

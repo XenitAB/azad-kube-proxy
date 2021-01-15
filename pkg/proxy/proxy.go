@@ -72,6 +72,13 @@ func (server *Server) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	var stopGroupSync func() = func() {
+		// Stop group sync
+		syncTicker.Stop()
+		syncChan <- true
+		return
+	}
+	defer stopGroupSync()
 
 	// Configure reverse proxy and http server
 	log.Info("Initializing reverse proxy", "ListenerAddress", server.Config.ListenerAddress)
@@ -94,10 +101,6 @@ func (server *Server) Start(ctx context.Context) error {
 
 	// Blocks until signal is sent
 	<-done
-
-	// Stop group sync
-	syncTicker.Stop()
-	syncChan <- true
 
 	log.Info("Server shutdown initiated")
 

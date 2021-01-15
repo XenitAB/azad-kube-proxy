@@ -9,7 +9,7 @@
             "program": "${workspaceFolder}/cmd/azad-kube-proxy/main.go",
             "env": {},
             "args": [],
-            "envFile": "${workspaceFolder}/tmp/env",
+            "envFile": "${workspaceFolder}/tmp/test_env",
         },
         {
             "name": "Launch test",
@@ -21,7 +21,7 @@
                 "-test.run",
                 "TestNewAzureClient"
             ],
-            "envFile": "${workspaceFolder}/tmp/env",
+            "envFile": "${workspaceFolder}/tmp/test_env",
         },
     ]
 }
