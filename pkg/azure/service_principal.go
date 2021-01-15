@@ -90,6 +90,12 @@ func (user *servicePrincipalUser) getServicePrincipalGroups(ctx context.Context,
 		return nil, err
 	}
 
+	if res.StatusCode != 200 {
+		err := fmt.Errorf("Status code not 200 OK: %d", res.StatusCode)
+		log.Error(err, "Unable to get Azure AD groups for service principal", "objectID", objectID)
+		return nil, err
+	}
+
 	defer res.Body.Close()
 
 	body, err := ioutil.ReadAll(res.Body)

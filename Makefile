@@ -20,7 +20,7 @@ vet:
 
 test:
 	echo $(TENANT_ID)
-	go test -timeout 1m ./... -cover -v
+	go test -timeout 1m ./... -cover
 
 docker-build:
 	docker build -t $(IMG) .
