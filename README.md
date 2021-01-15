@@ -153,24 +153,24 @@ done
 #### Creating env file for tests
 
 ```shell
-echo "CLIENT_ID=\"${AZ_APP_ID}\"" > ${PWD}/tmp/test_env
-echo "CLIENT_SECRET=\"${AZ_APP_SECRET}\"" >> ${PWD}/tmp/test_env
-echo "TENANT_ID=\"$(az account show --output tsv --query tenantId)\"" >> ${PWD}/tmp/test_env
-echo "TEST_USER_SP_CLIENT_ID=\"${SP_CLIENT_ID}\"" >> ${PWD}/tmp/test_env
-echo "TEST_USER_SP_CLIENT_SECRET=\"${SP_CLIENT_SECRET}\"" >> ${PWD}/tmp/test_env
-echo "TEST_USER_SP_RESOURCE=\"${AZ_APP_URI}\"" >> ${PWD}/tmp/test_env
-echo "TEST_USER_SP_OBJECT_ID=\"${SP_OBJECT_ID}\"" >> ${PWD}/tmp/test_env
-echo "TEST_USER_OBJECT_ID=\"${USER_OBJECT_ID}\"" >> ${PWD}/tmp/test_env
-echo "TEST_USER_PASSWORD=\"${USER_PASSWORD}\"" >> ${PWD}/tmp/test_env
-echo "AZURE_AD_GROUP_PREFIX=\"prefix1\"" >> ${PWD}/tmp/test_env
-echo "KUBERNETES_API_HOST=\"${K8S_HOST}\"" >> ${PWD}/tmp/test_env
-echo "KUBERNETES_API_PORT=\"${K8S_PORT}\"" >> ${PWD}/tmp/test_env
-echo "KUBERNETES_API_CA_CERT_PATH=\"${KUBE_CA_PATH}\"" >> ${PWD}/tmp/test_env
-echo "KUBERNETES_API_TOKEN_PATH=\"${KUBE_TOKEN_PATH}\"" >> ${PWD}/tmp/test_env
-echo "TLS_ENABLED=\"true\"" >> ${PWD}/tmp/test_env
-echo "TLS_CERTIFICATE_PATH=\"${CERT_PATH}\"" >> ${PWD}/tmp/test_env
-echo "TLS_KEY_PATH=\"${KEY_PATH}\"" >> ${PWD}/tmp/test_env
-echo "PORT=\"8443\"" >> ${PWD}/tmp/test_env
+echo "CLIENT_ID=${AZ_APP_ID}" > ${PWD}/tmp/test_env
+echo "CLIENT_SECRET=${AZ_APP_SECRET}" >> ${PWD}/tmp/test_env
+echo "TENANT_ID=$(az account show --output tsv --query tenantId)" >> ${PWD}/tmp/test_env
+echo "TEST_USER_SP_CLIENT_ID=${SP_CLIENT_ID}" >> ${PWD}/tmp/test_env
+echo "TEST_USER_SP_CLIENT_SECRET=${SP_CLIENT_SECRET}" >> ${PWD}/tmp/test_env
+echo "TEST_USER_SP_RESOURCE=${AZ_APP_URI}" >> ${PWD}/tmp/test_env
+echo "TEST_USER_SP_OBJECT_ID=${SP_OBJECT_ID}" >> ${PWD}/tmp/test_env
+echo "TEST_USER_OBJECT_ID=${USER_OBJECT_ID}" >> ${PWD}/tmp/test_env
+echo "TEST_USER_PASSWORD=${USER_PASSWORD}" >> ${PWD}/tmp/test_env
+echo "AZURE_AD_GROUP_PREFIX=prefix1" >> ${PWD}/tmp/test_env
+echo "KUBERNETES_API_HOST=${K8S_HOST}" >> ${PWD}/tmp/test_env
+echo "KUBERNETES_API_PORT=${K8S_PORT}" >> ${PWD}/tmp/test_env
+echo "KUBERNETES_API_CA_CERT_PATH=${KUBE_CA_PATH}" >> ${PWD}/tmp/test_env
+echo "KUBERNETES_API_TOKEN_PATH=${KUBE_TOKEN_PATH}" >> ${PWD}/tmp/test_env
+echo "TLS_ENABLED=true" >> ${PWD}/tmp/test_env
+echo "TLS_CERTIFICATE_PATH=${CERT_PATH}" >> ${PWD}/tmp/test_env
+echo "TLS_KEY_PATH=${KEY_PATH}" >> ${PWD}/tmp/test_env
+echo "PORT=8443" >> ${PWD}/tmp/test_env
 ```
 
 ### Running the proxy
