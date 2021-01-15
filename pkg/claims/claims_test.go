@@ -68,30 +68,27 @@ func TestGetOIDCVerifier(t *testing.T) {
 	cases := []struct {
 		tenantID            string
 		clientID            string
-		expectErr           bool
 		expectedErrContains string
 	}{
 		{
 			tenantID:            tenantID,
 			clientID:            clientID,
-			expectErr:           false,
 			expectedErrContains: "",
 		},
 		{
 			tenantID:            "",
 			clientID:            "",
-			expectErr:           true,
 			expectedErrContains: "AADSTS90002",
 		},
 	}
 
 	for _, c := range cases {
 		_, err := GetOIDCVerifier(ctx, c.tenantID, c.clientID)
-		if err != nil && !c.expectErr {
+		if err != nil && len(c.expectedErrContains) == 0 {
 			t.Errorf("Expected err to be nil but it was %q", err)
 		}
 
-		if c.expectErr {
+		if len(c.expectedErrContains) > 0 {
 			if !strings.Contains(err.Error(), c.expectedErrContains) {
 				t.Errorf("Expected err to contain %q but it was %q", c.expectedErrContains, err)
 			}

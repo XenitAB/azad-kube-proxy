@@ -56,7 +56,6 @@ func NewAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graph
 	usersClient, err := a.getAzureADUsersClient(ctx)
 	if err != nil {
 		return nil, err
-
 	}
 
 	a.groupsClient, err = a.getAzureADGroupsClient(ctx)
