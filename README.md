@@ -11,6 +11,39 @@ This reverse proxy will run in front of a Kubernetes API and accept tokens from 
 
 ![overview](assets/azad-kube-proxy-overview.png)
 
+## Why was this built?
+
+There are a few reasons why this proxy was built, mainly:
+
+- Azure AD authentication works great with Azure Kubernetes Service, but not that well with on-prem or other providers.
+  - When a user is member of more than 200 groups, distributed claims will be used. Azure AD doesn't follow the OIDC specification for distributed claims which means it doesn't work by default.
+    - Support OIDC distributed claims for group resolution in the K8S apiserver OIDC token checker [#62920](https://github.com/kubernetes/kubernetes/issues/62920)
+    - [AppsCode Guard](https://github.com/appscode/guard/blob/master/auth/providers/azure/graph/aks_tokenprovider.go)
+- When you do a blue/green deployment of Azure Kubernetes Service, a new API endpoint is used and everyone accessing the cluster will need to generate a new config. By using a proxy, you can use your own DNS records for it and just switch what cluster it is pointing to.
+- Using the AKS Kubernetes API with service principals haven't been the easiest (and before AADv2 support, wasn't possible).
+- Full control of the Azure AD Application that is published.
+- Ability to filter groups based on prefix to only allow specific groups to be used with the cluster.
+- Ability to create RBAC rules based on group names instead of ObjectIDs.
+
+## What are the main features?
+
+The main features of this proxy are:
+
+- Use Azure AD authentication with all cloud providers and on-prem.
+- Enable blue/green deployment of clusters.
+- Resolve the distributed claims issue with Azure AD and Kubernetes.
+- Limit what groups are sent to the Kubernetes API based on group name prefix.
+- Ability to control the Azure AD Application fully.
+- Use `az` (azure cli) to get tokens.
+- Use both normal users and service principals.
+
+## Alternatives
+
+The following alternatives exists:
+
+- [kube-oidc-proxy](https://github.com/jetstack/kube-oidc-proxy)
+- [Pomerium](https://github.com/pomerium/pomerium)
+
 ## Local development
 
 ### Creating the Azure AD Application
