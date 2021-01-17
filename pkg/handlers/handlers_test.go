@@ -22,7 +22,6 @@ import (
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
-	"github.com/xenitab/azad-kube-proxy/pkg/user"
 )
 
 func TestReadinessHandler(t *testing.T) {
@@ -33,8 +32,9 @@ func TestReadinessHandler(t *testing.T) {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
 
-	fakeCache := newFakeCache()
-	proxyHandlers, err := NewHandlersClient(ctx, config.Config{}, fakeCache, &user.Client{})
+	fakeCacheClient := newFakeCacheClient()
+	fakeUserClient := newFakeUserClient()
+	proxyHandlers, err := NewHandlersClient(ctx, config.Config{}, fakeCacheClient, fakeUserClient)
 	rr := httptest.NewRecorder()
 	router := mux.NewRouter()
 	router.HandleFunc("/readyz", proxyHandlers.ReadinessHandler(ctx)).Methods("GET")
@@ -61,8 +61,9 @@ func TestLivenessHandler(t *testing.T) {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
 
-	fakeCache := newFakeCache()
-	proxyHandlers, err := NewHandlersClient(ctx, config.Config{}, fakeCache, &user.Client{})
+	fakeCacheClient := newFakeCacheClient()
+	fakeUserClient := newFakeUserClient()
+	proxyHandlers, err := NewHandlersClient(ctx, config.Config{}, fakeCacheClient, fakeUserClient)
 	rr := httptest.NewRecorder()
 	router := mux.NewRouter()
 	router.HandleFunc("/healthz", proxyHandlers.LivenessHandler(ctx)).Methods("GET")
@@ -96,11 +97,12 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
 
-	memCache, err := cache.NewMemoryCache(5*time.Minute, 10*time.Minute)
+	memCacheClient, err := cache.NewMemoryCache(5*time.Minute, 10*time.Minute)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
-	fakeCache := newFakeCache()
+	fakeCacheClient := newFakeCacheClient()
+	fakeUserClient := newFakeUserClient()
 
 	cases := []struct {
 		request             *http.Request
@@ -118,7 +120,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 					"Authorization": {fmt.Sprintf("Bearer %s", token.Token)},
 				},
 			},
-			cacheClient:         memCache,
+			cacheClient:         memCacheClient,
 			expectedResCode:     http.StatusOK,
 			expectedErrContains: "",
 		},
@@ -132,7 +134,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 					"Authorization": {"Bearer"},
 				},
 			},
-			cacheClient:         memCache,
+			cacheClient:         memCacheClient,
 			expectedResCode:     http.StatusForbidden,
 			expectedErrContains: "Unable to extract Bearer token",
 		},
@@ -146,7 +148,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 					"Authorization": {"Bearer fake-token"},
 				},
 			},
-			cacheClient:         memCache,
+			cacheClient:         memCacheClient,
 			expectedResCode:     http.StatusForbidden,
 			expectedErrContains: "Unable to verify token",
 		},
@@ -160,7 +162,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 					"Authorization": {"Bearer fake-token"},
 				},
 			},
-			cacheClient:         fakeCache,
+			cacheClient:         fakeCacheClient,
 			expectedResCode:     http.StatusForbidden,
 			expectedErrContains: "",
 		},
@@ -187,7 +189,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		proxyHandlers, err := NewHandlersClient(ctx, config, c.cacheClient, &user.Client{})
+		proxyHandlers, err := NewHandlersClient(ctx, config, c.cacheClient, fakeUserClient)
 		if err != nil {
 			t.Errorf("Expected err to be nil but it was %q", err)
 		}
@@ -215,15 +217,41 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 	}
 }
 
-type fakeCache struct {
+type fakeUserClient struct {
+	fakeError error
+	fakeUser  models.User
+	fakeGroup models.Group
+}
+
+func newFakeUserClient() *fakeUserClient {
+	return &fakeUserClient{
+		fakeError: nil,
+		fakeUser: models.User{
+			Username: "username",
+			ObjectID: "00000000-0000-0000-0000-000000000000",
+			Groups: []models.Group{
+				{Name: "group1"},
+			},
+		},
+		fakeGroup: models.Group{
+			Name: "group1",
+		},
+	}
+}
+
+func (client *fakeUserClient) GetUser(ctx context.Context, username, objectID string) (models.User, error) {
+	return client.fakeUser, client.fakeError
+}
+
+type fakeCacheClient struct {
 	fakeError error
 	fakeFound bool
 	fakeUser  models.User
 	fakeGroup models.Group
 }
 
-func newFakeCache() *fakeCache {
-	return &fakeCache{
+func newFakeCacheClient() *fakeCacheClient {
+	return &fakeCacheClient{
 		fakeError: nil,
 		fakeFound: true,
 		fakeUser: models.User{
@@ -239,23 +267,19 @@ func newFakeCache() *fakeCache {
 	}
 }
 
-// GetUser ...
-func (c *fakeCache) GetUser(ctx context.Context, s string) (models.User, bool, error) {
+func (c *fakeCacheClient) GetUser(ctx context.Context, s string) (models.User, bool, error) {
 	return c.fakeUser, c.fakeFound, c.fakeError
 }
 
-// SetUser ...
-func (c *fakeCache) SetUser(ctx context.Context, s string, u models.User) error {
+func (c *fakeCacheClient) SetUser(ctx context.Context, s string, u models.User) error {
 	return c.fakeError
 }
 
-// GetGroup ...
-func (c *fakeCache) GetGroup(ctx context.Context, s string) (models.Group, bool, error) {
+func (c *fakeCacheClient) GetGroup(ctx context.Context, s string) (models.Group, bool, error) {
 	return c.fakeGroup, c.fakeFound, c.fakeError
 }
 
-// SetGroup ...
-func (c *fakeCache) SetGroup(ctx context.Context, s string, g models.Group) error {
+func (c *fakeCacheClient) SetGroup(ctx context.Context, s string, g models.Group) error {
 	return c.fakeError
 }
 
