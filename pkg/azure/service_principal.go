@@ -18,14 +18,14 @@ import (
 
 type servicePrincipalUser struct {
 	azureCredential *azidentity.ClientSecretCredential
-	cache           cache.Cache
+	cacheClient     cache.ClientInterface
 	msGraphToken    *azcore.AccessToken
 }
 
-func newServicePrincipalUser(ctx context.Context, azureCredential *azidentity.ClientSecretCredential, cache cache.Cache) (*servicePrincipalUser, error) {
+func newServicePrincipalUser(ctx context.Context, azureCredential *azidentity.ClientSecretCredential, cacheClient cache.ClientInterface) (*servicePrincipalUser, error) {
 	user := &servicePrincipalUser{
 		azureCredential: azureCredential,
-		cache:           cache,
+		cacheClient:     cacheClient,
 	}
 
 	var err error
@@ -48,7 +48,7 @@ func (user *servicePrincipalUser) getGroups(ctx context.Context, objectID string
 
 	var groupNames []models.Group
 	for _, groupID := range groupIDs {
-		group, found, err := user.cache.GetGroup(ctx, groupID)
+		group, found, err := user.cacheClient.GetGroup(ctx, groupID)
 		if err != nil {
 			return nil, err
 		}

@@ -30,7 +30,7 @@ func TestNewAzureClient(t *testing.T) {
 		clientSecret        string
 		tenantID            string
 		graphFilter         string
-		cache               cache.Cache
+		cacheClient         cache.ClientInterface
 		expectedErrContains string
 	}{
 		{
@@ -38,7 +38,7 @@ func TestNewAzureClient(t *testing.T) {
 			clientSecret:        clientSecret,
 			tenantID:            tenantID,
 			graphFilter:         "",
-			cache:               memCache,
+			cacheClient:         memCache,
 			expectedErrContains: "",
 		},
 		{
@@ -46,7 +46,7 @@ func TestNewAzureClient(t *testing.T) {
 			clientSecret:        clientSecret,
 			tenantID:            tenantID,
 			graphFilter:         "prefix",
-			cache:               memCache,
+			cacheClient:         memCache,
 			expectedErrContains: "",
 		},
 		{
@@ -54,7 +54,7 @@ func TestNewAzureClient(t *testing.T) {
 			clientSecret:        clientSecret,
 			tenantID:            "",
 			graphFilter:         "",
-			cache:               memCache,
+			cacheClient:         memCache,
 			expectedErrContains: "Client Secret Credential: Invalid tenantID provided.",
 		},
 		{
@@ -62,13 +62,13 @@ func TestNewAzureClient(t *testing.T) {
 			clientSecret:        "",
 			tenantID:            tenantID,
 			graphFilter:         "",
-			cache:               memCache,
+			cacheClient:         memCache,
 			expectedErrContains: "AADSTS7000216",
 		},
 	}
 
 	for _, c := range cases {
-		_, err := NewAzureClient(ctx, c.clientID, c.clientSecret, c.tenantID, c.graphFilter, c.cache)
+		_, err := NewAzureClient(ctx, c.clientID, c.clientSecret, c.tenantID, c.graphFilter, c.cacheClient)
 		if err != nil && len(c.expectedErrContains) == 0 {
 			t.Errorf("Expected err to be nil but it was %q", err)
 		}

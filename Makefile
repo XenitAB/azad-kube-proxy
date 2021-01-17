@@ -23,7 +23,7 @@ vet:
 
 .SILENT:
 test:
-	go test -timeout 1m ./... -cover
+	go test -timeout 1m ./pkg/handlers -cover
 
 .SILENT:
 run:

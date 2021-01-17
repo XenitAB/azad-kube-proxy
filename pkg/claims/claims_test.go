@@ -106,7 +106,7 @@ func getEnvOrSkip(t *testing.T, envVar string) string {
 }
 
 func getAccessToken(ctx context.Context, tenantID, clientID, clientSecret, scope string) (*azcore.AccessToken, error) {
-	tokenFilePath := "tmp/test-token-file"
+	tokenFilePath := fmt.Sprintf("../../tmp/test-token-file_%s", clientID)
 	tokenFileExists := fileExists(tokenFilePath)
 	token := &azcore.AccessToken{}
 
@@ -134,6 +134,16 @@ func getAccessToken(ctx context.Context, tenantID, clientID, clientSecret, scope
 		}
 
 		token, err := cred.GetToken(ctx, azcore.TokenRequestOptions{Scopes: []string{scope}})
+		if err != nil {
+			return nil, err
+		}
+
+		fileContents, err := json.Marshal(&token)
+		if err != nil {
+			return nil, err
+		}
+
+		err = ioutil.WriteFile(tokenFilePath, fileContents, 0644)
 		if err != nil {
 			return nil, err
 		}

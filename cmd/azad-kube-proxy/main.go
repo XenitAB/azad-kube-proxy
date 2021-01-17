@@ -31,7 +31,7 @@ func main() {
 	}
 
 	// Start reverse proxy
-	server, err := proxy.NewProxyServer(ctx, config)
+	server, err := proxy.NewProxyClient(ctx, config)
 	if err != nil {
 		log.Error(err, "Unable to initialize proxy server")
 		os.Exit(1)

@@ -31,19 +31,19 @@ type Client struct {
 	clientSecret         string
 	tenantID             string
 	graphFilter          string
-	cache                cache.Cache
+	cacheClient          cache.ClientInterface
 	groupsClient         graphrbac.GroupsClient
 	user                 *user
 	servicePrincipalUser *servicePrincipalUser
 }
 
 // NewAzureClient returns an Azure client or error
-func NewAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graphFilter string, cache cache.Cache) (*Client, error) {
+func NewAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graphFilter string, cacheClient cache.ClientInterface) (*Client, error) {
 	a := &Client{
 		clientID:     clientID,
 		clientSecret: clientSecret,
 		tenantID:     tenantID,
-		cache:        cache,
+		cacheClient:  cacheClient,
 	}
 
 	var err error
@@ -68,12 +68,12 @@ func NewAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graph
 	}
 	a.graphFilter = graphFilter
 
-	a.user, err = newUser(ctx, cache, usersClient)
+	a.user, err = newUser(ctx, cacheClient, usersClient)
 	if err != nil {
 		return nil, err
 	}
 
-	a.servicePrincipalUser, err = newServicePrincipalUser(ctx, azureCredential, cache)
+	a.servicePrincipalUser, err = newServicePrincipalUser(ctx, azureCredential, cacheClient)
 	if err != nil {
 		return nil, err
 	}
@@ -204,12 +204,12 @@ func (client *Client) syncAzureADGroupsCache(ctx context.Context, syncReason str
 	}
 
 	for _, group := range groups {
-		_, found, err := client.cache.GetGroup(ctx, *group.ObjectID)
+		_, found, err := client.cacheClient.GetGroup(ctx, *group.ObjectID)
 		if err != nil {
 			return err
 		}
 		if !found {
-			client.cache.SetGroup(ctx, *group.ObjectID, models.Group{Name: *group.DisplayName})
+			client.cacheClient.SetGroup(ctx, *group.ObjectID, models.Group{Name: *group.DisplayName})
 		}
 	}
 

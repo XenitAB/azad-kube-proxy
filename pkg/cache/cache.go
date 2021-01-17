@@ -9,8 +9,8 @@ import (
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
 
-// Cache ...
-type Cache interface {
+// ClientInterface ...
+type ClientInterface interface {
 	GetUser(ctx context.Context, s string) (models.User, bool, error)
 	SetUser(ctx context.Context, s string, u models.User) error
 	GetGroup(ctx context.Context, s string) (models.Group, bool, error)
@@ -18,7 +18,7 @@ type Cache interface {
 }
 
 // NewCache ...
-func NewCache(ctx context.Context, cacheEngine models.CacheEngine, config config.Config) (Cache, error) {
+func NewCache(ctx context.Context, cacheEngine models.CacheEngine, config config.Config) (ClientInterface, error) {
 	switch cacheEngine {
 	case models.RedisCacheEngine:
 		return NewRedisCache(ctx, config.RedisURI, 5*time.Minute)

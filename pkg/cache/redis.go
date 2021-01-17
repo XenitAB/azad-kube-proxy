@@ -11,8 +11,8 @@ import (
 
 // RedisCache ...
 type RedisCache struct {
-	Cache      *redis.Client
-	Expiration time.Duration
+	CacheClient *redis.Client
+	Expiration  time.Duration
 }
 
 // NewRedisCache ...
@@ -32,8 +32,8 @@ func NewRedisCache(ctx context.Context, redisURL string, expiration time.Duratio
 	}
 
 	return &RedisCache{
-		Cache:      redisClient,
-		Expiration: expiration,
+		CacheClient: redisClient,
+		Expiration:  expiration,
 	}, nil
 }
 
@@ -41,7 +41,7 @@ func NewRedisCache(ctx context.Context, redisURL string, expiration time.Duratio
 func (c *RedisCache) GetUser(ctx context.Context, s string) (models.User, bool, error) {
 	log := logr.FromContext(ctx)
 
-	res := c.Cache.Get(ctx, s)
+	res := c.CacheClient.Get(ctx, s)
 	err := res.Err()
 	if err != nil {
 		if err == redis.Nil {
@@ -66,7 +66,7 @@ func (c *RedisCache) GetUser(ctx context.Context, s string) (models.User, bool, 
 func (c *RedisCache) SetUser(ctx context.Context, s string, u models.User) error {
 	log := logr.FromContext(ctx)
 
-	err := c.Cache.SetNX(ctx, s, u, c.Expiration).Err()
+	err := c.CacheClient.SetNX(ctx, s, u, c.Expiration).Err()
 	if err != nil {
 		log.Error(err, "Unable to cache user object to Redis", "keyName", s)
 		return err
@@ -79,7 +79,7 @@ func (c *RedisCache) SetUser(ctx context.Context, s string, u models.User) error
 func (c *RedisCache) GetGroup(ctx context.Context, s string) (models.Group, bool, error) {
 	log := logr.FromContext(ctx)
 
-	res := c.Cache.Get(ctx, s)
+	res := c.CacheClient.Get(ctx, s)
 	err := res.Err()
 	if err != nil {
 		if err == redis.Nil {
@@ -105,7 +105,7 @@ func (c *RedisCache) GetGroup(ctx context.Context, s string) (models.Group, bool
 func (c *RedisCache) SetGroup(ctx context.Context, s string, g models.Group) error {
 	log := logr.FromContext(ctx)
 
-	err := c.Cache.SetNX(ctx, s, g, c.Expiration).Err()
+	err := c.CacheClient.SetNX(ctx, s, g, c.Expiration).Err()
 	if err != nil {
 		log.Error(err, "Unable to cache group object to Redis", "keyName", s)
 		return err
