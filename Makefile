@@ -23,7 +23,12 @@ vet:
 
 .SILENT:
 test:
-	go test -timeout 1m ./pkg/handlers -cover
+	go test -timeout 1m ./... -cover
+
+.SILENT:
+cover:
+	go test -timeout 1m ./... -coverprofile=tmp/coverage.out                                                                                                                                                                                         16:10:38
+	go tool cover -html=tmp/coverage.out	
 
 .SILENT:
 run:

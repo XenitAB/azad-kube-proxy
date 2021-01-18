@@ -16,10 +16,10 @@
             "type": "go",
             "request": "launch",
             "mode": "test",
-            "program": "${workspaceRoot}/pkg/azure",
+            "program": "${workspaceRoot}/pkg/handlers",
             "args": [
                 "-test.run",
-                "TestNewAzureClient"
+                "TestAzadKubeProxyHandler"
             ],
             "envFile": "${workspaceFolder}/tmp/test_env",
         },

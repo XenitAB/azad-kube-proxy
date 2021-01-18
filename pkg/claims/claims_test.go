@@ -24,8 +24,9 @@ func TestNewClaims(t *testing.T) {
 	spClientSecret := getEnvOrSkip(t, "TEST_USER_SP_CLIENT_SECRET")
 	spResource := getEnvOrSkip(t, "TEST_USER_SP_RESOURCE")
 	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	claimsClient := NewClaimsClient()
 
-	verifier, err := GetOIDCVerifier(ctx, tenantID, clientID)
+	verifier, err := claimsClient.GetOIDCVerifier(ctx, tenantID, clientID)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
@@ -40,7 +41,7 @@ func TestNewClaims(t *testing.T) {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
 
-	claims, err := NewClaims(verifiedToken)
+	claims, err := claimsClient.NewClaims(verifiedToken)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
@@ -49,12 +50,12 @@ func TestNewClaims(t *testing.T) {
 		t.Errorf("Returned ApplicationID wasn't what was expected.\nExpected: %s\nActual:  %s", spClientID, spClientID)
 	}
 
-	_, err = NewClaims(nil)
+	_, err = claimsClient.NewClaims(nil)
 	if !strings.Contains(err.Error(), "Token nil") {
 		t.Errorf("Expected err to contain 'Token nil': %q", err)
 	}
 
-	_, err = NewClaims(&oidc.IDToken{})
+	_, err = claimsClient.NewClaims(&oidc.IDToken{})
 	if !strings.Contains(err.Error(), "oidc: claims not set") {
 		t.Errorf("Expected err to contain 'oidc: claims not set': %q", err)
 	}
@@ -64,6 +65,7 @@ func TestGetOIDCVerifier(t *testing.T) {
 	clientID := getEnvOrSkip(t, "CLIENT_ID")
 	tenantID := getEnvOrSkip(t, "TENANT_ID")
 	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	claimsClient := NewClaimsClient()
 
 	cases := []struct {
 		tenantID            string
@@ -83,7 +85,7 @@ func TestGetOIDCVerifier(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		_, err := GetOIDCVerifier(ctx, c.tenantID, c.clientID)
+		_, err := claimsClient.GetOIDCVerifier(ctx, c.tenantID, c.clientID)
 		if err != nil && len(c.expectedErrContains) == 0 {
 			t.Errorf("Expected err to be nil but it was %q", err)
 		}

@@ -38,11 +38,12 @@ type Client struct {
 	CacheClient  cache.ClientInterface
 	OIDCVerifier *oidc.IDTokenVerifier
 	UserClient   user.ClientInterface
+	ClaimsClient claims.ClientInterface
 }
 
 // NewHandlersClient ...
-func NewHandlersClient(ctx context.Context, config config.Config, cacheClient cache.ClientInterface, userClient user.ClientInterface) (ClientInterface, error) {
-	oidcVerifier, err := claims.GetOIDCVerifier(ctx, config.TenantID, config.ClientID)
+func NewHandlersClient(ctx context.Context, config config.Config, cacheClient cache.ClientInterface, userClient user.ClientInterface, claimsClient claims.ClientInterface) (ClientInterface, error) {
+	oidcVerifier, err := claimsClient.GetOIDCVerifier(ctx, config.TenantID, config.ClientID)
 	if err != nil {
 		return nil, err
 	}
@@ -52,6 +53,7 @@ func NewHandlersClient(ctx context.Context, config config.Config, cacheClient ca
 		CacheClient:  cacheClient,
 		OIDCVerifier: oidcVerifier,
 		UserClient:   userClient,
+		ClaimsClient: claimsClient,
 	}
 
 	return handlersClient, nil
@@ -114,18 +116,18 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 			return
 		}
 
+		// Verify that client isn't sending impersonation headers
+		for h := range r.Header {
+			if strings.ToLower(h) == strings.ToLower(impersonateUserHeader) || strings.ToLower(h) == strings.ToLower(impersonateGroupHeader) || strings.HasPrefix(strings.ToLower(h), strings.ToLower(impersonateUserExtraHeaderPrefix)) {
+				log.Error(errors.New("Client sending impersonation headers"), "Client sending impersonation headers")
+				http.Error(w, "User unauthorized", http.StatusForbidden)
+				return
+			}
+		}
+
 		// Get the user from the token if no cache was found
 		if !found {
-			// Verify that client isn't sending impersonation headers
-			for h := range r.Header {
-				if strings.ToLower(h) == strings.ToLower(impersonateUserHeader) || strings.ToLower(h) == strings.ToLower(impersonateGroupHeader) || strings.HasPrefix(strings.ToLower(h), strings.ToLower(impersonateUserExtraHeaderPrefix)) {
-					log.Error(errors.New("Client sending impersonation headers"), "Client sending impersonation headers")
-					http.Error(w, "User unauthorized", http.StatusForbidden)
-					return
-				}
-			}
-
-			claims, err := claims.NewClaims(verifiedToken)
+			claims, err := client.ClaimsClient.NewClaims(verifiedToken)
 			if err != nil {
 				log.Error(err, "Unable to get claims")
 				http.Error(w, "Unable to get claims", http.StatusForbidden)
@@ -141,7 +143,7 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 			}
 
 			// Check if number of groups more than the configured limit
-			if len(user.Groups) > client.Config.AzureADMaxGroupCount {
+			if len(user.Groups) > client.Config.AzureADMaxGroupCount-1 {
 				log.Error(errors.New("Max groups reached"), "The user is member of more groups than allowed to be passed to the Kubernetes API", "groupCount", len(user.Groups), "username", user.Username, "config.AzureADMaxGroupCount", client.Config.AzureADMaxGroupCount)
 				http.Error(w, "Too many groups", http.StatusForbidden)
 				return

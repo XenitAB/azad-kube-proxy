@@ -15,6 +15,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/xenitab/azad-kube-proxy/pkg/azure"
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
+	"github.com/xenitab/azad-kube-proxy/pkg/claims"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"github.com/xenitab/azad-kube-proxy/pkg/handlers"
 	"github.com/xenitab/azad-kube-proxy/pkg/user"
@@ -31,10 +32,11 @@ type ClientInterface interface {
 
 // Client ...
 type Client struct {
-	Config      config.Config
-	CacheClient cache.ClientInterface
-	UserClient  user.ClientInterface
-	AzureClient azure.ClientInterface
+	Config       config.Config
+	CacheClient  cache.ClientInterface
+	UserClient   user.ClientInterface
+	AzureClient  azure.ClientInterface
+	ClaimsClient claims.ClientInterface
 }
 
 // NewProxyClient ...
@@ -50,11 +52,13 @@ func NewProxyClient(ctx context.Context, config config.Config) (ClientInterface,
 	}
 
 	userClient := user.NewUserClient(config, azureClient)
+	claimsClient := claims.NewClaimsClient()
 
 	proxyClient := Client{
-		Config:      config,
-		CacheClient: cacheClient,
-		UserClient:  userClient,
+		Config:       config,
+		CacheClient:  cacheClient,
+		UserClient:   userClient,
+		ClaimsClient: claimsClient,
 	}
 
 	return &proxyClient, nil
@@ -83,7 +87,7 @@ func (client *Client) Start(ctx context.Context) error {
 	defer stopGroupSync()
 
 	// Configure reverse proxy and http server
-	proxyHandlers, err := handlers.NewHandlersClient(ctx, client.Config, client.CacheClient, client.UserClient)
+	proxyHandlers, err := handlers.NewHandlersClient(ctx, client.Config, client.CacheClient, client.UserClient, client.ClaimsClient)
 	log.Info("Initializing reverse proxy", "ListenerAddress", client.Config.ListenerAddress)
 	proxy := client.getReverseProxy(ctx)
 	proxy.ErrorHandler = proxyHandlers.ErrorHandler(ctx)

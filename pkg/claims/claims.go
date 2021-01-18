@@ -44,8 +44,22 @@ type AzureClaims struct {
 	Groups         []string     `json:"groups"`
 }
 
+// ClientInterface ...
+type ClientInterface interface {
+	NewClaims(t *oidc.IDToken) (AzureClaims, error)
+	GetOIDCVerifier(ctx context.Context, tenantID, clientID string) (*oidc.IDTokenVerifier, error)
+}
+
+// Client ...
+type Client struct{}
+
+// NewClaimsClient ...
+func NewClaimsClient() ClientInterface {
+	return &Client{}
+}
+
 // NewClaims returns AzureClaims
-func NewClaims(t *oidc.IDToken) (AzureClaims, error) {
+func (client *Client) NewClaims(t *oidc.IDToken) (AzureClaims, error) {
 	var c AzureClaims
 
 	if t == nil {
@@ -61,7 +75,7 @@ func NewClaims(t *oidc.IDToken) (AzureClaims, error) {
 }
 
 // GetOIDCVerifier returns an ID Token Verifier or an error
-func GetOIDCVerifier(ctx context.Context, tenantID, clientID string) (*oidc.IDTokenVerifier, error) {
+func (client *Client) GetOIDCVerifier(ctx context.Context, tenantID, clientID string) (*oidc.IDTokenVerifier, error) {
 	log := logr.FromContext(ctx)
 	issuerURL := fmt.Sprintf("https://login.microsoftonline.com/%s/v2.0", tenantID)
 	provider, err := oidc.NewProvider(ctx, issuerURL)
