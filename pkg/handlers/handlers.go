@@ -1,0 +1,192 @@
+package handlers
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httputil"
+	"strings"
+
+	"github.com/coreos/go-oidc"
+	"github.com/go-logr/logr"
+	"github.com/xenitab/azad-kube-proxy/pkg/cache"
+	"github.com/xenitab/azad-kube-proxy/pkg/claims"
+	"github.com/xenitab/azad-kube-proxy/pkg/config"
+	"github.com/xenitab/azad-kube-proxy/pkg/user"
+	"github.com/xenitab/azad-kube-proxy/pkg/util"
+)
+
+const (
+	authorizationHeader              = "Authorization"
+	impersonateUserHeader            = "Impersonate-User"
+	impersonateGroupHeader           = "Impersonate-Group"
+	impersonateUserExtraHeaderPrefix = "Impersonate-Extra-"
+)
+
+// ClientInterface ...
+type ClientInterface interface {
+	ReadinessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request)
+	LivenessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request)
+	AzadKubeProxyHandler(ctx context.Context, p *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request)
+	ErrorHandler(ctx context.Context) func(w http.ResponseWriter, r *http.Request, err error)
+}
+
+// Client ...
+type Client struct {
+	Config       config.Config
+	CacheClient  cache.ClientInterface
+	OIDCVerifier *oidc.IDTokenVerifier
+	UserClient   user.ClientInterface
+	ClaimsClient claims.ClientInterface
+}
+
+// NewHandlersClient ...
+func NewHandlersClient(ctx context.Context, config config.Config, cacheClient cache.ClientInterface, userClient user.ClientInterface, claimsClient claims.ClientInterface) (ClientInterface, error) {
+	oidcVerifier, err := claimsClient.GetOIDCVerifier(ctx, config.TenantID, config.ClientID)
+	if err != nil {
+		return nil, err
+	}
+
+	handlersClient := &Client{
+		Config:       config,
+		CacheClient:  cacheClient,
+		OIDCVerifier: oidcVerifier,
+		UserClient:   userClient,
+		ClaimsClient: claimsClient,
+	}
+
+	return handlersClient, nil
+}
+
+// ReadinessHandler ...
+func (client *Client) ReadinessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request) {
+	log := logr.FromContext(ctx)
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		if _, err := w.Write([]byte("{\"status\": \"ok\"}")); err != nil {
+			log.Error(err, "Could not write response data")
+		}
+	}
+}
+
+// LivenessHandler ...
+func (client *Client) LivenessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request) {
+	log := logr.FromContext(ctx)
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		if _, err := w.Write([]byte("{\"status\": \"ok\"}")); err != nil {
+			log.Error(err, "Could not write response data")
+		}
+	}
+}
+
+// AzadKubeProxyHandler ...
+func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
+	log := logr.FromContext(ctx)
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Extract token from Authorization header
+		token, err := util.GetBearerToken(r)
+		if err != nil {
+			log.Error(err, "Unable to extract Bearer token")
+			http.Error(w, "Unable to extract Bearer token", http.StatusForbidden)
+			return
+		}
+
+		tokenHash := util.GetEncodedHash(token)
+
+		// Verify user token
+		verifiedToken, err := client.OIDCVerifier.Verify(r.Context(), token)
+		if err != nil {
+			log.Error(err, "Unable to verify token")
+			http.Error(w, "Unable to verify token", http.StatusForbidden)
+			return
+		}
+
+		// Use the token hash to get the user object from cache
+		user, found, err := client.CacheClient.GetUser(r.Context(), tokenHash)
+		if err != nil {
+			log.Error(err, "Unable to get cached user object")
+			http.Error(w, "Unexpected error", http.StatusInternalServerError)
+			return
+		}
+
+		// Verify that client isn't sending impersonation headers
+		for h := range r.Header {
+			if strings.ToLower(h) == strings.ToLower(impersonateUserHeader) || strings.ToLower(h) == strings.ToLower(impersonateGroupHeader) || strings.HasPrefix(strings.ToLower(h), strings.ToLower(impersonateUserExtraHeaderPrefix)) {
+				log.Error(errors.New("Client sending impersonation headers"), "Client sending impersonation headers")
+				http.Error(w, "User unauthorized", http.StatusForbidden)
+				return
+			}
+		}
+
+		// Get the user from the token if no cache was found
+		if !found {
+			claims, err := client.ClaimsClient.NewClaims(verifiedToken)
+			if err != nil {
+				log.Error(err, "Unable to get claims")
+				http.Error(w, "Unable to get claims", http.StatusForbidden)
+				return
+			}
+
+			// Get the user object
+			user, err = client.UserClient.GetUser(r.Context(), claims.Username, claims.ObjectID)
+			if err != nil {
+				log.Error(err, "Unable to get user")
+				http.Error(w, "Unable to get user", http.StatusForbidden)
+				return
+			}
+
+			// Check if number of groups more than the configured limit
+			if len(user.Groups) > client.Config.AzureADMaxGroupCount-1 {
+				log.Error(errors.New("Max groups reached"), "The user is member of more groups than allowed to be passed to the Kubernetes API", "groupCount", len(user.Groups), "username", user.Username, "config.AzureADMaxGroupCount", client.Config.AzureADMaxGroupCount)
+				http.Error(w, "Too many groups", http.StatusForbidden)
+				return
+			}
+
+			client.CacheClient.SetUser(r.Context(), tokenHash, user)
+		}
+
+		// Remove the Authorization header that is sent to the server
+		r.Header.Del(authorizationHeader)
+
+		// Add a new Authorization header with the token from the token path
+		r.Header.Add(authorizationHeader, fmt.Sprintf("Bearer %s", client.Config.KubernetesConfig.Token))
+
+		// Add the impersonation header for the users
+		r.Header.Add(impersonateUserHeader, user.Username)
+
+		// Add a new impersonation header per group
+		for _, group := range user.Groups {
+			r.Header.Add(impersonateGroupHeader, group.Name)
+		}
+
+		log.Info("Request", "path", r.URL.Path, "username", user.Username, "userType", user.Type, "groupCount", len(user.Groups), "cachedUser", found)
+
+		p.ServeHTTP(w, r)
+	}
+}
+
+// ErrorHandler ...
+func (client *Client) ErrorHandler(ctx context.Context) func(w http.ResponseWriter, r *http.Request, err error) {
+	log := logr.FromContext(ctx)
+
+	return func(w http.ResponseWriter, r *http.Request, err error) {
+		if err == nil {
+			log.Error(err, "error nil")
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
+
+		switch err {
+		default:
+			log.Error(err, "Unexpected error")
+			http.Error(w, "", http.StatusInternalServerError)
+		}
+	}
+}

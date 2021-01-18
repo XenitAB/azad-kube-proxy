@@ -10,19 +10,19 @@ import (
 
 // MemoryCache ...
 type MemoryCache struct {
-	Cache *gocache.Cache
+	CacheClient *gocache.Cache
 }
 
 // NewMemoryCache ...
 func NewMemoryCache(defaultExpiration, cleanupInterval time.Duration) (*MemoryCache, error) {
 	return &MemoryCache{
-		Cache: gocache.New(defaultExpiration, cleanupInterval),
+		CacheClient: gocache.New(defaultExpiration, cleanupInterval),
 	}, nil
 }
 
 // GetUser ...
 func (c *MemoryCache) GetUser(ctx context.Context, s string) (models.User, bool, error) {
-	u, f := c.Cache.Get(s)
+	u, f := c.CacheClient.Get(s)
 	if !f {
 		return models.User{}, false, nil
 	}
@@ -31,14 +31,14 @@ func (c *MemoryCache) GetUser(ctx context.Context, s string) (models.User, bool,
 
 // SetUser ...
 func (c *MemoryCache) SetUser(ctx context.Context, s string, u models.User) error {
-	c.Cache.Set(s, u, 0)
+	c.CacheClient.Set(s, u, 0)
 
 	return nil
 }
 
 // GetGroup ...
 func (c *MemoryCache) GetGroup(ctx context.Context, s string) (models.Group, bool, error) {
-	g, f := c.Cache.Get(s)
+	g, f := c.CacheClient.Get(s)
 	if !f {
 		return models.Group{}, false, nil
 	}
@@ -47,7 +47,7 @@ func (c *MemoryCache) GetGroup(ctx context.Context, s string) (models.Group, boo
 
 // SetGroup ...
 func (c *MemoryCache) SetGroup(ctx context.Context, s string, g models.Group) error {
-	c.Cache.Set(s, g, 0)
+	c.CacheClient.Set(s, g, 0)
 
 	return nil
 }

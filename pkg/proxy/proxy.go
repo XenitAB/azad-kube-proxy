@@ -11,55 +11,62 @@ import (
 	"syscall"
 	"time"
 
-	oidc "github.com/coreos/go-oidc"
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
 	"github.com/xenitab/azad-kube-proxy/pkg/azure"
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/claims"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
+	"github.com/xenitab/azad-kube-proxy/pkg/handlers"
 	"github.com/xenitab/azad-kube-proxy/pkg/user"
 )
 
-// Server ...
-type Server struct {
-	Config       config.Config
-	Cache        cache.Cache
-	OIDCVerifier *oidc.IDTokenVerifier
-	UserClient   *user.Client
+// ClientInterface ...
+type ClientInterface interface {
+	Start(ctx context.Context) error
+	listenAndServe(httpServer *http.Server) error
+	getHTTPServer(handler http.Handler) *http.Server
+	getReverseProxy(ctx context.Context) *httputil.ReverseProxy
+	getProxyTransport() *http.Transport
 }
 
-// NewProxyServer returns a proxy client or an error
-func NewProxyServer(ctx context.Context, config config.Config) (*Server, error) {
-	cache, err := cache.NewCache(ctx, config.CacheEngine, config)
+// Client ...
+type Client struct {
+	Config       config.Config
+	CacheClient  cache.ClientInterface
+	UserClient   user.ClientInterface
+	AzureClient  azure.ClientInterface
+	ClaimsClient claims.ClientInterface
+}
+
+// NewProxyClient ...
+func NewProxyClient(ctx context.Context, config config.Config) (ClientInterface, error) {
+	cacheClient, err := cache.NewCache(ctx, config.CacheEngine, config)
 	if err != nil {
 		return nil, err
 	}
 
-	oidcVerifier, err := claims.GetOIDCVerifier(ctx, config.TenantID, config.ClientID)
-	if err != nil {
-		return nil, err
-	}
-
-	azureClient, err := azure.NewAzureClient(ctx, config.ClientID, config.ClientSecret, config.TenantID, config.AzureADGroupPrefix, cache)
+	azureClient, err := azure.NewAzureClient(ctx, config.ClientID, config.ClientSecret, config.TenantID, config.AzureADGroupPrefix, cacheClient)
 	if err != nil {
 		return nil, err
 	}
 
 	userClient := user.NewUserClient(config, azureClient)
+	claimsClient := claims.NewClaimsClient()
 
-	proxyServer := Server{
+	proxyClient := Client{
 		Config:       config,
-		Cache:        cache,
-		OIDCVerifier: oidcVerifier,
+		CacheClient:  cacheClient,
 		UserClient:   userClient,
+		AzureClient:  azureClient,
+		ClaimsClient: claimsClient,
 	}
 
-	return &proxyServer, nil
+	return &proxyClient, nil
 }
 
 // Start launches the reverse proxy
-func (server *Server) Start(ctx context.Context) error {
+func (client *Client) Start(ctx context.Context) error {
 	log := logr.FromContext(ctx)
 
 	// Signal handler
@@ -68,23 +75,33 @@ func (server *Server) Start(ctx context.Context) error {
 
 	// Initiate group sync
 	log.Info("Starting group sync")
-	syncTicker, syncChan, err := server.UserClient.AzureClient.StartSyncTickerAzureADGroups(ctx, 5*time.Minute)
+	syncTicker, syncChan, err := client.AzureClient.StartSyncGroups(ctx, 5*time.Minute)
 	if err != nil {
 		return err
 	}
+	var stopGroupSync func() = func() {
+		// Stop group sync
+		syncTicker.Stop()
+		syncChan <- true
+		return
+	}
+	defer stopGroupSync()
 
 	// Configure reverse proxy and http server
-	log.Info("Initializing reverse proxy", "ListenerAddress", server.Config.ListenerAddress)
-	proxy := server.getReverseProxy(ctx)
+	proxyHandlers, err := handlers.NewHandlersClient(ctx, client.Config, client.CacheClient, client.UserClient, client.ClaimsClient)
+	log.Info("Initializing reverse proxy", "ListenerAddress", client.Config.ListenerAddress)
+	proxy := client.getReverseProxy(ctx)
+	proxy.ErrorHandler = proxyHandlers.ErrorHandler(ctx)
+
 	router := mux.NewRouter()
-	router.HandleFunc("/readyz", server.readinessHandler(ctx)).Methods("GET")
-	router.HandleFunc("/healthz", server.livenessHandler(ctx)).Methods("GET")
-	router.PathPrefix("/").HandlerFunc(server.azadKubeProxyHandler(ctx, proxy))
-	httpServer := server.getHTTPServer(router)
+	router.HandleFunc("/readyz", proxyHandlers.ReadinessHandler(ctx)).Methods("GET")
+	router.HandleFunc("/healthz", proxyHandlers.LivenessHandler(ctx)).Methods("GET")
+	router.PathPrefix("/").HandlerFunc(proxyHandlers.AzadKubeProxyHandler(ctx, proxy))
+	httpServer := client.getHTTPServer(router)
 
 	// Start HTTP server
 	go func() {
-		err := server.listenAndServe(httpServer)
+		err := client.listenAndServe(httpServer)
 		if err != nil && err != http.ErrServerClosed {
 			log.Error(err, "Server error")
 		}
@@ -94,10 +111,6 @@ func (server *Server) Start(ctx context.Context) error {
 
 	// Blocks until signal is sent
 	<-done
-
-	// Stop group sync
-	syncTicker.Stop()
-	syncChan <- true
 
 	log.Info("Server shutdown initiated")
 
@@ -118,28 +131,27 @@ func (server *Server) Start(ctx context.Context) error {
 	return nil
 }
 
-func (server *Server) listenAndServe(httpServer *http.Server) error {
-	if server.Config.ListenerTLSConfig.Enabled {
-		return httpServer.ListenAndServeTLS(server.Config.ListenerTLSConfig.CertificatePath, server.Config.ListenerTLSConfig.KeyPath)
+func (client *Client) listenAndServe(httpServer *http.Server) error {
+	if client.Config.ListenerTLSConfig.Enabled {
+		return httpServer.ListenAndServeTLS(client.Config.ListenerTLSConfig.CertificatePath, client.Config.ListenerTLSConfig.KeyPath)
 	}
 
 	return httpServer.ListenAndServe()
 }
 
-func (server *Server) getHTTPServer(handler http.Handler) *http.Server {
-	return &http.Server{Addr: server.Config.ListenerAddress, Handler: handler}
+func (client *Client) getHTTPServer(handler http.Handler) *http.Server {
+	return &http.Server{Addr: client.Config.ListenerAddress, Handler: handler}
 }
 
-func (server *Server) getReverseProxy(ctx context.Context) *httputil.ReverseProxy {
-	reverseProxy := httputil.NewSingleHostReverseProxy(server.Config.KubernetesConfig.URL)
-	reverseProxy.ErrorHandler = server.errorHandler(ctx)
-	reverseProxy.Transport = server.getProxyTransport()
+func (client *Client) getReverseProxy(ctx context.Context) *httputil.ReverseProxy {
+	reverseProxy := httputil.NewSingleHostReverseProxy(client.Config.KubernetesConfig.URL)
+	reverseProxy.Transport = client.getProxyTransport()
 	return reverseProxy
 }
 
-func (server *Server) getProxyTransport() *http.Transport {
+func (client *Client) getProxyTransport() *http.Transport {
 	return &http.Transport{
-		TLSClientConfig: getProxyTLSClientConfig(server.Config.KubernetesConfig.ValidateCertificate, server.Config.KubernetesConfig.RootCA),
+		TLSClientConfig: getProxyTLSClientConfig(client.Config.KubernetesConfig.ValidateCertificate, client.Config.KubernetesConfig.RootCA),
 	}
 }
 

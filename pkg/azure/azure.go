@@ -15,8 +15,14 @@ import (
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
 
-type azure interface {
+type userInterface interface {
 	getGroups(ctx context.Context, objectID string) ([]models.Group, error)
+}
+
+// ClientInterface ...
+type ClientInterface interface {
+	GetUserGroups(ctx context.Context, objectID string, userType models.UserType) ([]models.Group, error)
+	StartSyncGroups(ctx context.Context, syncInterval time.Duration) (*time.Ticker, chan bool, error)
 }
 
 // Client ...
@@ -25,19 +31,19 @@ type Client struct {
 	clientSecret         string
 	tenantID             string
 	graphFilter          string
-	cache                cache.Cache
+	cacheClient          cache.ClientInterface
 	groupsClient         graphrbac.GroupsClient
 	user                 *user
 	servicePrincipalUser *servicePrincipalUser
 }
 
 // NewAzureClient returns an Azure client or error
-func NewAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graphFilter string, cache cache.Cache) (*Client, error) {
+func NewAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graphFilter string, cacheClient cache.ClientInterface) (*Client, error) {
 	a := &Client{
 		clientID:     clientID,
 		clientSecret: clientSecret,
 		tenantID:     tenantID,
-		cache:        cache,
+		cacheClient:  cacheClient,
 	}
 
 	var err error
@@ -50,7 +56,6 @@ func NewAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graph
 	usersClient, err := a.getAzureADUsersClient(ctx)
 	if err != nil {
 		return nil, err
-
 	}
 
 	a.groupsClient, err = a.getAzureADGroupsClient(ctx)
@@ -63,12 +68,12 @@ func NewAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graph
 	}
 	a.graphFilter = graphFilter
 
-	a.user, err = newUser(ctx, cache, usersClient)
+	a.user, err = newUser(ctx, cacheClient, usersClient)
 	if err != nil {
 		return nil, err
 	}
 
-	a.servicePrincipalUser, err = newServicePrincipalUser(ctx, azureCredential, cache)
+	a.servicePrincipalUser, err = newServicePrincipalUser(ctx, azureCredential, cacheClient)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +83,7 @@ func NewAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graph
 
 // GetUserGroups ...
 func (client *Client) GetUserGroups(ctx context.Context, objectID string, userType models.UserType) ([]models.Group, error) {
-	var user azure
+	var user userInterface
 
 	switch userType {
 	case models.NormalUserType:
@@ -92,8 +97,8 @@ func (client *Client) GetUserGroups(ctx context.Context, objectID string, userTy
 	return user.getGroups(ctx, objectID)
 }
 
-// StartSyncTickerAzureADGroups initiates a ticker that will sync Azure AD Groups
-func (client *Client) StartSyncTickerAzureADGroups(ctx context.Context, syncInterval time.Duration) (*time.Ticker, chan bool, error) {
+// StartSyncGroups initiates a ticker that will sync Azure AD Groups
+func (client *Client) StartSyncGroups(ctx context.Context, syncInterval time.Duration) (*time.Ticker, chan bool, error) {
 	log := logr.FromContext(ctx)
 
 	ticker := time.NewTicker(syncInterval)
@@ -199,12 +204,12 @@ func (client *Client) syncAzureADGroupsCache(ctx context.Context, syncReason str
 	}
 
 	for _, group := range groups {
-		_, found, err := client.cache.GetGroup(ctx, *group.ObjectID)
+		_, found, err := client.cacheClient.GetGroup(ctx, *group.ObjectID)
 		if err != nil {
 			return err
 		}
 		if !found {
-			client.cache.SetGroup(ctx, *group.ObjectID, models.Group{Name: *group.DisplayName})
+			client.cacheClient.SetGroup(ctx, *group.ObjectID, models.Group{Name: *group.DisplayName})
 		}
 	}
 

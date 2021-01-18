@@ -11,13 +11,13 @@ import (
 )
 
 type user struct {
-	cache       cache.Cache
+	cacheClient cache.ClientInterface
 	usersClient graphrbac.UsersClient
 }
 
-func newUser(ctx context.Context, cache cache.Cache, usersClient graphrbac.UsersClient) (*user, error) {
+func newUser(ctx context.Context, cacheClient cache.ClientInterface, usersClient graphrbac.UsersClient) (*user, error) {
 	user := &user{
-		cache:       cache,
+		cacheClient: cacheClient,
 		usersClient: usersClient,
 	}
 
@@ -35,7 +35,7 @@ func (user *user) getGroups(ctx context.Context, objectID string) ([]models.Grou
 
 	var groupNames []models.Group
 	for _, groupID := range groupIDs {
-		group, found, err := user.cache.GetGroup(ctx, groupID)
+		group, found, err := user.cacheClient.GetGroup(ctx, groupID)
 		if err != nil {
 			return nil, err
 		}

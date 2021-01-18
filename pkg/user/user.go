@@ -9,20 +9,26 @@ import (
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
 
+// ClientInterface ...
+type ClientInterface interface {
+	GetUser(ctx context.Context, username, objectID string) (models.User, error)
+}
+
 // Client ...
 type Client struct {
-	Context     context.Context
 	Config      config.Config
-	Cache       cache.Cache
-	AzureClient *azure.Client
+	Cache       *cache.ClientInterface
+	AzureClient azure.ClientInterface
 }
 
 // NewUserClient ...
-func NewUserClient(config config.Config, azureClient *azure.Client) *Client {
-	return &Client{
+func NewUserClient(config config.Config, azureClient azure.ClientInterface) ClientInterface {
+	var userClient ClientInterface
+	userClient = &Client{
 		Config:      config,
 		AzureClient: azureClient,
 	}
+	return userClient
 }
 
 // GetUser returns the user or an error
