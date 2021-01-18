@@ -58,6 +58,7 @@ func NewProxyClient(ctx context.Context, config config.Config) (ClientInterface,
 		Config:       config,
 		CacheClient:  cacheClient,
 		UserClient:   userClient,
+		AzureClient:  azureClient,
 		ClaimsClient: claimsClient,
 	}
 
