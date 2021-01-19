@@ -3,19 +3,18 @@ package azure
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/to"
-	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/go-logr/logr"
+	hamiltonClients "github.com/manicminer/hamilton/clients"
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
 
 type user struct {
 	cacheClient cache.ClientInterface
-	usersClient graphrbac.UsersClient
+	usersClient *hamiltonClients.UsersClient
 }
 
-func newUser(ctx context.Context, cacheClient cache.ClientInterface, usersClient graphrbac.UsersClient) (*user, error) {
+func newUser(ctx context.Context, cacheClient cache.ClientInterface, usersClient *hamiltonClients.UsersClient) (*user, error) {
 	user := &user{
 		cacheClient: cacheClient,
 		usersClient: usersClient,
@@ -50,13 +49,16 @@ func (user *user) getGroups(ctx context.Context, objectID string) ([]models.Grou
 func (user *user) getUserGroups(ctx context.Context, objectID string) ([]string, error) {
 	log := logr.FromContext(ctx)
 
-	groupsResponse, err := user.usersClient.GetMemberGroups(ctx, objectID, graphrbac.UserGetMemberGroupsParameters{
-		SecurityEnabledOnly: to.BoolPtr(false),
-	})
+	groupsResponse, responseCode, err := user.usersClient.ListGroupMemberships(ctx, objectID, "")
 	if err != nil {
-		log.Error(err, "Unable to get Azure AD groups for user", "objectID", objectID)
+		log.Error(err, "Unable to get Azure AD groups for user", "objectID", objectID, "responseCode", responseCode)
 		return nil, err
 	}
 
-	return *groupsResponse.Value, nil
+	var groups []string
+	for _, group := range *groupsResponse {
+		groups = append(groups, *group.ID)
+	}
+
+	return groups, nil
 }
