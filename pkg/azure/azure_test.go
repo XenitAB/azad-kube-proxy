@@ -55,7 +55,7 @@ func TestNewAzureClient(t *testing.T) {
 			tenantID:            "",
 			graphFilter:         "",
 			cacheClient:         memCache,
-			expectedErrContains: "Client Secret Credential: Invalid tenantID provided.",
+			expectedErrContains: "no Authorizer could be configured, please check your configuration",
 		},
 		{
 			clientID:            "",
@@ -63,7 +63,7 @@ func TestNewAzureClient(t *testing.T) {
 			tenantID:            tenantID,
 			graphFilter:         "",
 			cacheClient:         memCache,
-			expectedErrContains: "AADSTS7000216",
+			expectedErrContains: "no Authorizer could be configured, please check your configuration",
 		},
 	}
 
@@ -118,12 +118,12 @@ func TestGetUserGroups(t *testing.T) {
 		{
 			objectID:            "",
 			userType:            models.NormalUserType,
-			expectedErrContains: "Failure responding to request: StatusCode=405",
+			expectedErrContains: "unexpected status 404 with response:",
 		},
 		{
 			objectID:            "",
 			userType:            models.ServicePrincipalUserType,
-			expectedErrContains: "Status code not 200 OK: 400",
+			expectedErrContains: "unexpected status 400 with response:",
 		},
 	}
 
