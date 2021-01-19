@@ -16,12 +16,12 @@ type groups struct {
 	graphFilter  string
 }
 
-func newGroups(ctx context.Context, cacheClient cache.ClientInterface, groupsClient *hamiltonClients.GroupsClient, graphFilter string) (*groups, error) {
+func newGroups(ctx context.Context, cacheClient cache.ClientInterface, groupsClient *hamiltonClients.GroupsClient, graphFilter string) *groups {
 	return &groups{
 		cacheClient:  cacheClient,
 		groupsClient: groupsClient,
 		graphFilter:  graphFilter,
-	}, nil
+	}
 }
 
 func (groups *groups) getAllGroups(ctx context.Context) (*[]hamiltonModels.Group, error) {
@@ -51,7 +51,10 @@ func (groups *groups) syncAzureADGroupsCache(ctx context.Context, syncReason str
 			return err
 		}
 		if !found {
-			groups.cacheClient.SetGroup(ctx, *group.ID, models.Group{Name: *group.DisplayName})
+			groups.cacheClient.SetGroup(ctx, *group.ID, models.Group{
+				Name:     *group.DisplayName,
+				ObjectID: *group.ID,
+			})
 		}
 	}
 

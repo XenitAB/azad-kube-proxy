@@ -24,6 +24,7 @@ type Config struct {
 	RedisURI             string `validate:"uri"`
 	AzureADGroupPrefix   string
 	AzureADMaxGroupCount int `validate:"min=1,max=1000"`
+	GroupIdentifier      models.GroupIdentifier
 	KubernetesConfig     KubernetesConfig
 }
 
@@ -62,6 +63,7 @@ func GetConfig(ctx context.Context, args []string) (Config, error) {
 	kubernetesAPITokenPath := fs.String("kubernetes-api-token-path", "/var/run/secrets/kubernetes.io/serviceaccount/token", "The token for communication to the Kubernetes API")
 	azureADGroupPrefix := fs.String("azure-ad-group-prefix", "", "The prefix of the Azure AD groups to be passed to the Kubernetes API")
 	azureADMaxGroupCount := fs.Int("azure-ad-max-group-count", 50, "The maximum of groups allowed to be passed to the Kubernetes API before the proxy will return unauthorized")
+	groupIdentifier := fs.String("group-identifier", "NAME", "What group identifier to use")
 	cacheEngine := fs.String("cache-engine", "MEMORY", "What cache engine to use")
 	redisURI := fs.String("redis-uri", "redis://127.0.0.1:6379/0", "The redis uri (redis://<user>:<password>@<host>:<port>/<db_number>)")
 
@@ -85,6 +87,11 @@ func GetConfig(ctx context.Context, args []string) (Config, error) {
 		return Config{}, err
 	}
 
+	gIdentifier, err := models.GetGroupIdentifier(*groupIdentifier)
+	if err != nil {
+		return Config{}, err
+	}
+
 	cacheEng, err := models.GetCacheEngine(*cacheEngine)
 	if err != nil {
 		return Config{}, err
@@ -104,6 +111,7 @@ func GetConfig(ctx context.Context, args []string) (Config, error) {
 		RedisURI:             *redisURI,
 		AzureADGroupPrefix:   *azureADGroupPrefix,
 		AzureADMaxGroupCount: *azureADMaxGroupCount,
+		GroupIdentifier:      gIdentifier,
 		KubernetesConfig: KubernetesConfig{
 			URL:                 kubernetesAPIUrl,
 			RootCA:              kubernetesRootCA,

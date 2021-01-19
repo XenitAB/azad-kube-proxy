@@ -14,39 +14,14 @@ type user struct {
 	usersClient *hamiltonClients.UsersClient
 }
 
-func newUser(ctx context.Context, cacheClient cache.ClientInterface, usersClient *hamiltonClients.UsersClient) (*user, error) {
-	user := &user{
+func newUser(ctx context.Context, cacheClient cache.ClientInterface, usersClient *hamiltonClients.UsersClient) *user {
+	return &user{
 		cacheClient: cacheClient,
 		usersClient: usersClient,
 	}
-
-	return user, nil
 }
 
 func (user *user) getGroups(ctx context.Context, objectID string) ([]models.Group, error) {
-	var groupIDs []string
-	var err error
-
-	groupIDs, err = user.getUserGroups(ctx, objectID)
-	if err != nil {
-		return nil, err
-	}
-
-	var groupNames []models.Group
-	for _, groupID := range groupIDs {
-		group, found, err := user.cacheClient.GetGroup(ctx, groupID)
-		if err != nil {
-			return nil, err
-		}
-		if found {
-			groupNames = append(groupNames, group)
-		}
-	}
-
-	return groupNames, nil
-}
-
-func (user *user) getUserGroups(ctx context.Context, objectID string) ([]string, error) {
 	log := logr.FromContext(ctx)
 
 	groupsResponse, responseCode, err := user.usersClient.ListGroupMemberships(ctx, objectID, "")
@@ -55,9 +30,16 @@ func (user *user) getUserGroups(ctx context.Context, objectID string) ([]string,
 		return nil, err
 	}
 
-	var groups []string
+	var groups []models.Group
 	for _, group := range *groupsResponse {
-		groups = append(groups, *group.ID)
+		group, found, err := user.cacheClient.GetGroup(ctx, *group.ID)
+		if err != nil {
+			return nil, err
+		}
+		if found {
+			groups = append(groups, group)
+		}
+
 	}
 
 	return groups, nil

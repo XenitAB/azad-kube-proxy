@@ -14,37 +14,14 @@ type servicePrincipalUser struct {
 	servicePrincipalsClient *hamiltonClients.ServicePrincipalsClient
 }
 
-func newServicePrincipalUser(ctx context.Context, cacheClient cache.ClientInterface, servicePrincipalsClient *hamiltonClients.ServicePrincipalsClient) (*servicePrincipalUser, error) {
+func newServicePrincipalUser(ctx context.Context, cacheClient cache.ClientInterface, servicePrincipalsClient *hamiltonClients.ServicePrincipalsClient) *servicePrincipalUser {
 	return &servicePrincipalUser{
 		cacheClient:             cacheClient,
 		servicePrincipalsClient: servicePrincipalsClient,
-	}, nil
+	}
 }
 
 func (user *servicePrincipalUser) getGroups(ctx context.Context, objectID string) ([]models.Group, error) {
-	var groupIDs []string
-	var err error
-
-	groupIDs, err = user.getServicePrincipalGroups(ctx, objectID)
-	if err != nil {
-		return nil, err
-	}
-
-	var groupNames []models.Group
-	for _, groupID := range groupIDs {
-		group, found, err := user.cacheClient.GetGroup(ctx, groupID)
-		if err != nil {
-			return nil, err
-		}
-		if found {
-			groupNames = append(groupNames, group)
-		}
-	}
-
-	return groupNames, nil
-}
-
-func (user *servicePrincipalUser) getServicePrincipalGroups(ctx context.Context, objectID string) ([]string, error) {
 	log := logr.FromContext(ctx)
 
 	groupsResponse, responseCode, err := user.servicePrincipalsClient.ListGroupMemberships(ctx, objectID, "")
@@ -53,9 +30,16 @@ func (user *servicePrincipalUser) getServicePrincipalGroups(ctx context.Context,
 		return nil, err
 	}
 
-	var groups []string
+	var groups []models.Group
 	for _, group := range *groupsResponse {
-		groups = append(groups, *group.ID)
+		group, found, err := user.cacheClient.GetGroup(ctx, *group.ID)
+		if err != nil {
+			return nil, err
+		}
+		if found {
+			groups = append(groups, group)
+		}
+
 	}
 
 	return groups, nil

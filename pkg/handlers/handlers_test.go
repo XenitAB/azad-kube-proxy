@@ -152,8 +152,32 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 	fakeCacheClient := newFakeCacheClient("", "", nil, false, nil)
 	fakeUserClient := newFakeUserClient("", "", nil, nil)
 
+	fakeBackend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("{\"fake\": true}"))
+	}))
+	defer fakeBackend.Close()
+	fakeBackendURL, err := url.Parse(fakeBackend.URL)
+	if err != nil {
+		t.Errorf("Expected err to be nil but it was %q", err)
+	}
+
+	cfg := config.Config{
+		ClientID:             clientID,
+		ClientSecret:         clientSecret,
+		TenantID:             tenantID,
+		CacheEngine:          models.MemoryCacheEngine,
+		AzureADMaxGroupCount: fakeMaxGroups,
+		GroupIdentifier:      models.NameGroupIdentifier,
+		KubernetesConfig: config.KubernetesConfig{
+			URL:   fakeBackendURL,
+			Token: "fake-token",
+		},
+	}
+
 	cases := []struct {
 		request             *http.Request
+		config              config.Config
+		configFunction      func(oldConfig config.Config) config.Config
 		cacheClient         cache.ClientInterface
 		cacheFunction       func(oldCacheClient cache.ClientInterface) cache.ClientInterface
 		claimsClient        claims.ClientInterface
@@ -173,6 +197,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 					"Authorization": {fmt.Sprintf("Bearer %s", token.Token)},
 				},
 			},
+			config:              cfg,
 			cacheClient:         memCacheClient,
 			claimsClient:        claimsClient,
 			userClient:          fakeUserClient,
@@ -189,6 +214,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 					"Authorization": {"Bearer"},
 				},
 			},
+			config:              cfg,
 			cacheClient:         memCacheClient,
 			claimsClient:        claimsClient,
 			expectedResCode:     http.StatusForbidden,
@@ -204,6 +230,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 					"Authorization": {"Bearer fake-token"},
 				},
 			},
+			config:              cfg,
 			cacheClient:         memCacheClient,
 			claimsClient:        claimsClient,
 			userClient:          fakeUserClient,
@@ -220,6 +247,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 					"Authorization": {fmt.Sprintf("Bearer %s", token.Token)},
 				},
 			},
+			config:              cfg,
 			cacheClient:         fakeCacheClient,
 			claimsClient:        claimsClient,
 			userClient:          fakeUserClient,
@@ -236,6 +264,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 					"Authorization": {"Bearer fake-token"},
 				},
 			},
+			config:              cfg,
 			cacheClient:         fakeCacheClient,
 			claimsClient:        claimsClient,
 			userClient:          fakeUserClient,
@@ -252,6 +281,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 					"Authorization": {fmt.Sprintf("Bearer %s", token.Token)},
 				},
 			},
+			config:              cfg,
 			cacheClient:         newFakeCacheClient("", "", nil, true, errors.New("Fake error")),
 			claimsClient:        claimsClient,
 			userClient:          fakeUserClient,
@@ -269,6 +299,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 					"Authorization":    {fmt.Sprintf("Bearer %s", token.Token)},
 				},
 			},
+			config:              cfg,
 			cacheClient:         fakeCacheClient,
 			claimsClient:        claimsClient,
 			userClient:          fakeUserClient,
@@ -286,6 +317,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 					"Impersonate-User": {"this-should-not-work"},
 				},
 			},
+			config:              cfg,
 			cacheClient:         fakeCacheClient,
 			claimsClient:        claimsClient,
 			userClient:          fakeUserClient,
@@ -304,6 +336,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 					"Impersonate-User": {"this-should-not-work"},
 				},
 			},
+			config:              cfg,
 			cacheClient:         fakeCacheClient,
 			claimsClient:        claimsClient,
 			userClient:          fakeUserClient,
@@ -322,6 +355,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 					"Impersonate-Group": {"this-should-not-work"},
 				},
 			},
+			config:              cfg,
 			cacheClient:         fakeCacheClient,
 			claimsClient:        claimsClient,
 			userClient:          fakeUserClient,
@@ -338,6 +372,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 					"Authorization": {fmt.Sprintf("Bearer %s", token.Token)},
 				},
 			},
+			config:              cfg,
 			cacheClient:         fakeCacheClient,
 			claimsClient:        newFakeClaimsClient(errors.New("fake error"), nil, claims.AzureClaims{}, nil),
 			userClient:          fakeUserClient,
@@ -354,6 +389,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 					"Authorization": {fmt.Sprintf("Bearer %s", token.Token)},
 				},
 			},
+			config:              cfg,
 			cacheClient:         fakeCacheClient,
 			claimsClient:        claimsClient,
 			userClient:          newFakeUserClient("", "", nil, errors.New("fake error")),
@@ -370,6 +406,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 					"Authorization": {fmt.Sprintf("Bearer %s", token.Token)},
 				},
 			},
+			config:       cfg,
 			cacheClient:  fakeCacheClient,
 			claimsClient: claimsClient,
 			userClient:   fakeUserClient,
@@ -388,31 +425,55 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 			expectedResCode:     http.StatusForbidden,
 			expectedErrContains: "Too many groups",
 		},
-	}
-
-	fakeBackend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("{\"fake\": true}"))
-	}))
-	defer fakeBackend.Close()
-	fakeBackendURL, err := url.Parse(fakeBackend.URL)
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
-	}
-
-	config := config.Config{
-		ClientID:             clientID,
-		ClientSecret:         clientSecret,
-		TenantID:             tenantID,
-		CacheEngine:          models.MemoryCacheEngine,
-		AzureADMaxGroupCount: fakeMaxGroups,
-		KubernetesConfig: config.KubernetesConfig{
-			URL:   fakeBackendURL,
-			Token: "fake-token",
+		{
+			request: &http.Request{
+				Method: "GET",
+				URL: &url.URL{
+					Path: "/",
+				},
+				Header: map[string][]string{
+					"Authorization": {fmt.Sprintf("Bearer %s", token.Token)},
+				},
+			},
+			config: cfg,
+			configFunction: func(oldConfig config.Config) config.Config {
+				oldConfig.GroupIdentifier = models.ObjectIDGroupIdentifier
+				return oldConfig
+			},
+			cacheClient:         memCacheClient,
+			claimsClient:        claimsClient,
+			userClient:          fakeUserClient,
+			expectedResCode:     http.StatusOK,
+			expectedErrContains: "",
+		},
+		{
+			request: &http.Request{
+				Method: "GET",
+				URL: &url.URL{
+					Path: "/",
+				},
+				Header: map[string][]string{
+					"Authorization": {fmt.Sprintf("Bearer %s", token.Token)},
+				},
+			},
+			config: cfg,
+			configFunction: func(oldConfig config.Config) config.Config {
+				oldConfig.GroupIdentifier = "DUMMY"
+				return oldConfig
+			},
+			cacheClient:         memCacheClient,
+			claimsClient:        claimsClient,
+			userClient:          fakeUserClient,
+			expectedResCode:     http.StatusInternalServerError,
+			expectedErrContains: "Unexpected error",
 		},
 	}
 
-	for idx, c := range cases {
-		t.Logf("Index: %d", idx)
+	for _, c := range cases {
+		if c.configFunction != nil {
+			c.config = c.configFunction(c.config)
+		}
+
 		if c.cacheFunction != nil {
 			c.cacheClient = c.cacheFunction(c.cacheClient)
 		}
@@ -425,12 +486,12 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 			c.userClient = c.userFunction(c.userClient)
 		}
 
-		proxyHandlers, err := NewHandlersClient(ctx, config, c.cacheClient, c.userClient, c.claimsClient)
+		proxyHandlers, err := NewHandlersClient(ctx, c.config, c.cacheClient, c.userClient, c.claimsClient)
 		if err != nil {
 			t.Errorf("Expected err to be nil but it was %q", err)
 		}
 
-		proxy := httputil.NewSingleHostReverseProxy(config.KubernetesConfig.URL)
+		proxy := httputil.NewSingleHostReverseProxy(c.config.KubernetesConfig.URL)
 		proxy.ErrorHandler = proxyHandlers.ErrorHandler(ctx)
 		rr := httptest.NewRecorder()
 		router := mux.NewRouter()
