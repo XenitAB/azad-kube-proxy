@@ -13,6 +13,7 @@ import (
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/claims"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
+	"github.com/xenitab/azad-kube-proxy/pkg/models"
 	"github.com/xenitab/azad-kube-proxy/pkg/user"
 	"github.com/xenitab/azad-kube-proxy/pkg/util"
 )
@@ -101,7 +102,7 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 		tokenHash := util.GetEncodedHash(token)
 
 		// Verify user token
-		verifiedToken, err := client.OIDCVerifier.Verify(r.Context(), token)
+		verifiedToken, err := client.OIDCVerifier.Verify(ctx, token)
 		if err != nil {
 			log.Error(err, "Unable to verify token")
 			http.Error(w, "Unable to verify token", http.StatusForbidden)
@@ -109,7 +110,7 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 		}
 
 		// Use the token hash to get the user object from cache
-		user, found, err := client.CacheClient.GetUser(r.Context(), tokenHash)
+		user, found, err := client.CacheClient.GetUser(ctx, tokenHash)
 		if err != nil {
 			log.Error(err, "Unable to get cached user object")
 			http.Error(w, "Unexpected error", http.StatusInternalServerError)
@@ -135,7 +136,7 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 			}
 
 			// Get the user object
-			user, err = client.UserClient.GetUser(r.Context(), claims.Username, claims.ObjectID)
+			user, err = client.UserClient.GetUser(ctx, claims.Username, claims.ObjectID)
 			if err != nil {
 				log.Error(err, "Unable to get user")
 				http.Error(w, "Unable to get user", http.StatusForbidden)
@@ -149,7 +150,7 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 				return
 			}
 
-			client.CacheClient.SetUser(r.Context(), tokenHash, user)
+			client.CacheClient.SetUser(ctx, tokenHash, user)
 		}
 
 		// Remove the Authorization header that is sent to the server
@@ -163,7 +164,16 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 
 		// Add a new impersonation header per group
 		for _, group := range user.Groups {
-			r.Header.Add(impersonateGroupHeader, group.Name)
+			switch client.Config.GroupIdentifier {
+			case models.NameGroupIdentifier:
+				r.Header.Add(impersonateGroupHeader, group.Name)
+			case models.ObjectIDGroupIdentifier:
+				r.Header.Add(impersonateGroupHeader, group.ObjectID)
+			default:
+				log.Error(errors.New("Unknown groups identifier"), "Unknown groups identifier", "GroupIdentifier", client.Config.GroupIdentifier)
+				http.Error(w, "Unexpected error", http.StatusInternalServerError)
+				return
+			}
 		}
 
 		log.Info("Request", "path", r.URL.Path, "username", user.Username, "userType", user.Type, "groupCount", len(user.Groups), "cachedUser", found)

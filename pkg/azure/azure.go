@@ -63,30 +63,15 @@ func NewAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graph
 		graphFilter = fmt.Sprintf("startswith(displayName,'%s')", graphFilter)
 	}
 
-	user, err := newUser(ctx, cacheClient, usersClient)
-	if err != nil {
-		return nil, err
-	}
-
-	servicePrincipalUser, err := newServicePrincipalUser(ctx, cacheClient, servicePrincipalsClient)
-	if err != nil {
-		return nil, err
-	}
-
-	groups, err := newGroups(ctx, cacheClient, groupsClient, graphFilter)
-	if err != nil {
-		return nil, err
-	}
-
 	return &Client{
 		clientID:             clientID,
 		clientSecret:         clientSecret,
 		tenantID:             tenantID,
 		graphFilter:          graphFilter,
 		cacheClient:          cacheClient,
-		user:                 user,
-		servicePrincipalUser: servicePrincipalUser,
-		groups:               groups,
+		user:                 newUser(ctx, cacheClient, usersClient),
+		servicePrincipalUser: newServicePrincipalUser(ctx, cacheClient, servicePrincipalsClient),
+		groups:               newGroups(ctx, cacheClient, groupsClient, graphFilter),
 	}, nil
 }
 

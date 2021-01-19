@@ -1,6 +1,7 @@
 package models
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -92,34 +93,91 @@ func getUseCases() ([]userCase, []groupCase) {
 				Username: "username",
 				ObjectID: "00000000-0000-0000-0000-000000000000",
 				Groups: []Group{
-					{Name: "test1"},
+					{
+						Name:     "test1",
+						ObjectID: "00000000-0000-0000-0000-000000000000",
+					},
 				},
 				Type: NormalUserType,
 			},
-			expectedString: "{\"Username\":\"username\",\"ObjectID\":\"00000000-0000-0000-0000-000000000000\",\"Groups\":[{\"Name\":\"test1\"}],\"Type\":\"NormalUser\"}",
+			expectedString: "{\"Username\":\"username\",\"ObjectID\":\"00000000-0000-0000-0000-000000000000\",\"Groups\":[{\"Name\":\"test1\",\"ObjectID\":\"00000000-0000-0000-0000-000000000000\"}],\"Type\":\"NormalUser\"}",
 		},
 		{
 			User: User{
 				Username: "username",
 				ObjectID: "00000000-0000-0000-0000-000000000000",
 				Groups: []Group{
-					{Name: "test1"},
-					{Name: "test2"},
+					{
+						Name:     "test1",
+						ObjectID: "00000000-0000-0000-0000-000000000000",
+					},
+					{
+						Name:     "test2",
+						ObjectID: "00000000-0000-0000-0000-000000000001",
+					},
 				},
 				Type: NormalUserType,
 			},
-			expectedString: "{\"Username\":\"username\",\"ObjectID\":\"00000000-0000-0000-0000-000000000000\",\"Groups\":[{\"Name\":\"test1\"},{\"Name\":\"test2\"}],\"Type\":\"NormalUser\"}",
+			expectedString: "{\"Username\":\"username\",\"ObjectID\":\"00000000-0000-0000-0000-000000000000\",\"Groups\":[{\"Name\":\"test1\",\"ObjectID\":\"00000000-0000-0000-0000-000000000000\"},{\"Name\":\"test2\",\"ObjectID\":\"00000000-0000-0000-0000-000000000001\"}],\"Type\":\"NormalUser\"}",
 		},
 	}
 
 	groupCases := []groupCase{
 		{
 			Group: Group{
-				Name: "test1",
+				Name:     "test1",
+				ObjectID: "00000000-0000-0000-0000-000000000000",
 			},
-			expectedString: "{\"Name\":\"test1\"}",
+			expectedString: "{\"Name\":\"test1\",\"ObjectID\":\"00000000-0000-0000-0000-000000000000\"}",
 		},
 	}
 
 	return userCases, groupCases
+}
+
+func TestGetGroupIdentifier(t *testing.T) {
+	cases := []struct {
+		groupIdentifierString   string
+		expectedGroupIdentifier GroupIdentifier
+		expectedErr             error
+	}{
+		{
+			groupIdentifierString:   "NAME",
+			expectedGroupIdentifier: NameGroupIdentifier,
+			expectedErr:             nil,
+		},
+		{
+			groupIdentifierString:   "OBJECTID",
+			expectedGroupIdentifier: ObjectIDGroupIdentifier,
+			expectedErr:             nil,
+		},
+		{
+			groupIdentifierString:   "",
+			expectedGroupIdentifier: "",
+			expectedErr:             errors.New("Unkown group identifier . Supported identifiers are: NAME or OBJECTID"),
+		},
+		{
+			groupIdentifierString:   "DUMMY",
+			expectedGroupIdentifier: "",
+			expectedErr:             errors.New("Unkown group identifier DUMMY. Supported identifiers are: NAME or OBJECTID"),
+		},
+	}
+
+	for _, c := range cases {
+		resGroupIdentifier, err := GetGroupIdentifier(c.groupIdentifierString)
+
+		if resGroupIdentifier != c.expectedGroupIdentifier && c.expectedErr == nil {
+			t.Errorf("Expected group identifier (%s) was not returned: %s", c.expectedGroupIdentifier, resGroupIdentifier)
+		}
+
+		if err != nil && c.expectedErr == nil {
+			t.Errorf("Expected err to be nil but it was %q", err)
+		}
+
+		if c.expectedErr != nil {
+			if err.Error() != c.expectedErr.Error() {
+				t.Errorf("Expected err to be %q but it was %q", c.expectedErr, err)
+			}
+		}
+	}
 }

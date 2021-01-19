@@ -1,6 +1,9 @@
 package models
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // UserType is the type of user
 type UserType string
@@ -30,9 +33,31 @@ func (i *User) UnmarshalBinary(data []byte) error {
 	return json.Unmarshal(data, &i)
 }
 
+// GroupIdentifier is the type for what identifier should be sent to the backend
+type GroupIdentifier string
+
+// NameGroupIdentifier defines that the Name should be sent to the backend
+var NameGroupIdentifier GroupIdentifier = "NAME"
+
+// ObjectIDGroupIdentifier defines that the ObjectID should be sent to the backend
+var ObjectIDGroupIdentifier GroupIdentifier = "OBJECTID"
+
+// GetGroupIdentifier ...
+func GetGroupIdentifier(s string) (GroupIdentifier, error) {
+	switch s {
+	case "NAME":
+		return NameGroupIdentifier, nil
+	case "OBJECTID":
+		return ObjectIDGroupIdentifier, nil
+	default:
+		return "", fmt.Errorf("Unkown group identifier %s. Supported identifiers are: NAME or OBJECTID", s)
+	}
+}
+
 // Group is the struct for a group
 type Group struct {
-	Name string
+	Name     string
+	ObjectID string
 }
 
 // MarshalBinary to marshal Group object

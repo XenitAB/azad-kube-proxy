@@ -112,6 +112,11 @@ func TestGetConfig(t *testing.T) {
 			expectedErrContains:    []string{},
 			expectedErrNotContains: []string{},
 		},
+		{
+			osArgs:                 append(baseWorkingArgs, "--group-identifier=FAKE"),
+			expectedErrContains:    []string{"Unkown group identifier FAKE."},
+			expectedErrNotContains: []string{},
+		},
 	}
 
 	for _, c := range cases {

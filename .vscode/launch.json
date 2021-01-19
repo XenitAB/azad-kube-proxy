@@ -2,14 +2,16 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch",
+            "name": "Attach",
             "type": "go",
-            "request": "launch",
-            "mode": "auto",
-            "program": "${workspaceFolder}/cmd/azad-kube-proxy/main.go",
-            "env": {},
-            "args": [],
-            "envFile": "${workspaceFolder}/tmp/test_env",
+            "request": "attach",
+            "mode": "remote",
+            "remotePath": "",
+            "port": 40000,
+            "host": "127.0.0.1",
+            "showLog": true,
+            "trace": "log",
+            "logOutput": "rpc"
         },
         {
             "name": "Launch test",
