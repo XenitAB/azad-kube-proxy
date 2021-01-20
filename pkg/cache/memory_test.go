@@ -57,7 +57,11 @@ func TestMemorySetUser(t *testing.T) {
 	cases, _ := getMemoryCases()
 
 	for _, c := range cases {
-		cache.SetUser(ctx, c.Key, c.User)
+		err := cache.SetUser(ctx, c.Key, c.User)
+		if err != nil {
+			t.Errorf("Expected err to be nil but it was %q", err)
+		}
+
 		cacheRes, found := cache.CacheClient.Get(c.Key)
 		if !cmp.Equal(c.User, cacheRes.(models.User)) {
 			t.Errorf("Expected response was not returned.\nExpected: %s\nActual:   %s", c.User, cacheRes.(models.User))
@@ -110,7 +114,10 @@ func TestMemorySetGroup(t *testing.T) {
 	_, cases := getMemoryCases()
 
 	for _, c := range cases {
-		cache.SetGroup(ctx, c.Key, c.Group)
+		err := cache.SetGroup(ctx, c.Key, c.Group)
+		if err != nil {
+			t.Errorf("Expected err to be nil but it was %q", err)
+		}
 		cacheRes, found := cache.CacheClient.Get(c.Key)
 		if !cmp.Equal(c.Group, cacheRes.(models.Group)) {
 			t.Errorf("Expected response was not returned.\nExpected: %s\nActual:   %s", c.Group, cacheRes.(models.Group))

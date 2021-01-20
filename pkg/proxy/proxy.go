@@ -80,15 +80,16 @@ func (client *Client) Start(ctx context.Context) error {
 		return err
 	}
 	var stopGroupSync func() = func() {
-		// Stop group sync
 		syncTicker.Stop()
 		syncChan <- true
-		return
 	}
 	defer stopGroupSync()
 
 	// Configure reverse proxy and http server
 	proxyHandlers, err := handlers.NewHandlersClient(ctx, client.Config, client.CacheClient, client.UserClient, client.ClaimsClient)
+	if err != nil {
+		return err
+	}
 	log.Info("Initializing reverse proxy", "ListenerAddress", client.Config.ListenerAddress)
 	proxy := client.getReverseProxy(ctx)
 	proxy.ErrorHandler = proxyHandlers.ErrorHandler(ctx)

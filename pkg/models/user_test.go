@@ -60,7 +60,6 @@ func TestUnmarshalBinary(t *testing.T) {
 type userCase struct {
 	User
 	expectedString string
-	expectedErr    error
 }
 
 type groupCase struct {

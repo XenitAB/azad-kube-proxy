@@ -172,7 +172,6 @@ func TestStartSyncGroups(t *testing.T) {
 	var stopGroupSync func() = func() {
 		groupSyncTicker.Stop()
 		groupSyncChan <- true
-		return
 	}
 	defer stopGroupSync()
 }

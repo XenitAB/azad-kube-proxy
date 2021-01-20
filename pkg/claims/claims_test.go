@@ -158,11 +158,7 @@ func getAccessToken(ctx context.Context, tenantID, clientID, clientSecret, scope
 
 func fileExists(s string) bool {
 	_, err := os.Stat(s)
-	if err == nil {
-		return true
-	}
-
-	return false
+	return err == nil
 }
 
 func getFileContent(s string) ([]byte, error) {

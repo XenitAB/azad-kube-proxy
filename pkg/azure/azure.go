@@ -109,7 +109,7 @@ func (client *Client) StartSyncGroups(ctx context.Context, syncInterval time.Dur
 			case <-syncChan:
 				log.Info("Stopped StartSyncTickerAzureADGroups")
 				return
-			case _ = <-ticker.C:
+			case <-ticker.C:
 				_ = client.groups.syncAzureADGroupsCache(ctx, "ticker")
 			}
 		}

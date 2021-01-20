@@ -153,7 +153,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 	fakeUserClient := newFakeUserClient("", "", nil, nil)
 
 	fakeBackend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("{\"fake\": true}"))
+		_, _ = w.Write([]byte("{\"fake\": true}"))
 	}))
 	defer fakeBackend.Close()
 	fakeBackendURL, err := url.Parse(fakeBackend.URL)
@@ -528,7 +528,7 @@ func newFakeUserClient(username string, objectID string, groups []models.Group, 
 	if objectID == "" {
 		objectID = "00000000-0000-0000-0000-000000000000"
 	}
-	if groups == nil || len(groups) == 0 {
+	if len(groups) == 0 {
 		groups = []models.Group{
 			{Name: "group"},
 		}
@@ -537,7 +537,7 @@ func newFakeUserClient(username string, objectID string, groups []models.Group, 
 		fakeError: fakeError,
 		fakeUser: models.User{
 			Username: username,
-			ObjectID: "00000000-0000-0000-0000-000000000000",
+			ObjectID: objectID,
 			Groups:   groups,
 		},
 		fakeGroup: groups[0],
@@ -562,7 +562,7 @@ func newFakeCacheClient(username string, objectID string, groups []models.Group,
 	if objectID == "" {
 		objectID = "00000000-0000-0000-0000-000000000000"
 	}
-	if groups == nil || len(groups) == 0 {
+	if len(groups) == 0 {
 		groups = []models.Group{
 			{Name: "group"},
 		}
@@ -726,9 +726,5 @@ func getFileContent(s string) ([]byte, error) {
 
 func fileExists(s string) bool {
 	_, err := os.Stat(s)
-	if err == nil {
-		return true
-	}
-
-	return false
+	return err == nil
 }

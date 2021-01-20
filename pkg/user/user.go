@@ -23,12 +23,10 @@ type Client struct {
 
 // NewUserClient ...
 func NewUserClient(config config.Config, azureClient azure.ClientInterface) ClientInterface {
-	var userClient ClientInterface
-	userClient = &Client{
+	return &Client{
 		Config:      config,
 		AzureClient: azureClient,
 	}
-	return userClient
 }
 
 // GetUser returns the user or an error

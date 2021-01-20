@@ -35,7 +35,7 @@ func TestGetConfig(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unable to generate temporary certificate for test: %q", err)
 	}
-	defer deleteFile(certPath)
+	defer deleteFile(t, certPath)
 
 	_, err = GetConfig(ctx, []string{"fake-bin", fmt.Sprintf("--kubernetes-api-ca-cert-path=%s", certPath)})
 	if !strings.Contains(err.Error(), "token: no such file or directory") {
@@ -47,7 +47,7 @@ func TestGetConfig(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unable to generate temporary file for test: %q", err)
 	}
-	defer deleteFile(tokenPath)
+	defer deleteFile(t, tokenPath)
 
 	baseArgs := []string{"fake-bin", fmt.Sprintf("--kubernetes-api-ca-cert-path=%s", certPath), fmt.Sprintf("--kubernetes-api-token-path=%s", tokenPath)}
 	baseWorkingArgs := append(baseArgs, "--client-id=00000000-0000-0000-0000-000000000000", "--client-secret=supersecret", "--tenant-id=00000000-0000-0000-0000-000000000000")
@@ -193,7 +193,7 @@ func TestConfigValidate(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unable to generate temporary file for test: %q", err)
 	}
-	defer deleteFile(randomFile)
+	defer deleteFile(t, randomFile)
 
 	cases := []struct {
 		config              Config
@@ -268,11 +268,9 @@ func generateRandomFile() (string, string, error) {
 	return filename, timestamp, nil
 }
 
-func deleteFile(file string) error {
+func deleteFile(t *testing.T, file string) {
 	err := os.Remove(file)
 	if err != nil {
-		return fmt.Errorf("Unable to delete file %s: %v", file, err)
+		t.Errorf("Unable to delete file: %q", err)
 	}
-
-	return nil
 }

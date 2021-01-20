@@ -119,7 +119,7 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 
 		// Verify that client isn't sending impersonation headers
 		for h := range r.Header {
-			if strings.ToLower(h) == strings.ToLower(impersonateUserHeader) || strings.ToLower(h) == strings.ToLower(impersonateGroupHeader) || strings.HasPrefix(strings.ToLower(h), strings.ToLower(impersonateUserExtraHeaderPrefix)) {
+			if strings.EqualFold(h, impersonateUserHeader) || strings.EqualFold(h, impersonateGroupHeader) || strings.HasPrefix(strings.ToLower(h), strings.ToLower(impersonateUserExtraHeaderPrefix)) {
 				log.Error(errors.New("Client sending impersonation headers"), "Client sending impersonation headers")
 				http.Error(w, "User unauthorized", http.StatusForbidden)
 				return
@@ -150,7 +150,11 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 				return
 			}
 
-			client.CacheClient.SetUser(ctx, tokenHash, user)
+			err = client.CacheClient.SetUser(ctx, tokenHash, user)
+			if err != nil {
+				log.Error(err, "Unable to set cache for user object")
+				http.Error(w, "Unexpected error", http.StatusInternalServerError)
+			}
 		}
 
 		// Remove the Authorization header that is sent to the server

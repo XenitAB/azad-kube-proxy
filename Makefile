@@ -10,6 +10,9 @@ ifneq (,$(wildcard $(TEST_ENV_FILE)))
 endif
 
 .SILENT:
+all: lint fmt vet test build
+
+.SILENT:
 lint:
 	golangci-lint run
 
