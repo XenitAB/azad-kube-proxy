@@ -181,9 +181,9 @@ func generateCertificateFile() (string, error) {
 	}
 
 	err = certOut.Close()
-	// if err != nil {
-	// 	return "", fmt.Errorf("Error closing %s: %v", filename, err)
-	// }
+	if err != nil {
+		return "", fmt.Errorf("Error closing %s: %v", filename, err)
+	}
 
 	return filename, nil
 }
@@ -271,6 +271,6 @@ func generateRandomFile() (string, string, error) {
 func deleteFile(t *testing.T, file string) {
 	err := os.Remove(file)
 	if err != nil {
-		t.Errorf("Unable to delete file: %q", err)
+t.Errorf("Unable to delete file: %q", err)
 	}
 }
