@@ -94,3 +94,30 @@ jobs:
         with:
           publishToken: ${{ secrets.SEMGREP_APP_TOKEN }}
           publishDeployment: 284
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v2
+      - name: Setup go
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: coverage
+        env:
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+          TENANT_ID: ${{ secrets.TENANT_ID }}
+          TEST_USER_SP_CLIENT_ID: ${{ secrets.TEST_USER_SP_CLIENT_ID }}
+          TEST_USER_SP_CLIENT_SECRET: ${{ secrets.TEST_USER_SP_CLIENT_SECRET }}
+          TEST_USER_SP_RESOURCE: ${{ secrets.TEST_USER_SP_RESOURCE }}
+          TEST_USER_SP_OBJECT_ID: ${{ secrets.TEST_USER_SP_OBJECT_ID }}
+          TEST_USER_OBJECT_ID: ${{ secrets.TEST_USER_OBJECT_ID }}
+        run: |
+          mkdir tmp
+          make cover
+      - name: Send coverage to coverall
+        uses: shogo82148/actions-goveralls@v1
+        with:
+          path-to-profile: tmp/coverage.out
