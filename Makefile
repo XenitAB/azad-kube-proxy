@@ -30,6 +30,10 @@ test:
 	go test -timeout 1m ./... -cover
 
 .SILENT:
+gosec:
+	gosec ./...
+
+.SILENT:
 cover:
 	go test -timeout 1m ./... -coverprofile=tmp/coverage.out                                                                                                                                                                                         16:10:38
 	go tool cover -html=tmp/coverage.out	
