@@ -169,7 +169,7 @@ func getHTTPScheme(tls bool) string {
 }
 
 func fileExists(filename string) bool {
-	info, err = os.Stat(filename)
+	info, err := os.Stat(filename)
 	if os.IsNotExist(err) {
 		return false
 	}
