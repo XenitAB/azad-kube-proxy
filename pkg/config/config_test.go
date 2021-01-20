@@ -181,9 +181,9 @@ func generateCertificateFile() (string, error) {
 	}
 
 	err = certOut.Close()
-	if err != nil {
-		return "", fmt.Errorf("Error closing %s: %v", filename, err)
-	}
+	// if err != nil {
+	// 	return "", fmt.Errorf("Error closing %s: %v", filename, err)
+	// }
 
 	return filename, nil
 }
