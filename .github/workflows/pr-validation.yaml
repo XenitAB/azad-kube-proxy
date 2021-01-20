@@ -121,3 +121,4 @@ jobs:
         uses: shogo82148/actions-goveralls@v1
         with:
           path-to-profile: tmp/coverage.out
+          ignore: cmd/azad-kube-proxy/main.go,pkg/proxy/proxy.go
