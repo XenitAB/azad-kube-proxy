@@ -26,6 +26,7 @@ vet:
 
 .SILENT:
 test:
+	echo tenant: $(TENANT_ID)
 	go test -timeout 1m ./... -cover
 
 .SILENT:
