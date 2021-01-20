@@ -269,7 +269,7 @@ func generateRandomFile() (string, string, error) {
 }
 
 func deleteFile(t *testing.T, file string) {
-	err := os.Remove(file)
+	err = os.Remove(file)
 	if err != nil {
 		t.Errorf("Unable to delete file: %q", err)
 	}
