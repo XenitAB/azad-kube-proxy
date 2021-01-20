@@ -1,0 +1,124 @@
+name: PR Validation
+
+on: pull_request
+
+env:
+  GO_VERSION: "1.15"
+  GOLANGCI_LINT_VERSION: "v1.35"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v2
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v2
+      - name: Setup go
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Run fmt
+        run: |
+          make fmt
+      - name: Check if working tree is dirty
+        run: |
+          if [[ $(git status --porcelain) ]]; then
+            git diff
+            echo 'run make fmt and commit changes'
+            exit 1
+          fi
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v2
+      - name: Setup go
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Run build
+        run: |
+          make build
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v2
+      - name: Setup go
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Run test
+        env:
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+          TENANT_ID: ${{ secrets.TENANT_ID }}
+          TEST_USER_SP_CLIENT_ID: ${{ secrets.TEST_USER_SP_CLIENT_ID }}
+          TEST_USER_SP_CLIENT_SECRET: ${{ secrets.TEST_USER_SP_CLIENT_SECRET }}
+          TEST_USER_SP_RESOURCE: ${{ secrets.TEST_USER_SP_RESOURCE }}
+          TEST_USER_SP_OBJECT_ID: ${{ secrets.TEST_USER_SP_OBJECT_ID }}
+          TEST_USER_OBJECT_ID: ${{ secrets.TEST_USER_OBJECT_ID }}
+        run: |
+          make test
+
+  gosec:
+    runs-on: ubuntu-latest
+    env:
+      GO111MODULE: on
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v2
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@master
+        with:
+          args: ./...
+
+  semgrep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: returntocorp/semgrep-action@v1
+        env: 
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          publishToken: ${{ secrets.SEMGREP_APP_TOKEN }}
+          publishDeployment: 284
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v2
+      - name: Setup go
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: coverage
+        env:
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+          TENANT_ID: ${{ secrets.TENANT_ID }}
+          TEST_USER_SP_CLIENT_ID: ${{ secrets.TEST_USER_SP_CLIENT_ID }}
+          TEST_USER_SP_CLIENT_SECRET: ${{ secrets.TEST_USER_SP_CLIENT_SECRET }}
+          TEST_USER_SP_RESOURCE: ${{ secrets.TEST_USER_SP_RESOURCE }}
+          TEST_USER_SP_OBJECT_ID: ${{ secrets.TEST_USER_SP_OBJECT_ID }}
+          TEST_USER_OBJECT_ID: ${{ secrets.TEST_USER_OBJECT_ID }}
+        run: |
+          mkdir tmp
+          make cover
+      - name: Send coverage to coverall
+        uses: shogo82148/actions-goveralls@v1
+        with:
+          path-to-profile: tmp/coverage.out
+          ignore: cmd/azad-kube-proxy/main.go,pkg/proxy/proxy.go

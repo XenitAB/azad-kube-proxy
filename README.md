@@ -1,6 +1,10 @@
 # azad-kube-proxy
 Azure AD Kubernetes API Proxy
 
+## Status
+
+[![Coverage Status](https://coveralls.io/repos/github/XenitAB/azad-kube-proxy/badge.svg?branch=main)](https://coveralls.io/github/XenitAB/azad-kube-proxy?branch=main)
+
 ## Description
 
 *ALPHA* project. Use at own risk.

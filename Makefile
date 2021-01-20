@@ -26,7 +26,12 @@ vet:
 
 .SILENT:
 test:
+	mkdir tmp
 	go test -timeout 1m ./... -cover
+
+.SILENT:
+gosec:
+	gosec ./...
 
 .SILENT:
 cover:
