@@ -26,7 +26,7 @@ vet:
 
 .SILENT:
 test:
-	echo tenant: $(TENANT_ID)
+	mkdir tmp
 	go test -timeout 1m ./... -cover
 
 .SILENT:
