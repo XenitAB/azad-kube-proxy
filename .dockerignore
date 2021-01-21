@@ -1,0 +1,6 @@
+.github/
+.vscode/
+assets/
+bin/
+deploy/
+tmp/
