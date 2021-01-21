@@ -6,7 +6,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v0.13.4
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v0.7.0
 	github.com/alicebob/miniredis/v2 v2.14.1
-	github.com/coreos/go-oidc v2.1.0+incompatible
+	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/go-logr/logr v0.3.0
 	github.com/go-logr/zapr v0.3.0
 	github.com/go-playground/validator/v10 v10.4.1
