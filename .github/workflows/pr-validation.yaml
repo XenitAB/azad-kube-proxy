@@ -157,7 +157,6 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          load: true
           platforms: linux/amd64,linux/arm/v7,linux/arm64
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
@@ -169,6 +168,9 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.version=${{ steps.prep.outputs.VERSION }}
             org.opencontainers.image.created=${{ steps.prep.outputs.BUILD_DATE }}
+      - name: Buildx load
+        run: |
+          docker buildx build --load -t ${{ env.NAME }}:${{ steps.prep.outputs.VERSION }} .
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
