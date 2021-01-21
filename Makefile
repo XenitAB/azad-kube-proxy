@@ -30,7 +30,7 @@ vet:
 
 .SILENT:
 test:
-	mkdir tmp
+	mkdir -p tmp
 	go test -timeout 1m ./... -cover
 
 .SILENT:
