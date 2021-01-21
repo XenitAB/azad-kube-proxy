@@ -129,6 +129,9 @@ jobs:
     steps:
       - name: Clone repo
         uses: actions/checkout@v2
+      - uses: brpaz/hadolint-action@v1.2.1
+        with:
+          dockerfile: Dockerfile
       - name: Cache container layers
         uses: actions/cache@v2
         with:
