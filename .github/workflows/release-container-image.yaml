@@ -8,6 +8,7 @@ on:
 env:
   NAME: "azad-kube-proxy"
 
+jobs:
   build-container:
     runs-on: ubuntu-latest
     steps:
