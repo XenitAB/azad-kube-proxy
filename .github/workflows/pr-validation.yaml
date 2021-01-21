@@ -129,6 +129,15 @@ jobs:
     steps:
       - name: Clone repo
         uses: actions/checkout@v2
+      - name: Prepare
+        id: prep
+        run: |
+          VERSION=sha-${GITHUB_SHA::8}
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF/refs\/tags\//}
+          fi
+          echo ::set-output name=BUILD_DATE::$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          echo ::set-output name=VERSION::${VERSION}
       - uses: brpaz/hadolint-action@v1.2.1
         with:
           dockerfile: Dockerfile
@@ -149,14 +158,21 @@ jobs:
           context: .
           file: ./Dockerfile
           load: true
-          platforms: linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64
+          platforms: linux/amd64,linux/arm/v7,linux/arm64
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
-          tags: ${{ env.NAME }}:${{ github.sha }}
+          tags: ${{ env.NAME }}:${{ steps.prep.outputs.VERSION }}
+          labels: |
+            org.opencontainers.image.title=${{ github.event.repository.name }}
+            org.opencontainers.image.description=${{ github.event.repository.description }}
+            org.opencontainers.image.url=${{ github.event.repository.html_url }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.prep.outputs.VERSION }}
+            org.opencontainers.image.created=${{ steps.prep.outputs.BUILD_DATE }}
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.NAME }}:${{ github.sha }}
+          image-ref: ${{ env.NAME }}:${{ steps.prep.outputs.VERSION }}
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
