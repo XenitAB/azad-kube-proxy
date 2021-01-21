@@ -9,7 +9,7 @@ env:
   NAME: "azad-kube-proxy"
 
 jobs:
-  build-container:
+  push-container:
     runs-on: ubuntu-latest
     steps:
       - name: Clone repo
@@ -44,7 +44,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
-      - name: Build container (multi arch)
+      - name: Build and push container (multi arch)
         uses: docker/build-push-action@v2
         with:
           push: true
