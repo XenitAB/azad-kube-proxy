@@ -10,7 +10,7 @@ ifneq (,$(wildcard $(TEST_ENV_FILE)))
 endif
 
 .SILENT:
-all: lint fmt vet test build
+all: tidy lint fmt vet test build
 
 .SILENT:
 lint:
@@ -19,6 +19,10 @@ lint:
 .SILENT:
 fmt:
 	go fmt ./...
+
+.SILENT:
+tidy:
+	go mod tidy
 
 .SILENT:
 vet:
