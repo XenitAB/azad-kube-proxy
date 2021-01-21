@@ -14,7 +14,7 @@ RUN apk add --no-cache make=4.3-r0 bash=5.1.0-r0
 RUN make build
 
 #RUNTIME
-FROM alpine:3.12 as runtime
+FROM alpine:3.13.0 as runtime
 LABEL org.opencontainers.image.source="https://github.com/XenitAB/azad-kube-proxy"
 
 # hadolint ignore=DL3018
