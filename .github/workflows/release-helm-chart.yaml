@@ -14,7 +14,7 @@ jobs:
       - name: Install yq
         uses: chrisdickinson/setup-yq@latest
         with:
-          yq-version: "4.4.1"
+          yq-version: "v4.4.1"
       - name: Get GitHub Tag
         id: get_tag
         run: |
