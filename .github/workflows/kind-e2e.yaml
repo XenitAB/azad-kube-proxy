@@ -4,8 +4,6 @@ on: pull_request
 
 env:
   NAME: "azad-kube-proxy"
-  GO_VERSION: "1.15"
-  GOLANGCI_LINT_VERSION: "v1.35"
 
 jobs:
   build-container:
@@ -48,7 +46,8 @@ jobs:
           TENANT_ID: ${{ secrets.TENANT_ID }}
           TEST_USER_SP_OBJECT_ID: ${{ secrets.TEST_USER_SP_OBJECT_ID }}
         run: |
-          helm upgrade --namespace azad-kube-proxy --install azad-kube-proxy --set secret.create=true --set secret.CLIENT_ID=${CLIENT_ID} --set secret.CLIENT_SECRET=${CLIENT_SECRET} --set secret.TENANT_ID=${TENANT_ID} ./charts/azad-kube-proxy
+          kubectl create namespace ${{ env.NAME }}
+          helm upgrade --namespace ${{ env.NAME }} --install ${{ env.NAME }} --set secret.create=true --set secret.CLIENT_ID=${CLIENT_ID} --set secret.CLIENT_SECRET=${CLIENT_SECRET} --set secret.TENANT_ID=${TENANT_ID} --set service.type=NodePort ./charts/azad-kube-proxy
           
           cat <<EOF | kubectl apply -f -
           apiVersion: rbac.authorization.k8s.io/v1
@@ -88,7 +87,8 @@ jobs:
           set -e
           az login --service-principal --username ${TEST_USER_SP_CLIENT_ID} --password ${TEST_USER_SP_CLIENT_SECRET} --tenant ${TENANT_ID} --allow-no-subscriptions 1>/dev/null
           TOKEN=$(az account get-access-token --resource ${TEST_USER_SP_RESOURCE} --query accessToken --output tsv)
-          RESPONSE=$(curl -s -k -H "Authorization: Bearer ${TOKEN}" http://localhost:8080/api/v1/namespaces/default/pods | jq -r '.items[0].metadata.name')
+          NODE_PORT=$(kubectl --namespace ${{ env.NAME }} get service ${{ env.NAME }} -o json | jq -r '.spec.ports[0].nodePort')
+          RESPONSE=$(curl -s -k -H "Authorization: Bearer ${TOKEN}" http://localhost:${NODE_PORT}/api/v1/namespaces/default/pods | jq -r '.items[0].metadata.name')
           if [[ "${RESPONSE}" != "test" ]]; then
             echo Expected response to be test. Was: ${RESPONSE}
             exit 1
