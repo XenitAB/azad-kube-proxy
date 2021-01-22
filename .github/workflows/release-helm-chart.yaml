@@ -1,8 +1,6 @@
 name: release-helm-chart
 
 on:
-  pull_request:
-    branches: [ main ]
   release:
     types:
       - published
@@ -32,7 +30,7 @@ jobs:
             echo "update version and appVersion for helm chart to: ${GITHUB_TAG}"
             exit 1
           fi
-      # - name: Publish Helm charts
-      #   uses: stefanprodan/helm-gh-pages@master
-      #   with:
-      #     token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish Helm charts
+        uses: stefanprodan/helm-gh-pages@master
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
