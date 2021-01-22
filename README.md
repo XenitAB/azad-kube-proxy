@@ -4,6 +4,10 @@ Azure AD Kubernetes API Proxy
 ## Status
 
 [![Coverage Status](https://coveralls.io/repos/github/XenitAB/azad-kube-proxy/badge.svg?branch=main)](https://coveralls.io/github/XenitAB/azad-kube-proxy?branch=main)
+![CodeQL](https://github.com/xenitab/azad-kube-proxy/workflows/CodeQL/badge.svg?branch=main)
+![KinD End-to-End](https://github.com/xenitab/azad-kube-proxy/workflows/KinD%20End-to-End/badge.svg?branch=main)
+![Trivy](https://github.com/xenitab/azad-kube-proxy/workflows/Trivy/badge.svg?branch=main)
+
 
 ## Description
 
