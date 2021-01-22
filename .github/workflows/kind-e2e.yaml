@@ -89,7 +89,7 @@ jobs:
           TOKEN=$(az account get-access-token --resource ${TEST_USER_SP_RESOURCE} --query accessToken --output tsv)
           NODE_IP=$(kubectl get node -o json | jq -r '.items[0].status.addresses[] | select(.type=="InternalIP").address')
           NODE_PORT=$(kubectl --namespace ${{ env.NAME }} get service ${{ env.NAME }} -o json | jq -r '.spec.ports[0].nodePort')
-          RESPONSE=$(curl -s -k -H "Authorization: Bearer ${TOKEN}" http://localhost:${NODE_PORT}/api/v1/namespaces/default/pods | jq -r '.items[0].metadata.name')
+          RESPONSE=$(curl -s -k -H "Authorization: Bearer ${TOKEN}" http://${NODE_IP}:${NODE_PORT}/api/v1/namespaces/default/pods | jq -r '.items[0].metadata.name')
           if [[ "${RESPONSE}" != "test" ]]; then
             echo Expected response to be test. Was: ${RESPONSE}
             exit 1
