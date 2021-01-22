@@ -6,7 +6,7 @@ on:
       - published
 
 jobs:
-  release:
+  release-helm:
     runs-on: ubuntu-latest
     steps:
       - name: Clone repo

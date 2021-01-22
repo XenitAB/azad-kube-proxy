@@ -6,7 +6,7 @@ env:
   NAME: "azad-kube-proxy"
 
 jobs:
-  build-container:
+  end-to-end:
     runs-on: ubuntu-latest
     steps:
       - name: Clone repo
@@ -87,6 +87,7 @@ jobs:
           set -e
           az login --service-principal --username ${TEST_USER_SP_CLIENT_ID} --password ${TEST_USER_SP_CLIENT_SECRET} --tenant ${TENANT_ID} --allow-no-subscriptions 1>/dev/null
           TOKEN=$(az account get-access-token --resource ${TEST_USER_SP_RESOURCE} --query accessToken --output tsv)
+          NODE_IP=$(kubectl get node -o json | jq -r '.items[0].status.addresses[] | select(.type=="InternalIP").address')
           NODE_PORT=$(kubectl --namespace ${{ env.NAME }} get service ${{ env.NAME }} -o json | jq -r '.spec.ports[0].nodePort')
           RESPONSE=$(curl -s -k -H "Authorization: Bearer ${TOKEN}" http://localhost:${NODE_PORT}/api/v1/namespaces/default/pods | jq -r '.items[0].metadata.name')
           if [[ "${RESPONSE}" != "test" ]]; then
