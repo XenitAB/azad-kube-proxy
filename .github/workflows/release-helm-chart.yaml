@@ -1,0 +1,34 @@
+name: release-helm-chart
+
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v2
+      - name: Install yq
+        uses: chrisdickinson/setup-yq@latest
+      - name: Get GitHub Tag
+        id: get_tag
+        run: |
+          echo "::set-output name=tag::${GITHUB_REF#refs/tags/}"
+      - name: Update Helm chart version and verify no changes
+        env:
+          GITHUB_TAG: ${{ steps.get_tag.outputs.tag }}
+        run: |
+          yq w -i charts/azad-kube-proxy/Chart.yaml version "${GITHUB_TAG}"
+          yq w -i charts/azad-kube-proxy/Chart.yaml appVersion "${GITHUB_TAG}"
+          if [[ $(git status --porcelain) ]]; then
+            git diff
+            echo "update version and appVersion for helm chart to: ${GITHUB_TAG}"
+            exit 1
+          fi
+      - name: Publish Helm charts
+        uses: stefanprodan/helm-gh-pages@master
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

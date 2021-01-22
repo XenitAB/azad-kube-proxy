@@ -1,0 +1,6 @@
+apiVersion: v2
+name: azad-kube-proxy
+description: A Helm chart for Azure AD Kubernetes API Proxy (azad-kube-proxy)
+type: application
+version: v0.0.2
+appVersion: v0.0.2
