@@ -13,6 +13,8 @@ jobs:
         uses: actions/checkout@v2
       - name: Install yq
         uses: chrisdickinson/setup-yq@latest
+        with:
+          yq-version: "4.4.1"
       - name: Get GitHub Tag
         id: get_tag
         run: |
@@ -21,8 +23,8 @@ jobs:
         env:
           GITHUB_TAG: ${{ steps.get_tag.outputs.tag }}
         run: |
-          yq w -i charts/azad-kube-proxy/Chart.yaml version "${GITHUB_TAG}"
-          yq w -i charts/azad-kube-proxy/Chart.yaml appVersion "${GITHUB_TAG}"
+          yq e '.version=env(GITHUB_TAG)' -i charts/azad-kube-proxy/Chart.yaml
+          yq e '.appVersion=env(GITHUB_TAG)' -i charts/azad-kube-proxy/Chart.yaml
           if [[ $(git status --porcelain) ]]; then
             git diff
             echo "update version and appVersion for helm chart to: ${GITHUB_TAG}"
