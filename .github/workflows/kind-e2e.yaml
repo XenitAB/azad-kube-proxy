@@ -22,9 +22,6 @@ jobs:
           fi
           echo ::set-output name=BUILD_DATE::$(date -u +'%Y-%m-%dT%H:%M:%SZ')
           echo ::set-output name=VERSION::${VERSION}
-      - uses: brpaz/hadolint-action@v1.2.1
-        with:
-          dockerfile: Dockerfile
       - name: Cache container layers
         uses: actions/cache@v2
         with:
@@ -51,7 +48,7 @@ jobs:
           TENANT_ID: ${{ secrets.TENANT_ID }}
           TEST_USER_SP_OBJECT_ID: ${{ secrets.TEST_USER_SP_OBJECT_ID }}
         run: |
-          helm upgrade --namespace azad-kube-proxy --install azad-kube-proxy --set secret.create=true --set secret.CLIENT_ID=${CLIENT_ID} --set secret.CLIENT_SECRET=${CLIENT_SECRET} --set secret.TENANT_ID=${TENANT_ID} ./azad-kube-proxy
+          helm upgrade --namespace azad-kube-proxy --install azad-kube-proxy --set secret.create=true --set secret.CLIENT_ID=${CLIENT_ID} --set secret.CLIENT_SECRET=${CLIENT_SECRET} --set secret.TENANT_ID=${TENANT_ID} ./charts/azad-kube-proxy
           
           cat <<EOF | kubectl apply -f -
           apiVersion: rbac.authorization.k8s.io/v1
@@ -91,7 +88,7 @@ jobs:
           set -e
           az login --service-principal --username ${TEST_USER_SP_CLIENT_ID} --password ${TEST_USER_SP_CLIENT_SECRET} --tenant ${TENANT_ID} --allow-no-subscriptions 1>/dev/null
           TOKEN=$(az account get-access-token --resource ${TEST_USER_SP_RESOURCE} --query accessToken --output tsv)
-          RESPONSE=$(curl -s -k -H "Authorization: Bearer ${TOKEN}" https://localhost:8443/api/v1/namespaces/default/pods | jq -r '.items[0].metadata.name')
+          RESPONSE=$(curl -s -k -H "Authorization: Bearer ${TOKEN}" http://localhost:8080/api/v1/namespaces/default/pods | jq -r '.items[0].metadata.name')
           if [[ "${RESPONSE}" != "test" ]]; then
             echo Expected response to be test. Was: ${RESPONSE}
             exit 1
