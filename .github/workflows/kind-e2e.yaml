@@ -1,6 +1,12 @@
 name: KinD End-to-End
 
-on: pull_request
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: '20 3 * * 6'
 
 env:
   NAME: "azad-kube-proxy"
@@ -68,7 +74,7 @@ jobs:
           apiVersion: v1
           kind: Pod
           metadata:
-            name: temp
+            name: test
             namespace: default
           spec:
             containers:
