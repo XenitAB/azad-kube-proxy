@@ -1,16 +1,18 @@
-name: Trivy main
+name: Trivy
 
 on:
+  pull_request:
+    branches: [ main ]
   push:
     branches: [ main ]
   schedule:
-    - cron: '17 3 * * 6'
+    - cron: '0 3 * * 6'
 
 env:
   NAME: "azad-kube-proxy"
 
 jobs:
-  build-container:
+  trivy:
     runs-on: ubuntu-latest
     steps:
       - name: Clone repo
@@ -43,10 +45,11 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          platforms: linux/amd64,linux/arm/v7,linux/arm64
+          platforms: linux/amd64
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
           tags: ${{ env.NAME }}:${{ steps.prep.outputs.VERSION }}
+          load: true
           labels: |
             org.opencontainers.image.title=${{ github.event.repository.name }}
             org.opencontainers.image.description=${{ github.event.repository.description }}
@@ -54,9 +57,6 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.version=${{ steps.prep.outputs.VERSION }}
             org.opencontainers.image.created=${{ steps.prep.outputs.BUILD_DATE }}
-      - name: Build and load (current arch)
-        run: |
-          docker buildx build --load -t ${{ env.NAME }}:${{ steps.prep.outputs.VERSION }} .
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:

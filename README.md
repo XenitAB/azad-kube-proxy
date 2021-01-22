@@ -103,7 +103,7 @@ K8S_PORT=$(echo ${HOST_PORT} | awk -F':' '{print $2}')
 
 ```shell
 kubectl config set-context kind-azad-kube-proxy
-kubectl apply -f deploy/yaml/azad-kube-proxy.yaml
+kubectl apply -f test/test-manifest.yaml
 cat <<EOF | kubectl apply -f -
 apiVersion: v1
 kind: Pod

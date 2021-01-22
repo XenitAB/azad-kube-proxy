@@ -55,13 +55,5 @@ token:
 	 az account get-access-token --resource ${TEST_USER_SP_RESOURCE} --query accessToken --output tsv
 
 .SILENT:
-docker-build:
-	docker build -t $(IMG) .
-
-.SILENT:
-kind-load:
-	kind load docker-image $(IMG)
-
-.SILENT:
 build:
 	go build -o bin/azad-kube-proxy cmd/azad-kube-proxy/main.go

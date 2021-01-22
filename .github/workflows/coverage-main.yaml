@@ -9,7 +9,7 @@ env:
   GO_VERSION: "1.15"
 
 jobs:
-  coverage:
+  coverage-main:
     runs-on: ubuntu-latest
     steps:
       - name: Clone repo
