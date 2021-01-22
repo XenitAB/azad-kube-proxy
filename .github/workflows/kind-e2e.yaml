@@ -83,7 +83,7 @@ jobs:
               command: ["sleep"]
               args: ["3000"]
           EOF
-      - name: Install helm chart
+      - name: Test azad-kube-proxy
         env:
           TENANT_ID: ${{ secrets.TENANT_ID }}
           TEST_USER_SP_CLIENT_ID: ${{ secrets.TEST_USER_SP_CLIENT_ID }}
@@ -95,6 +95,8 @@ jobs:
           TOKEN=$(az account get-access-token --resource ${TEST_USER_SP_RESOURCE} --query accessToken --output tsv)
           NODE_IP=$(kubectl get node -o json | jq -r '.items[0].status.addresses[] | select(.type=="InternalIP").address')
           NODE_PORT=$(kubectl --namespace ${{ env.NAME }} get service ${{ env.NAME }} -o json | jq -r '.spec.ports[0].nodePort')
+          echo NODE_IP: $NODE_IP
+          echo NODE_PORT: $NODE_PORT
           RESPONSE=$(curl -s -k -H "Authorization: Bearer ${TOKEN}" http://${NODE_IP}:${NODE_PORT}/api/v1/namespaces/default/pods | jq -r '.items[0].metadata.name')
           if [[ "${RESPONSE}" != "test" ]]; then
             echo Expected response to be test. Was: ${RESPONSE}
