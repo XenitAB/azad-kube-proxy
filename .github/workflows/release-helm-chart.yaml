@@ -1,6 +1,8 @@
 name: release-helm-chart
 
 on:
+  pull_request:
+    branches: [ main ]
   release:
     types:
       - published
@@ -14,7 +16,7 @@ jobs:
       - name: Install yq
         uses: chrisdickinson/setup-yq@latest
         with:
-          yq-version: "4.4.1"
+          yq-version: "v4.4.1"
       - name: Get GitHub Tag
         id: get_tag
         run: |
@@ -30,7 +32,7 @@ jobs:
             echo "update version and appVersion for helm chart to: ${GITHUB_TAG}"
             exit 1
           fi
-      - name: Publish Helm charts
-        uses: stefanprodan/helm-gh-pages@master
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Publish Helm charts
+      #   uses: stefanprodan/helm-gh-pages@master
+      #   with:
+      #     token: ${{ secrets.GITHUB_TOKEN }}
