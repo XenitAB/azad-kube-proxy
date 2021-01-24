@@ -1,6 +1,6 @@
 project_name: kubectl-azad_proxy
 builds:
-- main: ./cmd/kubectl-azad_proxy/main.go
+- main: ./cmd/kubectl-azad-proxy/main.go
   binary: kubectl-azad_proxy
   env:
   - CGO_ENABLED=0
