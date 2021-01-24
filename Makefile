@@ -10,7 +10,7 @@ ifneq (,$(wildcard $(TEST_ENV_FILE)))
 endif
 
 .SILENT:
-all: tidy lint fmt vet gosec test build
+all: tidy lint fmt vet gosec test build build-plugin
 
 .SILENT:
 lint:
@@ -64,4 +64,4 @@ build:
 
 .SILENT:
 build-plugin:
-	go build -o bin/kubectl-azad-proxy cmd/kubectl-azad-proxy/main.go
+	go build -o bin/kubectl-azad_proxy cmd/kubectl-azad-proxy/main.go
