@@ -143,7 +143,6 @@ func TestLogin(t *testing.T) {
 	}
 
 	tokenCacheFileErr := fmt.Sprintf("%s/../../../tmp/test-login-token-cache-err", curDir)
-	defer deleteFile(t, tokenCacheFileErr)
 	cfgErr := LoginConfig{
 		clusterName: "test",
 		resource:    resource,

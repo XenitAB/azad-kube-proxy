@@ -185,7 +185,6 @@ func TestGetToken(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected err to be nil: %q", err)
 	}
-	defer deleteFile(t, realFalseFile)
 
 	cases := []struct {
 		tokens              TokensInterface

@@ -130,7 +130,6 @@ func TestGenerate(t *testing.T) {
 		t.Errorf("Expected err to be nil: %q", err)
 	}
 	tokenCacheFile := fmt.Sprintf("%s/../../../tmp/test-cached-tokens-generate", curDir)
-	defer deleteFile(t, tokenCacheFile)
 	kubeConfigFile := fmt.Sprintf("%s/../../../tmp/test-generate-kubeconfig", curDir)
 	defer deleteFile(t, kubeConfigFile)
 
