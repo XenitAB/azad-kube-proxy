@@ -130,9 +130,9 @@ func TestGenerate(t *testing.T) {
 		t.Errorf("Expected err to be nil: %q", err)
 	}
 	tokenCacheFile := fmt.Sprintf("%s/../../../tmp/test-cached-tokens-generate", curDir)
-	defer deleteFile(tokenCacheFile)
+	defer deleteFile(t, tokenCacheFile)
 	kubeConfigFile := fmt.Sprintf("%s/../../../tmp/test-generate-kubeconfig", curDir)
-	defer deleteFile(kubeConfigFile)
+	defer deleteFile(t, kubeConfigFile)
 
 	cfg := GenerateConfig{
 		clusterName:        "test",
@@ -208,7 +208,6 @@ func TestGenerate(t *testing.T) {
 				t.Errorf("Expected length of kubeCfg.Clusters[c.generateConfig.clusterName].CertificateAuthorityData to be lager than 0 but was: %d", len(kubeCfg.Clusters[c.generateConfig.clusterName].CertificateAuthorityData))
 			}
 		}
-		cfg = GenerateConfig{}
 	}
 }
 

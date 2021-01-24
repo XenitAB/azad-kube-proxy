@@ -88,7 +88,7 @@ func TestNewTokens(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected err to be nil: %q", err)
 	}
-	defer deleteFile(fakeFile)
+	defer deleteFile(t, fakeFile)
 
 	_, err = NewTokens(ctx, fakeFile, defaultAzureCredentialOptions)
 	if err != nil {
@@ -108,7 +108,7 @@ func TestNewTokens(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected err to be nil: %q", err)
 	}
-	defer deleteFile(fakeFileErr)
+	defer deleteFile(t, fakeFileErr)
 
 	_, err = NewTokens(ctx, fakeFileErr, defaultAzureCredentialOptions)
 	if !strings.Contains(err.Error(), "json: cannot unmarshal bool") {
@@ -166,7 +166,7 @@ func TestGetToken(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected err to be nil: %q", err)
 	}
-	defer deleteFile(fakeFile)
+	defer deleteFile(t, fakeFile)
 
 	fakeTokens, err := NewTokens(ctx, fakeFile, defaultAzureCredentialOptions)
 	if err != nil {
@@ -178,14 +178,14 @@ func TestGetToken(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected err to be nil: %q", err)
 	}
-	defer deleteFile(realFile)
+	defer deleteFile(t, realFile)
 
 	realFalseFile := fmt.Sprintf("%s/../../../tmp/test-cached-tokens-realfalse", curDir)
 	realFalseTokens, err := NewTokens(ctx, realFalseFile, defaultAzureCredentialOptionsFalse)
 	if err != nil {
 		t.Errorf("Expected err to be nil: %q", err)
 	}
-	defer deleteFile(realFalseFile)
+	defer deleteFile(t, realFalseFile)
 
 	cases := []struct {
 		tokens              TokensInterface
@@ -263,13 +263,11 @@ func createCacheFile(path string, cachedTokens interface{}) error {
 	return nil
 }
 
-func deleteFile(file string) error {
+func deleteFile(t *testing.T, file string) {
 	err := os.Remove(file)
 	if err != nil {
-		return fmt.Errorf("Unable to delete file %s: %v", file, err)
+		t.Errorf("Unable to delete file: %q", err)
 	}
-
-	return nil
 }
 
 func getEnvOrSkip(t *testing.T, envVar string) string {

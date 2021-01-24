@@ -128,7 +128,7 @@ func TestLogin(t *testing.T) {
 		t.Errorf("Expected err to be nil: %q", err)
 	}
 	tokenCacheFile := fmt.Sprintf("%s/../../../tmp/test-login-token-cache", curDir)
-	defer deleteFile(tokenCacheFile)
+	defer deleteFile(t, tokenCacheFile)
 
 	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
 	cfg := LoginConfig{
@@ -143,7 +143,7 @@ func TestLogin(t *testing.T) {
 	}
 
 	tokenCacheFileErr := fmt.Sprintf("%s/../../../tmp/test-login-token-cache-err", curDir)
-	defer deleteFile(tokenCacheFileErr)
+	defer deleteFile(t, tokenCacheFileErr)
 	cfgErr := LoginConfig{
 		clusterName: "test",
 		resource:    resource,
@@ -200,6 +200,5 @@ func TestLogin(t *testing.T) {
 				t.Errorf("Expected tokenRes.Kind to be '%s' but was: %s", "ExecCredential", tokenRes.Kind)
 			}
 		}
-		cfg = LoginConfig{}
 	}
 }
