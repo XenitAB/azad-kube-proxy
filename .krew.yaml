@@ -1,0 +1,46 @@
+apiVersion: krew.googlecontainertools.github.com/v1alpha2
+kind: Plugin
+metadata:
+  name: azad-proxy
+spec:
+  platforms:
+  - {{addURIAndSha "https://github.com/xenitab/azad-kube-proxy/releases/download/{{ .TagName }}/kubectl-azad_proxy-darwin-amd64.zip" .TagName }}
+    bin: kubectl-azad_proxy
+    files:
+    - from: kubectl-azad_proxy
+      to: .
+    - from: LICENSE
+      to: .
+    selector:
+      matchLabels:
+        os: darwin
+        arch: amd64
+  - {{addURIAndSha "https://github.com/xenitab/azad-kube-proxy/releases/download/{{ .TagName }}/kubectl-azad_proxy-linux-amd64.zip" .TagName }}
+    bin: kubectl-azad_proxy
+    files:
+    - from: kubectl-azad_proxy
+      to: .
+    - from: LICENSE
+      to: .
+    selector:
+      matchLabels:
+        os: linux
+        arch: amd64
+  - {{addURIAndSha "https://github.com/xenitab/azad-kube-proxy/releases/download/{{ .TagName }}/kubectl-azad_proxy-windows-amd64.zip" .TagName }}
+    bin: kubectl-azad_proxy.exe
+    files:
+    - from: kubectl-azad_proxy.exe
+      to: .
+    - from: LICENSE
+      to: .
+    selector:
+      matchLabels:
+        os: windows
+        arch: amd64
+  version: "{{ .TagName }}"
+  shortDescription: Plugin to generate and handle authentication for azad-kube-proxy
+  description: |
+    Azure AD Kubernetes API Proxy: azad-kube-proxy
+    This is a plugin to make authentication and rotation of tokens from Azure AD simpler
+    when using azad-kube-proxy.
+  homepage: https://github.com/xenitab/azad-kube-proxy
