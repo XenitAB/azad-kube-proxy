@@ -3,9 +3,7 @@ package actions
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/urfave/cli/v2"
 	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,14 +12,18 @@ import (
 
 // LoginConfig ...
 type LoginConfig struct {
+	clusterName                   string
 	resource                      string
+	tokenCache                    string
 	defaultAzureCredentialOptions *azidentity.DefaultAzureCredentialOptions
 }
 
 // NewLoginConfig ...
-func NewLoginConfig(c *cli.Context) (LoginConfig, error) {
+func NewLoginConfig(ctx context.Context, c *cli.Context) (LoginConfig, error) {
 	return LoginConfig{
-		resource: c.String("resource"),
+		clusterName: c.String("cluster-name"),
+		resource:    c.String("resource"),
+		tokenCache:  c.String("token-cache"),
 		defaultAzureCredentialOptions: &azidentity.DefaultAzureCredentialOptions{
 			ExcludeAzureCLICredential:    c.Bool("exclude-azure-cli-auth"),
 			ExcludeEnvironmentCredential: c.Bool("exclude-environment-auth"),
@@ -31,13 +33,25 @@ func NewLoginConfig(c *cli.Context) (LoginConfig, error) {
 }
 
 // LoginFlags ...
-func LoginFlags() []cli.Flag {
+func LoginFlags(ctx context.Context) []cli.Flag {
 	return []cli.Flag{
+		&cli.StringFlag{
+			Name:     "cluster-name",
+			Usage:    "The name of the Kubernetes cluster / context",
+			EnvVars:  []string{"CLUSTER_NAME"},
+			Required: true,
+		},
 		&cli.StringFlag{
 			Name:     "resource",
 			Usage:    "The Azure AD App URI / resource",
 			EnvVars:  []string{"RESOURCE"},
 			Required: true,
+		},
+		&cli.StringFlag{
+			Name:    "token-cache",
+			Usage:   "The token cache path to cache tokens",
+			EnvVars: []string{"TOKEN_CACHE"},
+			Value:   "~/.kube/azad-proxy.json",
 		},
 		&cli.BoolFlag{
 			Name:    "exclude-azure-cli-auth",
@@ -61,10 +75,13 @@ func LoginFlags() []cli.Flag {
 }
 
 // Login ...
-func Login(cfg LoginConfig) (string, error) {
-	ctx := context.Background()
+func Login(ctx context.Context, cfg LoginConfig) (string, error) {
+	tokens, err := NewTokens(ctx, cfg.tokenCache, cfg.defaultAzureCredentialOptions)
+	if err != nil {
+		return "", err
+	}
 
-	token, err := getAccessToken(ctx, cfg.resource, cfg.defaultAzureCredentialOptions)
+	token, err := tokens.GetToken(ctx, cfg.clusterName, cfg.resource)
 	if err != nil {
 		return "", err
 	}
@@ -76,7 +93,7 @@ func Login(cfg LoginConfig) (string, error) {
 		},
 		Status: &k8sclientauth.ExecCredentialStatus{
 			Token:               token.Token,
-			ExpirationTimestamp: &k8smetav1.Time{Time: token.ExpiresOn},
+			ExpirationTimestamp: &k8smetav1.Time{Time: token.ExpirationTimestamp},
 		},
 	}
 
@@ -86,19 +103,4 @@ func Login(cfg LoginConfig) (string, error) {
 	}
 
 	return string(res), nil
-}
-
-func getAccessToken(ctx context.Context, resource string, defaultAzureCredentialOptions *azidentity.DefaultAzureCredentialOptions) (*azcore.AccessToken, error) {
-	scope := fmt.Sprintf("%s/.default", resource)
-	cred, err := azidentity.NewDefaultAzureCredential(defaultAzureCredentialOptions)
-	if err != nil {
-		return nil, err
-	}
-
-	token, err := cred.GetToken(ctx, azcore.TokenRequestOptions{Scopes: []string{scope}})
-	if err != nil {
-		return nil, err
-	}
-
-	return token, nil
 }

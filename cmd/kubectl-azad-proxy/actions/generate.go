@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/pem"
 	"fmt"
@@ -22,13 +23,14 @@ type GenerateConfig struct {
 	proxyURL                      url.URL
 	resource                      string
 	kubeConfig                    string
+	tokenCache                    string
 	overwrite                     bool
 	insecureSkipVerify            bool
 	defaultAzureCredentialOptions *azidentity.DefaultAzureCredentialOptions
 }
 
 // NewGenerateConfig ...
-func NewGenerateConfig(c *cli.Context) (GenerateConfig, error) {
+func NewGenerateConfig(ctx context.Context, c *cli.Context) (GenerateConfig, error) {
 	proxyURL, err := url.Parse(c.String("proxy-url"))
 	if err != nil {
 		return GenerateConfig{}, err
@@ -38,6 +40,7 @@ func NewGenerateConfig(c *cli.Context) (GenerateConfig, error) {
 		proxyURL:           *proxyURL,
 		resource:           c.String("resource"),
 		kubeConfig:         c.String("kubeconfig"),
+		tokenCache:         c.String("token-cache"),
 		overwrite:          c.Bool("overwrite"),
 		insecureSkipVerify: c.Bool("tls-insecure-skip-verify"),
 		defaultAzureCredentialOptions: &azidentity.DefaultAzureCredentialOptions{
@@ -49,7 +52,7 @@ func NewGenerateConfig(c *cli.Context) (GenerateConfig, error) {
 }
 
 // GenerateFlags ...
-func GenerateFlags() []cli.Flag {
+func GenerateFlags(ctx context.Context) []cli.Flag {
 	usr, _ := user.Current()
 	return []cli.Flag{
 		&cli.StringFlag{
@@ -75,6 +78,12 @@ func GenerateFlags() []cli.Flag {
 			Usage:   "The path of the Kubernetes Config",
 			EnvVars: []string{"KUBECONFIG"},
 			Value:   fmt.Sprintf("%s/.kube/config", usr.HomeDir),
+		},
+		&cli.StringFlag{
+			Name:    "token-cache",
+			Usage:   "The token cache path to cache tokens",
+			EnvVars: []string{"TOKEN_CACHE"},
+			Value:   "~/.kube/azad-proxy.json",
 		},
 		&cli.BoolFlag{
 			Name:    "overwrite",
@@ -110,7 +119,7 @@ func GenerateFlags() []cli.Flag {
 }
 
 // Generate ...
-func Generate(cfg GenerateConfig) error {
+func Generate(ctx context.Context, cfg GenerateConfig) error {
 	kubeCfg, err := k8sclientcmd.LoadFromFile(cfg.kubeConfig)
 	if err != nil && !strings.Contains(err.Error(), "no such file or directory") {
 		return err
@@ -163,8 +172,16 @@ func Generate(cfg GenerateConfig) error {
 			},
 			Env: []k8sclientcmdapi.ExecEnvVar{
 				{
+					Name:  "CLUSTER_NAME",
+					Value: cfg.clusterName,
+				},
+				{
 					Name:  "RESOURCE",
 					Value: cfg.resource,
+				},
+				{
+					Name:  "TOKEN_CACHE",
+					Value: cfg.tokenCache,
 				},
 				{
 					Name:  "EXCLUDE_AZURE_CLI_AUTH",
