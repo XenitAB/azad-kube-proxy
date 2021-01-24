@@ -52,10 +52,12 @@ spec:
             httpGet:
               path: /healthz
               port: http
+              scheme: {{ .Values.application.scheme }}
           readinessProbe:
             httpGet:
               path: /readyz
               port: http
+              scheme: {{ .Values.application.scheme }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- with .Values.podVolumeMounts }}

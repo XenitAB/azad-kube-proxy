@@ -1,5 +1,6 @@
 application:
   port: 8443
+  scheme: HTTPS
 
 podArgs:
   - --client-id=$(CLIENT_ID)

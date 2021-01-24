@@ -65,7 +65,7 @@ jobs:
           openssl req -newkey rsa:4096 -x509 -sha256 -days 3650 -nodes -out tmp/cert.crt -keyout tmp/cert.key -subj "/C=SE/ST=LOCALHOST/L=LOCALHOST/O=LOCALHOST/OU=LOCALHOST/CN=${NODE_IP}" -extensions san -config tmp/csr-config
           kubectl create namespace ${{ env.NAME }}
           kubectl --namespace ${{ env.NAME }} create secret tls test-cert --cert=tmp/cert.crt --key=tmp/cert.key
-          helm upgrade --wait --timeout 120s --namespace ${{ env.NAME }} --install ${{ env.NAME }} --values test/test-values.yaml --set secret.CLIENT_ID=${CLIENT_ID} --set secret.CLIENT_SECRET=${CLIENT_SECRET} --set secret.TENANT_ID=${TENANT_ID} ./charts/azad-kube-proxy
+          helm upgrade --wait --timeout 120s --namespace ${{ env.NAME }} --install ${{ env.NAME }} --values test/test-values.yaml --set secret.CLIENT_ID=${CLIENT_ID} --set secret.CLIENT_SECRET=${CLIENT_SECRET} --set secret.TENANT_ID=${TENANT_ID} --set image.repository=${{ env.NAME }} --set image.tag=${{ steps.prep.outputs.VERSION }} ./charts/azad-kube-proxy
           
           cat <<EOF | kubectl apply -f -
           apiVersion: rbac.authorization.k8s.io/v1
