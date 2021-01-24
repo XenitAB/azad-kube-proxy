@@ -13,9 +13,7 @@ import (
 
 func main() {
 	// Initiate the logging
-	var log logr.Logger
-
-	log = klogr.New().V(0)
+	log := klogr.New().V(0)
 	ctx := logr.NewContext(context.Background(), log)
 
 	app := &cli.App{

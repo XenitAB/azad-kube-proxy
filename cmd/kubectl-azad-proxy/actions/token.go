@@ -148,12 +148,12 @@ func getAccessToken(ctx context.Context, resource string, defaultAzureCredential
 }
 
 func getFileContent(s string) ([]byte, error) {
-	file, err := os.Open(s)
+	file, err := os.Open(s) // #nosec
 	if err != nil {
 		return nil, err
 	}
 
-	defer file.Close()
+	defer file.Close() // #nosec
 
 	bytes, err := ioutil.ReadAll(file)
 	if err != nil {

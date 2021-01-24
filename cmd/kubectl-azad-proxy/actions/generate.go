@@ -229,7 +229,7 @@ func getCACertificates(url url.URL, insecureSkipVerify bool) ([]byte, error) {
 
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: insecureSkipVerify,
-	}
+	} // #nosec
 
 	conn, err := tls.DialWithDialer(dialer, "tcp", hostPort, tlsConfig)
 	if err != nil {
