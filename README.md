@@ -11,13 +11,112 @@ Azure AD Kubernetes API Proxy
 
 ## Description
 
-*ALPHA* project. Use at own risk.
+This is a reverse proxy you place in front of your Kubernetes API. It will accept Azure AD access tokens (v2) and handle impersonation to the Kubernetes API.
 
-This reverse proxy will run in front of a Kubernetes API and accept tokens from Azure AD and using these and the Graph API, use impersonation headers to authenticate the end user to the API.
+A kubectl plugin (`kubectl azad-proxy`) can be used to handle authentication and configuration generation. It supports Azure CLI, environment variables and MSI as authentication source.
 
 ## Overview
 
 ![overview](assets/azad-kube-proxy-overview.png)
+
+## Installation
+
+### Proxy (Helm chart)
+
+Helm chart is located in [charts/azad-kube-proxy](charts/azad-kube-proxy) and published using GitHub Pages.
+
+Example usage:
+
+```shell
+helm repo add dhkey-operator https://xenitab.github.io/azad-kube-proxy/
+helm repo update
+
+kubectl create namespace azad-kube-proxy
+helm upgrade --namespace azad-kube-proxy --version <ver> --install azad-kube-proxy azad-kube-proxy/azad-kube-proxy
+```
+
+### Plugin (Krew / kubectl plugin)
+
+*NOTE: Not published as of now. Download from the release page and place the binary in a folder that you have in $PATH.*
+
+The kubectl plugin can be installed through Krew.
+
+```shell
+kubectl krew install azad-proxy
+```
+
+### Usage
+
+### Proxy
+
+Setup the proxy (using Helm Chart or other way). It is recommended to set it up using an ingress in front of it handling the TLS and also being able to take care of an allow list of what IPs can connect to it.
+
+Using ingress-nginx, cert-manager and external-dns - you will be able to handle the blue/green deployments with ease.
+
+It is not tested with MSI / aad-pod-identity yet, but may work with some tweaks.
+
+Configuration can be found in [pkg/config/config.go](pkg/config/config.go).
+
+### Plugin
+
+Setup the plugin (using Krew or manually). When that is done, run:
+
+```shell
+kubectl azad-proxy generate --cluster-name dev-cluster --proxy-url https://dev.example.com --resource https://dev.example.com
+```
+
+This in turn will leverage the other command and run `kubectl azad-proxy login [...]` to handle the authentication and rotation of token.
+
+It will look something like this:
+
+```YAML
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: [...]
+    server: https://dev.example.com
+  name: dev-cluster
+contexts:
+- context:
+    cluster: dev-cluster
+    user: dev-cluster
+  name: dev-cluster
+current-context: dev-cluster
+kind: Config
+preferences: {}
+users:
+- name: dev-cluster
+  user:
+    exec:
+      apiVersion: client.authentication.k8s.io/v1beta1
+      args:
+      - azad-proxy
+      - login
+      command: kubectl
+      env:
+      - name: CLUSTER_NAME
+        value: dev-cluster
+      - name: RESOURCE
+        value: https://dev.example.com
+      - name: TOKEN_CACHE
+        value: ~/.kube/azad-proxy.json
+      - name: EXCLUDE_AZURE_CLI_AUTH
+        value: "false"
+      - name: EXCLUDE_ENVIRONMENT_AUTH
+        value: "false"
+      - name: EXCLUDE_MSI_AUTH
+        value: "false"
+      provideClusterInfo: false
+```
+
+The token will by default be cached to `~/.kube/azad-proxy.json` (access token with usually an hours expiry). Azure CLI authentication is used by default and you need to be authenticated with Azure CLI to use the plugin. It is also possible to use the environment variables for Service Principal authentication without the Azure CLI:
+- `AZURE_TENANT_ID`
+- `AZURE_CLIENT_ID`
+- `AZURE_CLIENT_SECRET`
+
+It's not tested, but MSI / aad-pod-identity may also work.
+
+Configuration for the `generate` command can be found in [cmd/kubectl-azad-proxy/actions/generate.go](cmd/kubectl-azad-proxy/actions/generate.go) and configuration for the `login` command can be found in [cmd/kubectl-azad-proxy/actions/login.go](cmd/kubectl-azad-proxy/actions/login.go).
 
 ## Why was this built?
 
@@ -31,7 +130,7 @@ There are a few reasons why this proxy was built, mainly:
 - Using the AKS Kubernetes API with service principals haven't been the easiest (and before AADv2 support, wasn't possible).
 - Full control of the Azure AD Application that is published.
 - Ability to filter groups based on prefix to only allow specific groups to be used with the cluster.
-- Ability to create RBAC rules based on group names instead of ObjectIDs.
+- Ability to create RBAC rules based on Azure AD group displayNames as well as objectIDs.
 
 ## What are the main features?
 
@@ -42,8 +141,22 @@ The main features of this proxy are:
 - Resolve the distributed claims issue with Azure AD and Kubernetes.
 - Limit what groups are sent to the Kubernetes API based on group name prefix.
 - Ability to control the Azure AD Application fully.
-- Use `az` (azure cli) to get tokens.
 - Use both normal users and service principals.
+- Use either Azure AD group displayNames or objectIDs
+
+### Blue/Green deployment
+
+**CURRENT**
+
+![blue_green_current](assets/blue_green-Current.png)
+
+**AZAD-KUBE-PROXY**
+
+![blue_green_current](assets/blue_green-azad-kube-proxy.png)
+
+### Multiple clouds / Kubernetes Services
+
+![multi-k8s-service](assets/multi-k8s-service.png)
 
 ## Alternatives
 
@@ -61,28 +174,13 @@ AZ_APP_NAME="k8s-api"
 AZ_APP_URI="https://k8s-api.azadkubeproxy.onmicrosoft.com"
 AZ_APP_ID=$(az ad app create --display-name ${AZ_APP_NAME} --identifier-uris ${AZ_APP_URI} --query appId -o tsv)
 AZ_APP_OBJECT_ID=$(az ad app show --id ${AZ_APP_ID} --output tsv --query objectId)
-AZ_APP_PERMISSION_ID=$(az ad app show --id ${AZ_APP_ID} --output tsv --query "oauth2Permissions[0].id" )
-az ad app update --id ${AZ_APP_ID} --set groupMembershipClaims=All
+AZ_APP_PERMISSION_ID=$(az ad app show --id ${AZ_APP_ID} --output tsv --query "oauth2Permissions[0].id")
 az rest --method PATCH --uri "https://graph.microsoft.com/beta/applications/${AZ_APP_OBJECT_ID}" --body '{"api":{"requestedAccessTokenVersion": 2}}'
 # Add Azure CLI as allowed client
 az rest --method PATCH --uri "https://graph.microsoft.com/beta/applications/${AZ_APP_OBJECT_ID}" --body "{\"api\":{\"preAuthorizedApplications\":[{\"appId\":\"04b07795-8ddb-461a-bbee-02f9e1bf7b46\",\"permissionIds\":[\"${AZ_APP_PERMISSION_ID}\"]}]}}"
 AZ_APP_SECRET=$(az ad sp credential reset --name ${AZ_APP_ID} --credential-description "azad-kube-proxy" --output tsv --query password)
-az ad app permission add --id ${AZ_APP_ID} --api 00000002-0000-0000-c000-000000000000 --api-permissions 5778995a-e1bf-45b8-affa-663a9f3f4d04=Role
 az ad app permission add --id ${AZ_APP_ID} --api 00000003-0000-0000-c000-000000000000 --api-permissions 7ab1d382-f21e-4acd-a863-ba3e13f7da61=Role
 az ad app permission admin-consent --id ${AZ_APP_ID}
-```
-
-### Generating self signed certificate for development
-
-*NOTE*: You need to run the application using certificates since `kubectl` won't send Authorization header when not using TLS.
-
-```shell
-mkdir -p tmp
-
-openssl req -newkey rsa:4096 -x509 -sha256 -days 3650 -nodes -out tmp/cert.crt -keyout tmp/cert.key -subj "/C=SE/ST=LOCALHOST/L=LOCALHOST/O=LOCALHOST/OU=LOCALHOST/CN=localhost" -extensions san -config <( echo '[req]'; echo 'distinguished_name=req'; echo '[san]'; echo 'subjectAltName=DNS:localhost')
-
-CERT_PATH="${PWD}/tmp/cert.crt"
-KEY_PATH="${PWD}/tmp/cert.key"
 ```
 
 ### Setting up Kind cluster
@@ -98,6 +196,7 @@ K8S_PORT=$(echo ${HOST_PORT} | awk -F':' '{print $2}')
 ### Configuring service account
 
 ```shell
+mkdir -p tmp 
 kubectl config set-context kind-azad-kube-proxy
 kubectl apply -f test/test-manifest.yaml
 cat <<EOF | kubectl apply -f -
@@ -105,20 +204,45 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: temp
-  namespace: azad-kube-proxy
+  namespace: azad-kube-proxy-test
 spec:
-  serviceAccountName: azad-kube-proxy
+  serviceAccountName: azad-kube-proxy-test
   containers:
   - image: busybox
     name: test
     command: ["sleep"]
     args: ["3000"]
 EOF
-kubectl exec -n azad-kube-proxy temp -- cat "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt" > tmp/ca.crt
-kubectl exec -n azad-kube-proxy temp -- cat "/var/run/secrets/kubernetes.io/serviceaccount/token" > tmp/token
-kubectl delete -n azad-kube-proxy pod temp
+kubectl exec -n azad-kube-proxy-test temp -- cat "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt" > tmp/ca.crt
+kubectl exec -n azad-kube-proxy-test temp -- cat "/var/run/secrets/kubernetes.io/serviceaccount/token" > tmp/token
+kubectl delete -n azad-kube-proxy-test pod temp
 KUBE_CA_PATH="${PWD}/tmp/ca.crt"
 KUBE_TOKEN_PATH="${PWD}/tmp/token"
+```
+
+### Generating self signed certificate for development
+
+*NOTE*: You need to run the application using certificates since `kubectl` won't send Authorization header when not using TLS.
+
+```shell
+NODE_IP=$(kubectl get node -o json | jq -r '.items[0].status.addresses[] | select(.type=="InternalIP").address')
+
+cat <<EOF > tmp/csr-config
+[req]
+distinguished_name=req
+[san]
+subjectAltName=@alt_names
+[alt_names]
+DNS.1 = localhost
+DNS.2 = ${NODE_IP}
+IP.1 = 127.0.0.1
+IP.2 = ${NODE_IP}
+EOF
+
+openssl req -newkey rsa:4096 -x509 -sha256 -days 3650 -nodes -out tmp/tls.crt -keyout tmp/tls.key -subj "/C=SE/ST=LOCALHOST/L=LOCALHOST/O=LOCALHOST/OU=LOCALHOST/CN=localhost" -extensions san -config tmp/csr-config
+
+CERT_PATH="${PWD}/tmp/tls.crt"
+KEY_PATH="${PWD}/tmp/tls.key"
 ```
 
 ### Creating env for tests
@@ -171,6 +295,7 @@ echo "TLS_ENABLED=true" >> ${PWD}/tmp/test_env
 echo "TLS_CERTIFICATE_PATH=${CERT_PATH}" >> ${PWD}/tmp/test_env
 echo "TLS_KEY_PATH=${KEY_PATH}" >> ${PWD}/tmp/test_env
 echo "PORT=8443" >> ${PWD}/tmp/test_env
+echo "NODE_IP=${NODE_IP}" >> ${PWD}/tmp/test_env
 ```
 
 ### Running the proxy
@@ -181,6 +306,8 @@ make run
 
 ### Authentication for end user
 
+NOTE: Remember to add permissions to the user running the tests.
+
 #### Curl
 
 ```shell
@@ -188,9 +315,21 @@ TOKEN=$(make token)
 curl -k -H "Authorization: Bearer ${TOKEN}" https://localhost:8443/api/v1/namespaces/default/pods
 ```
 
-#### Kubectl
+#### Kubectl (manual)
 
 ```shell
 TOKEN=$(make token)
 kubectl --token="${TOKEN}" --server https://127.0.0.1:8443 --insecure-skip-tls-verify get pods
+```
+
+#### Kubectl (kubectl-azad-proxy)
+
+```shell
+set -a
+source ./tmp/test_env
+set +a
+make build-plugin
+ln -s ${PWD}/bin/kubectl-azad_proxy ~/.krew/bin/kubectl-azad_proxy
+kubectl azad-proxy generate --cluster-name local-test --kubeconfig ${PWD}/tmp/kubeconfig-test --proxy-url https://127.0.0.1:8443 --tls-insecure-skip-verify=true --overwrite --resource ${TEST_USER_SP_RESOURCE}
+kubectl --kubeconfig ${PWD}/tmp/kubeconfig-test get pods
 ```
