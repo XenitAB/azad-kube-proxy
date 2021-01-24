@@ -52,9 +52,17 @@ jobs:
           TENANT_ID: ${{ secrets.TENANT_ID }}
           TEST_USER_SP_OBJECT_ID: ${{ secrets.TEST_USER_SP_OBJECT_ID }}
         run: |
-          mkdir tmp
+          mkdir -p tmp
           NODE_IP=$(kubectl get node -o json | jq -r '.items[0].status.addresses[] | select(.type=="InternalIP").address')
-          openssl req -newkey rsa:4096 -x509 -sha256 -days 3650 -nodes -out tmp/cert.crt -keyout tmp/cert.key -subj "/C=SE/ST=LOCALHOST/L=LOCALHOST/O=LOCALHOST/OU=LOCALHOST/CN=${NODE_IP}" -extensions san -config <( echo '[req]'; echo 'distinguished_name=req'; echo '[san]'; echo 'subjectAltName=DNS:${NODE_IP}')
+
+          cat <<EOF > tmp/csr-config
+          [req]
+          distinguished_name=req
+          [san]
+          subjectAltName=DNS:${NODE_IP}
+          EOF
+          
+          openssl req -newkey rsa:4096 -x509 -sha256 -days 3650 -nodes -out tmp/cert.crt -keyout tmp/cert.key -subj "/C=SE/ST=LOCALHOST/L=LOCALHOST/O=LOCALHOST/OU=LOCALHOST/CN=${NODE_IP}" -extensions san -config tmp/csr-config
           kubectl create namespace ${{ env.NAME }}
           kubectl --namespace ${{ env.NAME }} create secret tls test-cert --cert=tmp/cert.crt --key=tmp/cert.key
           helm upgrade --wait --timeout 120s --namespace ${{ env.NAME }} --install ${{ env.NAME }} --values test/test-values.yaml --set secret.CLIENT_ID=${CLIENT_ID} --set secret.CLIENT_SECRET=${CLIENT_SECRET} --set secret.TENANT_ID=${TENANT_ID} ./charts/azad-kube-proxy
