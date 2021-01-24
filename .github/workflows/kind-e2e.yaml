@@ -59,7 +59,10 @@ jobs:
           [req]
           distinguished_name=req
           [san]
-          subjectAltName=DNS:${NODE_IP}
+          subjectAltName=@alt_names
+          [alt_names]
+          IP.1 = ${NODE_IP}
+          DNS.1 = ${NODE_IP}
           EOF
           
           openssl req -newkey rsa:4096 -x509 -sha256 -days 3650 -nodes -out tmp/cert.crt -keyout tmp/cert.key -subj "/C=SE/ST=LOCALHOST/L=LOCALHOST/O=LOCALHOST/OU=LOCALHOST/CN=${NODE_IP}" -extensions san -config tmp/csr-config
