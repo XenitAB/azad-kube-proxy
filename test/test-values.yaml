@@ -7,8 +7,8 @@ podArgs:
   - --tenant-id=$(TENANT_ID)
   - --azure-ad-group-prefix=$(AZURE_AD_GROUP_PREFIX)
   - --tls-enabled=true
-  - --tls-certificate-path="/mnt/tls/tls.crt"
-  - --tls-key-path="/mnt/tls/tls.key"
+  - --tls-certificate-path=/mnt/tls/tls.crt
+  - --tls-key-path=/mnt/tls/tls.key
   - --port=8443
 
 podEnv:
