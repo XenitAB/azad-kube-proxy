@@ -115,3 +115,13 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+podVolumes: []
+  # - name: foo
+  #   secret:
+  #     secretName: mysecret
+
+podVolumeMounts: []
+  # - name: foo
+  #   mountPath: "/etc/foo"
+  #   readOnly: true
