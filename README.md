@@ -77,17 +77,9 @@ az ad app permission admin-consent --id ${AZ_APP_ID}
 *NOTE*: You need to run the application using certificates since `kubectl` won't send Authorization header when not using TLS.
 
 ```shell
-mkdir tmp
-cd tmp
+mkdir -p tmp
 
-openssl req -newkey rsa:4096 \
-            -x509 \
-            -sha256
-            -days 3650 \
-            -nodes \
-            -out tmp/cert.crt \
-            -keyout tmp/cert.key \
-            -subj "/C=SE/ST=LOCALHOST/L=LOCALHOST/O=LOCALHOST/OU=LOCALHOST/CN=localhost"
+openssl req -newkey rsa:4096 -x509 -sha256 -days 3650 -nodes -out tmp/cert.crt -keyout tmp/cert.key -subj "/C=SE/ST=LOCALHOST/L=LOCALHOST/O=LOCALHOST/OU=LOCALHOST/CN=localhost" -extensions san -config <( echo '[req]'; echo 'distinguished_name=req'; echo '[san]'; echo 'subjectAltName=DNS:localhost')
 
 CERT_PATH="${PWD}/tmp/cert.crt"
 KEY_PATH="${PWD}/tmp/cert.key"
