@@ -118,12 +118,13 @@ jobs:
           TEST_USER_SP_CLIENT_ID: ${{ secrets.TEST_USER_SP_CLIENT_ID }}
           TEST_USER_SP_CLIENT_SECRET: ${{ secrets.TEST_USER_SP_CLIENT_SECRET }}
           TEST_USER_SP_RESOURCE: ${{ secrets.TEST_USER_SP_RESOURCE }}
+          EXCLUDE_ENVIRONMENT_AUTH: true
+          EXCLUDE_MSI_AUTH: true
         run: |
           set -e
           az login --service-principal --username ${TEST_USER_SP_CLIENT_ID} --password ${TEST_USER_SP_CLIENT_SECRET} --tenant ${TENANT_ID} --allow-no-subscriptions 1>/dev/null
           make build-plugin
           sudo mv bin/kubectl-azad_proxy /usr/local/bin/
-          echo $PATH
           NODE_IP=$(kubectl get node -o json | jq -r '.items[0].status.addresses[] | select(.type=="InternalIP").address')
           NODE_PORT=$(kubectl --namespace ${{ env.NAME }} get service ${{ env.NAME }} -o json | jq -r '.spec.ports[0].nodePort')
           kubectl azad-proxy generate --cluster-name local-test --kubeconfig ~/.kube/test --proxy-url https://${NODE_IP}:${NODE_PORT} --tls-insecure-skip-verify=true --overwrite --resource ${TEST_USER_SP_RESOURCE}
