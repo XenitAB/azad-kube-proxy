@@ -1,5 +1,6 @@
 application:
   port: 8080
+  scheme: HTTP # HTTP or HTTPS
 
 podArgs:
   # Go here to find all arguments: pkg/config/config.go GetConfig()
@@ -115,3 +116,13 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+podVolumes: []
+  # - name: foo
+  #   secret:
+  #     secretName: mysecret
+
+podVolumeMounts: []
+  # - name: foo
+  #   mountPath: "/etc/foo"
+  #   readOnly: true

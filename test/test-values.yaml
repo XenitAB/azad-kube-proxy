@@ -1,0 +1,49 @@
+application:
+  port: 8443
+  scheme: HTTPS
+
+podArgs:
+  - --client-id=$(CLIENT_ID)
+  - --client-secret=$(CLIENT_SECRET)
+  - --tenant-id=$(TENANT_ID)
+  - --azure-ad-group-prefix=$(AZURE_AD_GROUP_PREFIX)
+  - --tls-enabled=true
+  - --tls-certificate-path=/mnt/tls/tls.crt
+  - --tls-key-path=/mnt/tls/tls.key
+  - --port=8443
+
+podEnv:
+  - name: CLIENT_ID
+    valueFrom:
+      secretKeyRef:
+        name: azad-kube-proxy
+        key: CLIENT_ID
+  - name: CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: azad-kube-proxy
+        key: CLIENT_SECRET
+  - name: TENANT_ID
+    valueFrom:
+      secretKeyRef:
+        name: azad-kube-proxy
+        key: TENANT_ID
+  - name: AZURE_AD_GROUP_PREFIX
+    value: ""
+
+secret:
+  create: true
+
+service:
+  type: NodePort
+  port: 443
+
+podVolumes:
+  - name: tls
+    secret:
+      secretName: test-cert
+
+podVolumeMounts:
+  - name: tls
+    mountPath: "/mnt/tls"
+    readOnly: true

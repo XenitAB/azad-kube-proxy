@@ -52,8 +52,23 @@ jobs:
           TENANT_ID: ${{ secrets.TENANT_ID }}
           TEST_USER_SP_OBJECT_ID: ${{ secrets.TEST_USER_SP_OBJECT_ID }}
         run: |
+          mkdir -p tmp
+          NODE_IP=$(kubectl get node -o json | jq -r '.items[0].status.addresses[] | select(.type=="InternalIP").address')
+
+          cat <<EOF > tmp/csr-config
+          [req]
+          distinguished_name=req
+          [san]
+          subjectAltName=@alt_names
+          [alt_names]
+          IP.1 = ${NODE_IP}
+          DNS.1 = ${NODE_IP}
+          EOF
+          
+          openssl req -newkey rsa:4096 -x509 -sha256 -days 3650 -nodes -out tmp/cert.crt -keyout tmp/cert.key -subj "/C=SE/ST=LOCALHOST/L=LOCALHOST/O=LOCALHOST/OU=LOCALHOST/CN=${NODE_IP}" -extensions san -config tmp/csr-config
           kubectl create namespace ${{ env.NAME }}
-          helm upgrade --wait --timeout 120s --namespace ${{ env.NAME }} --install ${{ env.NAME }} --set secret.create=true --set secret.CLIENT_ID=${CLIENT_ID} --set secret.CLIENT_SECRET=${CLIENT_SECRET} --set secret.TENANT_ID=${TENANT_ID} --set service.type=NodePort ./charts/azad-kube-proxy
+          kubectl --namespace ${{ env.NAME }} create secret tls test-cert --cert=tmp/cert.crt --key=tmp/cert.key
+          helm upgrade --wait --timeout 120s --namespace ${{ env.NAME }} --install ${{ env.NAME }} --values test/test-values.yaml --set secret.CLIENT_ID=${CLIENT_ID} --set secret.CLIENT_SECRET=${CLIENT_SECRET} --set secret.TENANT_ID=${TENANT_ID} --set image.repository=${{ env.NAME }} --set image.tag=${{ steps.prep.outputs.VERSION }} ./charts/azad-kube-proxy
           
           cat <<EOF | kubectl apply -f -
           apiVersion: rbac.authorization.k8s.io/v1
@@ -95,7 +110,28 @@ jobs:
           TOKEN=$(az account get-access-token --resource ${TEST_USER_SP_RESOURCE} --query accessToken --output tsv)
           NODE_IP=$(kubectl get node -o json | jq -r '.items[0].status.addresses[] | select(.type=="InternalIP").address')
           NODE_PORT=$(kubectl --namespace ${{ env.NAME }} get service ${{ env.NAME }} -o json | jq -r '.spec.ports[0].nodePort')
-          RESPONSE=$(curl -s -k -H "Authorization: Bearer ${TOKEN}" http://${NODE_IP}:${NODE_PORT}/api/v1/namespaces/default/pods | jq -r '.items[0].metadata.name')
+          RESPONSE=$(curl -s -k -H "Authorization: Bearer ${TOKEN}" https://${NODE_IP}:${NODE_PORT}/api/v1/namespaces/default/pods | jq -r '.items[0].metadata.name')
+          if [[ "${RESPONSE}" != "test" ]]; then
+            echo Expected response to be test. Was: ${RESPONSE}
+            exit 1
+          fi
+      - name: Test kubectl-azad-proxy
+        env:
+          TENANT_ID: ${{ secrets.TENANT_ID }}
+          TEST_USER_SP_CLIENT_ID: ${{ secrets.TEST_USER_SP_CLIENT_ID }}
+          TEST_USER_SP_CLIENT_SECRET: ${{ secrets.TEST_USER_SP_CLIENT_SECRET }}
+          TEST_USER_SP_RESOURCE: ${{ secrets.TEST_USER_SP_RESOURCE }}
+          EXCLUDE_ENVIRONMENT_AUTH: true
+          EXCLUDE_MSI_AUTH: true
+        run: |
+          set -e
+          az login --service-principal --username ${TEST_USER_SP_CLIENT_ID} --password ${TEST_USER_SP_CLIENT_SECRET} --tenant ${TENANT_ID} --allow-no-subscriptions 1>/dev/null
+          make build-plugin
+          sudo mv bin/kubectl-azad_proxy /usr/local/bin/
+          NODE_IP=$(kubectl get node -o json | jq -r '.items[0].status.addresses[] | select(.type=="InternalIP").address')
+          NODE_PORT=$(kubectl --namespace ${{ env.NAME }} get service ${{ env.NAME }} -o json | jq -r '.spec.ports[0].nodePort')
+          kubectl azad-proxy generate --cluster-name local-test --kubeconfig ~/.kube/test --proxy-url https://${NODE_IP}:${NODE_PORT} --tls-insecure-skip-verify=true --overwrite --resource ${TEST_USER_SP_RESOURCE}
+          RESPONSE=$(kubectl --kubeconfig ~/.kube/test --namespace default get pods -o json | jq -r '.items[0].metadata.name')
           if [[ "${RESPONSE}" != "test" ]]; then
             echo Expected response to be test. Was: ${RESPONSE}
             exit 1

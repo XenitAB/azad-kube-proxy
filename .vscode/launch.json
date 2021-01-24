@@ -18,10 +18,10 @@
             "type": "go",
             "request": "launch",
             "mode": "test",
-            "program": "${workspaceRoot}/pkg/handlers",
+            "program": "${workspaceRoot}/cmd/kubectl-azad-proxy/actions",
             "args": [
                 "-test.run",
-                "TestAzadKubeProxyHandler"
+                "TestGetToken"
             ],
             "envFile": "${workspaceFolder}/tmp/test_env",
         },
