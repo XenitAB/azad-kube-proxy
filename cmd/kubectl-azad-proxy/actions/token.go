@@ -24,6 +24,7 @@ type Token struct {
 
 // TokensInterface is the interface for the Tokens struct
 type TokensInterface interface {
+	GetPath() string
 	GetToken(ctx context.Context, name string, resource string) (Token, error)
 	SetToken(ctx context.Context, name string, token Token) error
 }
@@ -71,6 +72,11 @@ func NewTokens(ctx context.Context, path string, defaultAzureCredentialOptions *
 	}
 
 	return t, nil
+}
+
+// GetPath returns the path where the cached tokens are stored
+func (t Tokens) GetPath() string {
+	return t.path
 }
 
 // GetToken ...
