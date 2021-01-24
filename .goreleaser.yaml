@@ -1,0 +1,25 @@
+project_name: kubectl-azad_proxy
+builds:
+- main: ./cmd/kubectl-azad_proxy/main.go
+  binary: kubectl-azad_proxy
+  env:
+  - CGO_ENABLED=0
+  goos:
+  - linux
+  - windows
+  - darwin
+  goarch:
+  - amd64
+  - arm
+  - arm64
+archives:
+- name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
+  format: zip
+  files:
+  - LICENSE
+  - README.md
+  wrap_in_directory: false
+checksum:
+  name_template: 'checksums.txt'
+changelog:
+  sort: asc
