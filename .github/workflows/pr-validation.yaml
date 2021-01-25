@@ -24,7 +24,7 @@ jobs:
       - name: Clone repo
         uses: actions/checkout@v2
       - name: Setup go
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v2.1.3
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Run fmt
@@ -44,7 +44,7 @@ jobs:
       - name: Clone repo
         uses: actions/checkout@v2
       - name: Setup go
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v2.1.3
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Run build
@@ -57,7 +57,7 @@ jobs:
       - name: Clone repo
         uses: actions/checkout@v2
       - name: Setup go
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v2.1.3
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Run test
@@ -102,7 +102,7 @@ jobs:
       - name: Clone repo
         uses: actions/checkout@v2
       - name: Setup go
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v2.1.3
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: coverage
