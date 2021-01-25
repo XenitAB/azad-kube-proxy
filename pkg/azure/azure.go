@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/manicminer/hamilton/auth"
+	hamiltonAuth "github.com/manicminer/hamilton/auth"
 	hamiltonClients "github.com/manicminer/hamilton/clients"
 	hamiltonEnvironments "github.com/manicminer/hamilton/environments"
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
@@ -45,7 +46,7 @@ func NewAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graph
 		EnableClientSecretAuth: true,
 	}
 
-	authorizer, err := authConfig.NewAuthorizer(ctx)
+	authorizer, err := authConfig.NewAuthorizer(ctx, hamiltonAuth.MsGraph)
 	if err != nil {
 		return nil, err
 	}

@@ -7,6 +7,7 @@ Azure AD Kubernetes API Proxy
 ![CodeQL](https://github.com/xenitab/azad-kube-proxy/workflows/CodeQL/badge.svg?branch=main)
 ![KinD End-to-End](https://github.com/xenitab/azad-kube-proxy/workflows/KinD%20End-to-End/badge.svg?branch=main)
 ![Trivy](https://github.com/xenitab/azad-kube-proxy/workflows/Trivy/badge.svg?branch=main)
+[![Dependabot Status](https://api.dependabot.com/badges/status?host=github&repo=XenitAB/azad-kube-proxy)](https://dependabot.com)
 
 
 ## Description

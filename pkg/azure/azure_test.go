@@ -118,12 +118,12 @@ func TestGetUserGroups(t *testing.T) {
 		{
 			objectID:            "",
 			userType:            models.NormalUserType,
-			expectedErrContains: "unexpected status 404 with response:",
+			expectedErrContains: "unexpected status 404 with OData error: Request_ResourceNotFound:",
 		},
 		{
 			objectID:            "",
 			userType:            models.ServicePrincipalUserType,
-			expectedErrContains: "unexpected status 400 with response:",
+			expectedErrContains: "unexpected status 400 with OData error: Request_BadRequest:",
 		},
 	}
 
