@@ -53,11 +53,32 @@ func main() {
 					return nil
 				},
 			},
+			{
+				Name:    "discover",
+				Aliases: []string{"d"},
+				Usage:   "Discovery for the azad-kube-proxy enabled apps and their configuration",
+				Flags:   actions.DiscoverFlags(ctx),
+				Action: func(c *cli.Context) error {
+					cfg, err := actions.NewDiscoverConfig(ctx, c)
+					if err != nil {
+						return err
+					}
+
+					output, err := actions.Discover(ctx, cfg)
+					if err != nil {
+						return err
+					}
+
+					fmt.Print(output)
+					return nil
+				},
+			},
 		},
 	}
 
 	err := app.Run(os.Args)
 	if err != nil {
+		log.Error(err, "App exited with error")
 		os.Exit(1)
 	}
 

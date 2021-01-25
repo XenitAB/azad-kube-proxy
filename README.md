@@ -117,6 +117,27 @@ The token will by default be cached to `~/.kube/azad-proxy.json` (access token w
 
 It's not tested, but MSI / aad-pod-identity may also work.
 
+If you want an easy way of discovering what proxies are published, tag them using the following:
+```shell
+az rest --method PATCH --uri "https://graph.microsoft.com/beta/applications/${AZ_APP_OBJECT_ID}" --body '{"tags":["azad-kube-proxy"]}'
+```
+
+Then the end users can use the following to discover the proxies:
+```shell
+kubectl azad-proxy discover
+```
+
+They will see an output like this:
+```shell
++--------------+-------------------------+
+| CLUSTER NAME |         RESOURCE        |
++--------------+-------------------------+
+| dev-cluster  | https://dev.example.com |
++--------------+-------------------------+
+```
+
+JSON output is also possible by adding `--output JSON` to the discover command.
+
 Configuration for the `generate` command can be found in [cmd/kubectl-azad-proxy/actions/generate.go](cmd/kubectl-azad-proxy/actions/generate.go) and configuration for the `login` command can be found in [cmd/kubectl-azad-proxy/actions/login.go](cmd/kubectl-azad-proxy/actions/login.go).
 
 ## Why was this built?
@@ -179,6 +200,8 @@ AZ_APP_PERMISSION_ID=$(az ad app show --id ${AZ_APP_ID} --output tsv --query "oa
 az rest --method PATCH --uri "https://graph.microsoft.com/beta/applications/${AZ_APP_OBJECT_ID}" --body '{"api":{"requestedAccessTokenVersion": 2}}'
 # Add Azure CLI as allowed client
 az rest --method PATCH --uri "https://graph.microsoft.com/beta/applications/${AZ_APP_OBJECT_ID}" --body "{\"api\":{\"preAuthorizedApplications\":[{\"appId\":\"04b07795-8ddb-461a-bbee-02f9e1bf7b46\",\"permissionIds\":[\"${AZ_APP_PERMISSION_ID}\"]}]}}"
+# This tag will enable discovery using kubectl azad-proxy discover
+az rest --method PATCH --uri "https://graph.microsoft.com/beta/applications/${AZ_APP_OBJECT_ID}" --body '{"tags":["azad-kube-proxy"]}'
 AZ_APP_SECRET=$(az ad sp credential reset --name ${AZ_APP_ID} --credential-description "azad-kube-proxy" --output tsv --query password)
 az ad app permission add --id ${AZ_APP_ID} --api 00000003-0000-0000-c000-000000000000 --api-permissions 7ab1d382-f21e-4acd-a863-ba3e13f7da61=Role
 az ad app permission admin-consent --id ${AZ_APP_ID}
