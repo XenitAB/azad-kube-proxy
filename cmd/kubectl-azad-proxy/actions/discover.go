@@ -8,6 +8,7 @@ import (
 
 	hamiltonAuth "github.com/manicminer/hamilton/auth"
 	hamiltonClients "github.com/manicminer/hamilton/clients"
+	hamiltonEnvironments "github.com/manicminer/hamilton/environments"
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli/v2"
 )
@@ -28,7 +29,13 @@ type discover struct {
 
 // DiscoverConfig ...
 type DiscoverConfig struct {
-	outputType outputType
+	outputType
+	tenantID               string
+	clientID               string
+	clientSecret           string
+	enableClientSecretAuth bool
+	enableAzureCliToken    bool
+	enableMsiAuth          bool
 }
 
 // NewDiscoverConfig ...
@@ -43,8 +50,28 @@ func NewDiscoverConfig(ctx context.Context, c *cli.Context) (DiscoverConfig, err
 		return DiscoverConfig{}, fmt.Errorf("Supported outputs are TABLE and JSON. The following was used: %s", c.String("output"))
 	}
 
+	enableAzureCliToken := !c.Bool("exclude-azure-cli-auth")
+	tenantID := c.String("tenant-id")
+	if tenantID == "" && enableAzureCliToken {
+		cliConfig, err := hamiltonAuth.NewAzureCliConfig(hamiltonAuth.MsGraph, "")
+		if err != nil {
+			return DiscoverConfig{}, err
+		}
+
+		tenantID = cliConfig.TenantID
+		if tenantID == "" {
+			return DiscoverConfig{}, fmt.Errorf("No tenantID could be extracted from Azure CLI authentication")
+		}
+	}
+
 	return DiscoverConfig{
-		outputType: output,
+		outputType:             output,
+		tenantID:               tenantID,
+		clientID:               c.String("client-id"),
+		clientSecret:           c.String("client-secret"),
+		enableClientSecretAuth: !c.Bool("exclude-environment-auth"),
+		enableAzureCliToken:    enableAzureCliToken,
+		enableMsiAuth:          !c.Bool("exclude-msi-auth"),
 	}, nil
 }
 
@@ -58,22 +85,72 @@ func DiscoverFlags(ctx context.Context) []cli.Flag {
 			Value:    "TABLE",
 			Required: false,
 		},
+		&cli.StringFlag{
+			Name:     "auth-method",
+			Usage:    "Authentication method to use.",
+			EnvVars:  []string{"AUTH_METHOD"},
+			Value:    "CLI",
+			Required: false,
+		},
+		&cli.StringFlag{
+			Name:     "tenant-id",
+			Usage:    "Azure Tenant ID used with ENV auth",
+			EnvVars:  []string{"AZURE_TENANT_ID"},
+			Value:    "",
+			Required: false,
+		},
+		&cli.StringFlag{
+			Name:     "client-id",
+			Usage:    "Azure Client ID used with ENV auth",
+			EnvVars:  []string{"AZURE_CLIENT_ID"},
+			Value:    "",
+			Required: false,
+		},
+		&cli.StringFlag{
+			Name:     "client-secret",
+			Usage:    "Azure Client Secret used with ENV auth",
+			EnvVars:  []string{"AZURE_CLIENT_SECRET"},
+			Value:    "",
+			Required: false,
+		},
+		&cli.BoolFlag{
+			Name:    "exclude-azure-cli-auth",
+			Usage:   "Should Azure CLI be excluded from the authentication?",
+			EnvVars: []string{"EXCLUDE_AZURE_CLI_AUTH"},
+			Value:   false,
+		},
+		&cli.BoolFlag{
+			Name:    "exclude-environment-auth",
+			Usage:   "Should environment be excluded from the authentication?",
+			EnvVars: []string{"EXCLUDE_ENVIRONMENT_AUTH"},
+			Value:   false,
+		},
+		&cli.BoolFlag{
+			Name:    "exclude-msi-auth",
+			Usage:   "Should MSI be excluded from the authentication?",
+			EnvVars: []string{"EXCLUDE_MSI_AUTH"},
+			Value:   false,
+		},
 	}
 }
 
 // Discover ...
 func Discover(ctx context.Context, cfg DiscoverConfig) (string, error) {
-	azureCliConfig, err := hamiltonAuth.NewAzureCliConfig(hamiltonAuth.MsGraph, "")
+	authConfig := &hamiltonAuth.Config{
+		Environment:            hamiltonEnvironments.Global,
+		TenantID:               cfg.tenantID,
+		ClientID:               cfg.clientID,
+		ClientSecret:           cfg.clientSecret,
+		EnableClientSecretAuth: cfg.enableClientSecretAuth,
+		EnableAzureCliToken:    cfg.enableAzureCliToken,
+		EnableMsiAuth:          cfg.enableMsiAuth,
+	}
+
+	authorizer, err := authConfig.NewAuthorizer(ctx, hamiltonAuth.MsGraph)
 	if err != nil {
 		return "", err
 	}
-
-	authorizer, err := hamiltonAuth.NewAzureCliAuthorizer(ctx, hamiltonAuth.MsGraph, "")
-	if err != nil {
-		return "", err
-	}
-
-	appsClient := hamiltonClients.NewApplicationsClient(azureCliConfig.TenantID)
+	appsClient := hamiltonClients.NewApplicationsClient(cfg.tenantID)
 	appsClient.BaseClient.Authorizer = authorizer
 
 	graphFilter := fmt.Sprintf("tags/any(s: s eq '%s')", azureADAppTag)
