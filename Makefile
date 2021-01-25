@@ -10,7 +10,7 @@ ifneq (,$(wildcard $(TEST_ENV_FILE)))
 endif
 
 .SILENT:
-all: tidy lint fmt vet gosec test build build-plugin
+all: tidy lint fmt vet gosec go-test build build-plugin
 
 .SILENT:
 lint:
@@ -29,7 +29,7 @@ vet:
 	go vet ./...
 
 .SILENT:
-test:
+go-test:
 	mkdir -p tmp
 	go test -timeout 1m ./... -cover
 

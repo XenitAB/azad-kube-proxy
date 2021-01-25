@@ -15,6 +15,9 @@ func TestNewDiscoverConfig(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
 	cfg := DiscoverConfig{}
 
+	restoreAzureCLIAuth := tempChangeEnv("EXCLUDE_AZURE_CLI_AUTH", "true")
+	defer restoreAzureCLIAuth()
+
 	app := &cli.App{
 		Name:  "test",
 		Usage: "test",
