@@ -9,6 +9,7 @@ import (
 	hamiltonAuth "github.com/manicminer/hamilton/auth"
 	hamiltonClients "github.com/manicminer/hamilton/clients"
 	hamiltonEnvironments "github.com/manicminer/hamilton/environments"
+	hamiltonModels "github.com/manicminer/hamilton/models"
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli/v2"
 )
@@ -25,6 +26,7 @@ var jsonOutputType outputType = "JSON"
 type discover struct {
 	ClusterName string `json:"cluster_name"`
 	Resource    string `json:"resource"`
+	ProxyURL    string `json:"proxy_url"`
 }
 
 // DiscoverConfig ...
@@ -41,7 +43,7 @@ type DiscoverConfig struct {
 // NewDiscoverConfig ...
 func NewDiscoverConfig(ctx context.Context, c *cli.Context) (DiscoverConfig, error) {
 	var output outputType
-	switch c.String("output") {
+	switch strings.ToUpper(c.String("output")) {
 	case "TABLE":
 		output = tableOutputType
 	case "JSON":
@@ -160,18 +162,7 @@ func Discover(ctx context.Context, cfg DiscoverConfig) (string, error) {
 		return "", err
 	}
 
-	discoverData := []discover{}
-
-	for _, clusterApp := range *clusterApps {
-		if len(*clusterApp.IdentifierUris) != 0 {
-			displayName := *clusterApp.DisplayName
-			appUris := *clusterApp.IdentifierUris
-			discoverData = append(discoverData, discover{
-				ClusterName: displayName,
-				Resource:    appUris[0],
-			})
-		}
-	}
+	discoverData := getDiscoverData(*clusterApps)
 
 	var output string
 	switch cfg.outputType {
@@ -189,16 +180,61 @@ func Discover(ctx context.Context, cfg DiscoverConfig) (string, error) {
 	return output, nil
 }
 
+func getDiscoverData(clusterApps []hamiltonModels.Application) []discover {
+	discoverData := []discover{}
+
+	for _, clusterApp := range clusterApps {
+		var clusterName, resource, proxyURL string
+		if len(*clusterApp.IdentifierUris) != 0 {
+			for _, tag := range *clusterApp.Tags {
+				if strings.HasPrefix(tag, "cluster_name:") {
+					tagClusterName := strings.Replace(tag, "cluster_name:", "", 1)
+					if len(tagClusterName) != 0 {
+						clusterName = tagClusterName
+					}
+				}
+
+				if strings.HasPrefix(tag, "proxy_url:") {
+					tagProxyURL := strings.Replace(tag, "proxy_url:", "", 1)
+					if len(tagProxyURL) != 0 {
+						proxyURL = tagProxyURL
+					}
+				}
+			}
+
+			appUris := *clusterApp.IdentifierUris
+			resource = appUris[0]
+
+			if clusterName == "" {
+				clusterName = *clusterApp.DisplayName
+			}
+
+			if proxyURL == "" {
+				proxyURL = resource
+			}
+
+			discoverData = append(discoverData, discover{
+				ClusterName: clusterName,
+				Resource:    resource,
+				ProxyURL:    proxyURL,
+			})
+		}
+	}
+
+	return discoverData
+}
+
 func getTable(discoverData []discover) string {
 	tableString := &strings.Builder{}
 	table := tablewriter.NewWriter(tableString)
-	table.SetHeader([]string{"Cluster Name", "Resource"})
+	table.SetHeader([]string{"Cluster Name", "Resource", "Proxy URL"})
 
 	data := [][]string{}
 	for _, d := range discoverData {
 		data = append(data, []string{
 			d.ClusterName,
 			d.Resource,
+			d.ProxyURL,
 		})
 	}
 

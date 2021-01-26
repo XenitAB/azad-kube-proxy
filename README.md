@@ -60,6 +60,8 @@ Configuration can be found in [pkg/config/config.go](pkg/config/config.go).
 
 ### Plugin
 
+**GENERATE / LOGIN**
+
 Setup the plugin (using Krew or manually). When that is done, run:
 
 ```shell
@@ -117,10 +119,28 @@ The token will by default be cached to `~/.kube/azad-proxy.json` (access token w
 
 It's not tested, but MSI / aad-pod-identity may also work.
 
+**DISCOVER**
+
 If you want an easy way of discovering what proxies are published, tag them using the following:
 ```shell
 az rest --method PATCH --uri "https://graph.microsoft.com/beta/applications/${AZ_APP_OBJECT_ID}" --body '{"tags":["azad-kube-proxy"]}'
 ```
+
+The cluster name will by default be the displayName of the Azure AD application. This can be changed by:
+```shell
+az rest --method PATCH --uri "https://graph.microsoft.com/beta/applications/${AZ_APP_OBJECT_ID}" --body '{"tags":["azad-kube-proxy","cluster_name:dev-cluster"]}'
+```
+
+The proxy url will by default be the same as resource (first string in the identifierUris array). This can be changed by:
+```shell
+az rest --method PATCH --uri "https://graph.microsoft.com/beta/applications/${AZ_APP_OBJECT_ID}" --body '{"tags":["azad-kube-proxy","proxy_url:https://dev.example.com"]}'
+```
+
+All three together would look like this:
+```shell
+az rest --method PATCH --uri "https://graph.microsoft.com/beta/applications/${AZ_APP_OBJECT_ID}" --body '{"tags":["azad-kube-proxy","cluster_name:dev-cluster","proxy_url:https://dev.example.com"]}'
+```
+
 
 Then the end users can use the following to discover the proxies:
 ```shell
@@ -129,16 +149,21 @@ kubectl azad-proxy discover
 
 They will see an output like this:
 ```shell
-+--------------+-------------------------+
-| CLUSTER NAME |         RESOURCE        |
-+--------------+-------------------------+
-| dev-cluster  | https://dev.example.com |
-+--------------+-------------------------+
++--------------+-------------------------+-------------------------+
+| CLUSTER NAME |        RESOURCE         |        PROXY URL        |
++--------------+-------------------------+-------------------------+
+| dev-cluster  | https://dev.example.com | https://dev.example.com |
++--------------+-------------------------+-------------------------+
 ```
 
 JSON output is also possible by adding `--output JSON` to the discover command.
 
-Configuration for the `generate` command can be found in [cmd/kubectl-azad-proxy/actions/generate.go](cmd/kubectl-azad-proxy/actions/generate.go) and configuration for the `login` command can be found in [cmd/kubectl-azad-proxy/actions/login.go](cmd/kubectl-azad-proxy/actions/login.go).
+**CONFIGURATION PARAMETERS**
+
+- `kubectl azad-proxy generate`: [cmd/kubectl-azad-proxy/actions/generate.go](cmd/kubectl-azad-proxy/actions/generate.go)
+- `kubectl azad-proxy login`: [cmd/kubectl-azad-proxy/actions/login.go](cmd/kubectl-azad-proxy/actions/login.go)
+- `kubectl azad-proxy discover`: [cmd/kubectl-azad-proxy/actions/discover.go](cmd/kubectl-azad-proxy/actions/discover.go)
+
 
 ## Why was this built?
 
