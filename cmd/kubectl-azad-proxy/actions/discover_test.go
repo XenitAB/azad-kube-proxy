@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-logr/logr"
 	logrTesting "github.com/go-logr/logr/testing"
+	hamiltonModels "github.com/manicminer/hamilton/models"
 	"github.com/urfave/cli/v2"
 )
 
@@ -193,4 +194,135 @@ func TestDiscover(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestGetDiscoverData(t *testing.T) {
+	cases := []struct {
+		clusterApps    []hamiltonModels.Application
+		expectedOutput []discover
+	}{
+		{
+			clusterApps: []hamiltonModels.Application{
+				{
+					DisplayName:    toStringPtr("fake"),
+					IdentifierUris: toStringArrayPtr([]string{"https://fake"}),
+					Tags:           toStringArrayPtr([]string{"azad-kube-proxy"}),
+				},
+			},
+			expectedOutput: []discover{
+				{
+					ClusterName: "fake",
+					Resource:    "https://fake",
+					ProxyURL:    "https://fake",
+				},
+			},
+		},
+		{
+			clusterApps: []hamiltonModels.Application{
+				{
+					DisplayName:    toStringPtr("fake"),
+					IdentifierUris: toStringArrayPtr([]string{"https://fake"}),
+					Tags:           toStringArrayPtr([]string{"azad-kube-proxy"}),
+				},
+				{
+					DisplayName:    toStringPtr("fake2"),
+					IdentifierUris: toStringArrayPtr([]string{"https://fake2"}),
+					Tags:           toStringArrayPtr([]string{"azad-kube-proxy"}),
+				},
+			},
+			expectedOutput: []discover{
+				{
+					ClusterName: "fake",
+					Resource:    "https://fake",
+					ProxyURL:    "https://fake",
+				},
+				{
+					ClusterName: "fake2",
+					Resource:    "https://fake2",
+					ProxyURL:    "https://fake2",
+				},
+			},
+		},
+		{
+			clusterApps: []hamiltonModels.Application{
+				{
+					DisplayName:    toStringPtr("fake"),
+					IdentifierUris: toStringArrayPtr([]string{"https://fake"}),
+					Tags:           toStringArrayPtr([]string{"azad-kube-proxy", "cluster_name:newfake"}),
+				},
+			},
+			expectedOutput: []discover{
+				{
+					ClusterName: "newfake",
+					Resource:    "https://fake",
+					ProxyURL:    "https://fake",
+				},
+			},
+		},
+		{
+			clusterApps: []hamiltonModels.Application{
+				{
+					DisplayName:    toStringPtr("fake"),
+					IdentifierUris: toStringArrayPtr([]string{"https://fake"}),
+					Tags:           toStringArrayPtr([]string{"azad-kube-proxy", "proxy_url:https://newfake"}),
+				},
+				{
+					DisplayName:    toStringPtr("fake"),
+					IdentifierUris: toStringArrayPtr([]string{"https://fake"}),
+					Tags:           toStringArrayPtr([]string{"azad-kube-proxy", "cluster_name:newfake2", "proxy_url:https://newfake2"}),
+				},
+			},
+			expectedOutput: []discover{
+				{
+					ClusterName: "fake",
+					Resource:    "https://fake",
+					ProxyURL:    "https://newfake",
+				},
+				{
+					ClusterName: "newfake2",
+					Resource:    "https://fake",
+					ProxyURL:    "https://newfake2",
+				},
+			},
+		},
+		{
+			clusterApps: []hamiltonModels.Application{
+				{
+					DisplayName:    toStringPtr("fake"),
+					IdentifierUris: toStringArrayPtr([]string{"https://fake"}),
+					Tags:           toStringArrayPtr([]string{"azad-kube-proxy", "fake"}),
+				},
+			},
+			expectedOutput: []discover{
+				{
+					ClusterName: "fake",
+					Resource:    "https://fake",
+					ProxyURL:    "https://fake",
+				},
+			},
+		},
+	}
+
+	for _, c := range cases {
+		discoverData := getDiscoverData(c.clusterApps)
+		for i, d := range discoverData {
+			if c.expectedOutput[i].ClusterName != d.ClusterName {
+				t.Errorf("Expected output cluster name to be '%s' but was: %s", c.expectedOutput[i].ClusterName, d.ClusterName)
+			}
+			if c.expectedOutput[i].Resource != d.Resource {
+				t.Errorf("Expected output resource to be '%s' but was: %s", c.expectedOutput[i].Resource, d.Resource)
+			}
+			if c.expectedOutput[i].ProxyURL != d.ProxyURL {
+				t.Errorf("Expected output proxy url to be '%s' but was: %s", c.expectedOutput[i].ProxyURL, d.ProxyURL)
+			}
+		}
+	}
+}
+
+func toStringPtr(s string) *string {
+	return &s
+}
+
+func toStringArrayPtr(s []string) *[]string {
+	return &s
 }
