@@ -18,13 +18,12 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	logrTesting "github.com/go-logr/logr/testing"
 )
 
 // ./azad-kube-proxy --test abc --hejsan 123
 // [./azad-kube-proxy --test abc --hejsan 123]
 func TestGetConfig(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 	// Fake certificate
 	_, err := GetConfig(ctx, []string{"fake-bin"})
 	if !strings.Contains(err.Error(), "ca.crt: no such file or directory") {

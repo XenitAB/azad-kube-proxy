@@ -19,11 +19,10 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	logrTesting "github.com/go-logr/logr/testing"
 )
 
 func TestGetCertificate(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 
 	certPath, err := generateCertificateFile()
 	if err != nil {
@@ -52,7 +51,7 @@ func TestGetCertificate(t *testing.T) {
 }
 
 func TestGetStringFromFile(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 	filePath, expectedFileString, err := generateRandomFile()
 	if err != nil {
 		t.Errorf("Unable to generate temporary file for test: %q", err)

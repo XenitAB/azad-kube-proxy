@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	logrTesting "github.com/go-logr/logr/testing"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
@@ -27,7 +26,7 @@ func (client *fakeAzureClient) StartSyncGroups(ctx context.Context, syncInterval
 }
 
 func TestGetUser(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 	config := config.Config{}
 	azureClient := &fakeAzureClient{
 		fakeError: nil,

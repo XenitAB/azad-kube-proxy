@@ -11,13 +11,12 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/go-logr/logr"
-	logrTesting "github.com/go-logr/logr/testing"
 	"github.com/urfave/cli/v2"
 	k8sclientcmd "k8s.io/client-go/tools/clientcmd"
 )
 
 func TestNewGenerateConfig(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 	cfg := GenerateConfig{}
 
 	app := &cli.App{
@@ -124,7 +123,7 @@ func TestNewGenerateConfig(t *testing.T) {
 }
 
 func TestGenerate(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 	curDir, err := os.Getwd()
 	if err != nil {
 		t.Errorf("Expected err to be nil: %q", err)

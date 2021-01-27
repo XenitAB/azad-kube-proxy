@@ -7,13 +7,12 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
-	logrTesting "github.com/go-logr/logr/testing"
 	hamiltonModels "github.com/manicminer/hamilton/models"
 	"github.com/urfave/cli/v2"
 )
 
 func TestNewDiscoverConfig(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 	cfg := DiscoverConfig{}
 
 	restoreAzureCLIAuth := tempChangeEnv("EXCLUDE_AZURE_CLI_AUTH", "true")
@@ -124,7 +123,7 @@ func TestDiscover(t *testing.T) {
 	clientSecret := getEnvOrSkip(t, "CLIENT_SECRET")
 	resource := getEnvOrSkip(t, "TEST_USER_SP_RESOURCE")
 
-	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 
 	cases := []struct {
 		discoverConfig         DiscoverConfig
