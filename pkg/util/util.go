@@ -65,7 +65,7 @@ func GetBearerToken(r *http.Request) (string, error) {
 
 	a := strings.Split(h, "Bearer ")
 	if len(a) != 2 {
-		return "", fmt.Errorf("Authorization split by 'Bearer ' isn't length of 2 (actual lenght: %d)", len(a))
+		return "", fmt.Errorf("Authorization split by 'Bearer ' isn't length of 2 (actual length: %d)", len(a))
 	}
 
 	token := a[1]

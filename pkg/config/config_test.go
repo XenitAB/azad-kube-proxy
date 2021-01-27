@@ -98,12 +98,12 @@ func TestGetConfig(t *testing.T) {
 		},
 		{
 			osArgs:                 append(baseWorkingArgs, "--cache-engine=FAKE"),
-			expectedErrContains:    []string{"Unkown cache engine type FAKE."},
+			expectedErrContains:    []string{"Unknown cache engine type FAKE."},
 			expectedErrNotContains: []string{},
 		},
 		{
 			osArgs:                 append(baseWorkingArgs, "--cache-engine=FAKE"),
-			expectedErrContains:    []string{"Unkown cache engine type FAKE."},
+			expectedErrContains:    []string{"Unknown cache engine type FAKE."},
 			expectedErrNotContains: []string{},
 		},
 		{
@@ -113,7 +113,7 @@ func TestGetConfig(t *testing.T) {
 		},
 		{
 			osArgs:                 append(baseWorkingArgs, "--group-identifier=FAKE"),
-			expectedErrContains:    []string{"Unkown group identifier FAKE."},
+			expectedErrContains:    []string{"Unknown group identifier FAKE."},
 			expectedErrNotContains: []string{},
 		},
 	}

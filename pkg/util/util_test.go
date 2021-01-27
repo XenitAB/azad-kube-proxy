@@ -118,7 +118,7 @@ func TestGetBearerToken(t *testing.T) {
 			token:                  "Bearer Bearer Bearer ",
 			addAuthorizationHeader: true,
 			headerTemplate:         "%s",
-			expectedErr:            errors.New("Authorization split by 'Bearer ' isn't length of 2 (actual lenght: 4)"),
+			expectedErr:            errors.New("Authorization split by 'Bearer ' isn't length of 2 (actual length: 4)"),
 		},
 	}
 
