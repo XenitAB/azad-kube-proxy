@@ -125,13 +125,13 @@ func DiscoverFlags(ctx context.Context) []cli.Flag {
 			Name:    "exclude-environment-auth",
 			Usage:   "Should environment be excluded from the authentication?",
 			EnvVars: []string{"EXCLUDE_ENVIRONMENT_AUTH"},
-			Value:   false,
+			Value:   true,
 		},
 		&cli.BoolFlag{
 			Name:    "exclude-msi-auth",
 			Usage:   "Should MSI be excluded from the authentication?",
 			EnvVars: []string{"EXCLUDE_MSI_AUTH"},
-			Value:   false,
+			Value:   true,
 		},
 	}
 }
