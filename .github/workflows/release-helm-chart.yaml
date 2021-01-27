@@ -25,11 +25,6 @@ jobs:
         run: |
           yq e '.version=env(GITHUB_TAG)' -i charts/azad-kube-proxy/Chart.yaml
           yq e '.appVersion=env(GITHUB_TAG)' -i charts/azad-kube-proxy/Chart.yaml
-          if [[ $(git status --porcelain) ]]; then
-            git diff
-            echo "update version and appVersion for helm chart to: ${GITHUB_TAG}"
-            exit 1
-          fi
       - name: Publish Helm charts
         uses: stefanprodan/helm-gh-pages@master
         with:
