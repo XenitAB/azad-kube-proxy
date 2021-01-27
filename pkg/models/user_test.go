@@ -153,12 +153,12 @@ func TestGetGroupIdentifier(t *testing.T) {
 		{
 			groupIdentifierString:   "",
 			expectedGroupIdentifier: "",
-			expectedErr:             errors.New("Unkown group identifier . Supported identifiers are: NAME or OBJECTID"),
+			expectedErr:             errors.New("Unknown group identifier . Supported identifiers are: NAME or OBJECTID"),
 		},
 		{
 			groupIdentifierString:   "DUMMY",
 			expectedGroupIdentifier: "",
-			expectedErr:             errors.New("Unkown group identifier DUMMY. Supported identifiers are: NAME or OBJECTID"),
+			expectedErr:             errors.New("Unknown group identifier DUMMY. Supported identifiers are: NAME or OBJECTID"),
 		},
 	}
 

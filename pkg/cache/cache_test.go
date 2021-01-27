@@ -8,13 +8,12 @@ import (
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/go-logr/logr"
-	logrTesting "github.com/go-logr/logr/testing"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
 
 func TestNewCache(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 	redisServer, err := miniredis.Run()
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)

@@ -14,7 +14,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/coreos/go-oidc"
 	"github.com/go-logr/logr"
-	logrTesting "github.com/go-logr/logr/testing"
 )
 
 func TestNewClaims(t *testing.T) {
@@ -23,7 +22,7 @@ func TestNewClaims(t *testing.T) {
 	spClientID := getEnvOrSkip(t, "TEST_USER_SP_CLIENT_ID")
 	spClientSecret := getEnvOrSkip(t, "TEST_USER_SP_CLIENT_SECRET")
 	spResource := getEnvOrSkip(t, "TEST_USER_SP_RESOURCE")
-	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 	claimsClient := NewClaimsClient()
 
 	verifier, err := claimsClient.GetOIDCVerifier(ctx, tenantID, clientID)
@@ -64,7 +63,7 @@ func TestNewClaims(t *testing.T) {
 func TestGetOIDCVerifier(t *testing.T) {
 	clientID := getEnvOrSkip(t, "CLIENT_ID")
 	tenantID := getEnvOrSkip(t, "TENANT_ID")
-	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 	claimsClient := NewClaimsClient()
 
 	cases := []struct {

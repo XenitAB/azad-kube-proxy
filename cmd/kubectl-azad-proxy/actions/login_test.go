@@ -11,13 +11,12 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/go-logr/logr"
-	logrTesting "github.com/go-logr/logr/testing"
 	"github.com/urfave/cli/v2"
 	k8sclientauth "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
 )
 
 func TestNewLoginConfig(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 	cfg := LoginConfig{}
 
 	app := &cli.App{
@@ -130,7 +129,7 @@ func TestLogin(t *testing.T) {
 	tokenCacheFile := fmt.Sprintf("%s/../../../tmp/test-login-token-cache", curDir)
 	defer deleteFile(t, tokenCacheFile)
 
-	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 	cfg := LoginConfig{
 		clusterName: "test",
 		resource:    resource,

@@ -19,6 +19,6 @@ func GetCacheEngine(s string) (CacheEngine, error) {
 	case "REDIS":
 		return RedisCacheEngine, nil
 	default:
-		return "", fmt.Errorf("Unkown cache engine type %s. Supported engines are: MEMORY or REDIS", s)
+		return "", fmt.Errorf("Unknown cache engine type %s. Supported engines are: MEMORY or REDIS", s)
 	}
 }

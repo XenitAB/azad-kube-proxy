@@ -37,8 +37,6 @@ helm upgrade --namespace azad-kube-proxy --version <ver> --install azad-kube-pro
 
 ### Plugin (Krew / kubectl plugin)
 
-*NOTE: Not published as of now. Download from the release page and place the binary in a folder that you have in $PATH.*
-
 The kubectl plugin can be installed through Krew.
 
 ```shell

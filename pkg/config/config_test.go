@@ -18,13 +18,12 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	logrTesting "github.com/go-logr/logr/testing"
 )
 
 // ./azad-kube-proxy --test abc --hejsan 123
 // [./azad-kube-proxy --test abc --hejsan 123]
 func TestGetConfig(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 	// Fake certificate
 	_, err := GetConfig(ctx, []string{"fake-bin"})
 	if !strings.Contains(err.Error(), "ca.crt: no such file or directory") {
@@ -99,12 +98,12 @@ func TestGetConfig(t *testing.T) {
 		},
 		{
 			osArgs:                 append(baseWorkingArgs, "--cache-engine=FAKE"),
-			expectedErrContains:    []string{"Unkown cache engine type FAKE."},
+			expectedErrContains:    []string{"Unknown cache engine type FAKE."},
 			expectedErrNotContains: []string{},
 		},
 		{
 			osArgs:                 append(baseWorkingArgs, "--cache-engine=FAKE"),
-			expectedErrContains:    []string{"Unkown cache engine type FAKE."},
+			expectedErrContains:    []string{"Unknown cache engine type FAKE."},
 			expectedErrNotContains: []string{},
 		},
 		{
@@ -114,7 +113,7 @@ func TestGetConfig(t *testing.T) {
 		},
 		{
 			osArgs:                 append(baseWorkingArgs, "--group-identifier=FAKE"),
-			expectedErrContains:    []string{"Unkown group identifier FAKE."},
+			expectedErrContains:    []string{"Unknown group identifier FAKE."},
 			expectedErrNotContains: []string{},
 		},
 	}

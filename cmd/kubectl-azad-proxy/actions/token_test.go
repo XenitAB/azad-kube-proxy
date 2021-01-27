@@ -12,11 +12,10 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/go-logr/logr"
-	logrTesting "github.com/go-logr/logr/testing"
 )
 
 func TestNewTokens(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 
 	fakeHomeDir := "/home/test-user"
 	restoreHomeDir := tempChangeEnv("HOME", fakeHomeDir)
@@ -131,7 +130,7 @@ func TestGetToken(t *testing.T) {
 	restoreClientSecret := tempChangeEnv("AZURE_CLIENT_SECRET", clientSecret)
 	defer restoreClientSecret()
 
-	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 
 	fakeHomeDir := "/home/test-user"
 	restoreHomeDir := tempChangeEnv("HOME", fakeHomeDir)

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	logrTesting "github.com/go-logr/logr/testing"
 	"github.com/google/go-cmp/cmp"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
@@ -19,7 +18,7 @@ func TestNewMemoryCache(t *testing.T) {
 }
 
 func TestMemoryGetUser(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 	cache, err := NewMemoryCache(5*time.Minute, 10*time.Minute)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
@@ -48,7 +47,7 @@ func TestMemoryGetUser(t *testing.T) {
 }
 
 func TestMemorySetUser(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 	cache, err := NewMemoryCache(5*time.Minute, 10*time.Minute)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
@@ -76,7 +75,7 @@ func TestMemorySetUser(t *testing.T) {
 }
 
 func TestMemoryGetGroup(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 	cache, err := NewMemoryCache(5*time.Minute, 10*time.Minute)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
@@ -105,7 +104,7 @@ func TestMemoryGetGroup(t *testing.T) {
 }
 
 func TestMemorySetGroup(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logrTesting.NullLogger{})
+	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 	cache, err := NewMemoryCache(5*time.Minute, 10*time.Minute)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
