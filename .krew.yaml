@@ -4,7 +4,7 @@ metadata:
   name: azad-proxy
 spec:
   platforms:
-  - {{addURIAndSha "https://github.com/xenitab/azad-kube-proxy/releases/download/{{ .TagName }}/kubectl-azad_proxy-darwin-amd64.zip" .TagName }}
+  - {{addURIAndSha "https://github.com/XenitAB/azad-kube-proxy/releases/download/{{ .TagName }}/kubectl-azad_proxy-darwin-amd64.zip" .TagName }}
     bin: kubectl-azad_proxy
     files:
     - from: kubectl-azad_proxy
@@ -15,7 +15,7 @@ spec:
       matchLabels:
         os: darwin
         arch: amd64
-  - {{addURIAndSha "https://github.com/xenitab/azad-kube-proxy/releases/download/{{ .TagName }}/kubectl-azad_proxy-linux-amd64.zip" .TagName }}
+  - {{addURIAndSha "https://github.com/XenitAB/azad-kube-proxy/releases/download/{{ .TagName }}/kubectl-azad_proxy-linux-amd64.zip" .TagName }}
     bin: kubectl-azad_proxy
     files:
     - from: kubectl-azad_proxy
@@ -26,7 +26,7 @@ spec:
       matchLabels:
         os: linux
         arch: amd64
-  - {{addURIAndSha "https://github.com/xenitab/azad-kube-proxy/releases/download/{{ .TagName }}/kubectl-azad_proxy-windows-amd64.zip" .TagName }}
+  - {{addURIAndSha "https://github.com/XenitAB/azad-kube-proxy/releases/download/{{ .TagName }}/kubectl-azad_proxy-windows-amd64.zip" .TagName }}
     bin: kubectl-azad_proxy.exe
     files:
     - from: kubectl-azad_proxy.exe
@@ -38,10 +38,10 @@ spec:
         os: windows
         arch: amd64
   version: "{{ .TagName }}"
-  homepage: https://github.com/xenitab/azad-kube-proxy
+  homepage: https://github.com/XenitAB/azad-kube-proxy
   caveats: |
     This plugin is used in combination with the azad-kube-proxy:
-    - https://github.com/xenitab/azad-kube-proxy
+    - https://github.com/XenitAB/azad-kube-proxy
 
     There shouldn't be a use case where you can use the plugin without the proxy.
     If you haven't been asked by a cluster admin to install this plugin - it may
