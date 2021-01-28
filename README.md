@@ -43,6 +43,7 @@ The kubectl plugin can be installed through Krew.
 kubectl krew install azad-proxy
 ```
 
+
 ### Usage
 
 ### Proxy
