@@ -11,7 +11,7 @@ import (
 
 // ClientInterface ...
 type ClientInterface interface {
-	DashboardHandler(ctx context.Context, router *mux.Router) *mux.Router
+	DashboardHandler(ctx context.Context, router *mux.Router) (*mux.Router, error)
 }
 
 // NewDashboardClient ...

@@ -17,6 +17,6 @@ func newNoneClient(ctx context.Context) noneClient {
 }
 
 // DashboardHandler ...
-func (client *noneClient) DashboardHandler(ctx context.Context, router *mux.Router) *mux.Router {
-	return router
+func (client *noneClient) DashboardHandler(ctx context.Context, router *mux.Router) (*mux.Router, error) {
+	return router, nil
 }

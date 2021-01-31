@@ -6,6 +6,8 @@ TEST_ENV_FILE = tmp/test_env
 VERSION ?= "v0.0.0-dev"
 REVISION ?= ""
 CREATED ?= ""
+K8S_DASH_DIR ?= ${PWD}/tmp/k8sdash
+NODE_MODULES ?= ${PWD}/tmp/k8sdash
 
 
 ifneq (,$(wildcard $(TEST_ENV_FILE)))
@@ -69,3 +71,11 @@ build:
 .SILENT:
 build-plugin:
 	go build -o bin/kubectl-azad_proxy cmd/kubectl-azad-proxy/main.go
+
+.SILENT:
+build-k8sdash:
+	mkdir -p $(K8S_DASH_DIR)
+	cp -R gitmodules/k8dash/client/* $(K8S_DASH_DIR)/
+	cd $(K8S_DASH_DIR)
+	npm install --prefix $(K8S_DASH_DIR)
+	npm run build --prefix $(K8S_DASH_DIR)

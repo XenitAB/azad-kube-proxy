@@ -105,8 +105,13 @@ func (client *Client) Start(ctx context.Context) error {
 	router := mux.NewRouter()
 	router.HandleFunc("/readyz", proxyHandlers.ReadinessHandler(ctx)).Methods("GET")
 	router.HandleFunc("/healthz", proxyHandlers.LivenessHandler(ctx)).Methods("GET")
-	routerWithDashboard := client.DashboardClient.DashboardHandler(ctx, router)
-	routerWithDashboard.PathPrefix("/").HandlerFunc(proxyHandlers.AzadKubeProxyHandler(ctx, proxy))
+
+	routerWithDashboard, err := client.DashboardClient.DashboardHandler(ctx, router)
+	if err != nil {
+		return err
+	}
+
+	// routerWithDashboard.PathPrefix("/").HandlerFunc(proxyHandlers.AzadKubeProxyHandler(ctx, proxy))
 	httpServer := client.getHTTPServer(routerWithDashboard)
 
 	// Start HTTP server

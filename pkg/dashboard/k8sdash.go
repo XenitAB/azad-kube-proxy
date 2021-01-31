@@ -5,11 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"os"
+	"strings"
 
 	"github.com/coreos/go-oidc"
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
+	"github.com/xenitab/azad-kube-proxy/pkg/util"
 	"golang.org/x/oauth2"
 )
 
@@ -36,20 +40,85 @@ func newK8sdashClient(ctx context.Context, config config.Config) (k8sdashClient,
 }
 
 // DashboardHandler ...
-func (client *k8sdashClient) DashboardHandler(ctx context.Context, router *mux.Router) *mux.Router {
+func (client *k8sdashClient) DashboardHandler(ctx context.Context, router *mux.Router) (*mux.Router, error) {
+	log := logr.FromContext(ctx)
+
+	k8sdashPath := os.Getenv("K8S_DASH_PATH")
+	if k8sdashPath == "" {
+		err := fmt.Errorf("K8S_DASH_PATH environment variable not set")
+		log.Error(err, "")
+		return nil, err
+	}
+
+	assetManifest, err := util.GetStringFromFile(ctx, fmt.Sprintf("%s/asset-manifest.json", k8sdashPath))
+	if err != nil {
+		log.Error(err, "Unable to open asset manifest")
+		return nil, err
+	}
+
+	manifest := struct {
+		Files     map[string]string
+		Endpoints []string
+	}{}
+
+	err = json.Unmarshal([]byte(assetManifest), &manifest)
+	if err != nil {
+		log.Error(err, "Unable to unmarshal asset manifest")
+		return nil, err
+	}
+
+	fs := http.FileServer(http.Dir(k8sdashPath))
+
+	for _, v := range manifest.Files {
+		path := strings.TrimPrefix(v, ".")
+		log.Info("Debug", "path", path)
+		router.Path(path).Handler(fs)
+	}
+
+	static := []string{
+		"/favicon.ico",
+		"/logo.png",
+		"/manifest.json",
+	}
+
+	for _, file := range static {
+		router.Path(file).Handler(fs)
+	}
+
+	router.Path("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, fmt.Sprintf("%s/index.html", k8sdashPath))
+	}).Methods("GET")
+
 	router.HandleFunc("/oidc", client.getOIDC(ctx)).Methods("GET")
 	router.HandleFunc("/oidc", client.postOIDC(ctx)).Methods("POST")
-	return router
+	router.HandleFunc("/", client.postOIDC(ctx)).Methods("POST")
+
+	return router, nil
 }
 
 func (client *k8sdashClient) getOIDC(ctx context.Context) func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContext(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		authURL, err := url.Parse(client.oidcProvider.Endpoint().AuthURL)
+		if err != nil {
+			log.Error(err, "Unable pars auth url")
+			http.Error(w, "Unable pars auth url", http.StatusInternalServerError)
+			return
+		}
+
+		query := authURL.Query()
+
+		query.Set("client_id", "0622715d-3443-4ca1-940e-0d2a360344a6")
+		query.Set("scope", "https://k8s-api.azadkubeproxy.onmicrosoft.com/.default")
+		query.Set("response_type", "code")
+
+		authURLString := fmt.Sprintf("%s?%s", authURL.String(), query.Encode())
+
 		body := struct {
 			AuthorizationEndpoint string `json:"authEndpoint"`
 		}{
-			AuthorizationEndpoint: client.oidcProvider.Endpoint().AuthURL,
+			AuthorizationEndpoint: authURLString,
 		}
 
 		resBody, err := json.Marshal(&body)
@@ -88,14 +157,23 @@ func (client *k8sdashClient) postOIDC(ctx context.Context) func(http.ResponseWri
 		}
 
 		oauth2Config := oauth2.Config{
-			ClientID:     client.config.ClientID,
-			ClientSecret: client.config.ClientSecret,
-			RedirectURL:  "https://k8s-api.azadkubeproxy.onmicrosoft.com",
+			ClientID:     "0622715d-3443-4ca1-940e-0d2a360344a6",
+			ClientSecret: "somethingsecret",
+			RedirectURL:  reqBody.RedirectURI,
 			Endpoint:     client.oidcProvider.Endpoint(),
 			Scopes:       []string{"https://k8s-api.azadkubeproxy.onmicrosoft.com/.default"},
 		}
 
 		oauth2Token, err := oauth2Config.Exchange(ctx, reqBody.Code)
+		if err != nil {
+			log.Error(err, "Unable to get access token")
+			http.Error(w, "Unable to get access token", http.StatusInternalServerError)
+			return
+		}
+
+		accessToken := oauth2Token.AccessToken
+
+		log.Info("Debug access token", "accessToken", accessToken)
 
 		body := struct {
 			AccessToken string `json:"token"`
