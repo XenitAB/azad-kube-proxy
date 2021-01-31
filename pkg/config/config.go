@@ -8,7 +8,7 @@ import (
 	"os"
 
 	"github.com/go-playground/validator/v10"
-	flag "github.com/spf13/pflag"
+	"github.com/urfave/cli/v2"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 	"github.com/xenitab/azad-kube-proxy/pkg/util"
 )
@@ -43,80 +43,196 @@ type ListenerTLSConfig struct {
 	KeyPath         string
 }
 
-// GetConfig returns the configuration or an error
-func GetConfig(ctx context.Context, args []string) (Config, error) {
-	fs := flag.NewFlagSet("azad-kube-proxy", flag.ContinueOnError)
+// Flags returns a flag array
+func Flags(ctx context.Context) []cli.Flag {
+	return []cli.Flag{
+		&cli.StringFlag{
+			Name:     "client-id",
+			Usage:    "Azure AD Application Client ID",
+			Required: true,
+			EnvVars:  []string{"CLIENT_ID"},
+		},
+		&cli.StringFlag{
+			Name:     "client-secret",
+			Usage:    "Azure AD Application Client Secret",
+			Required: true,
+			EnvVars:  []string{"CLIENT_SECRET"},
+		},
+		&cli.StringFlag{
+			Name:     "tenant-id",
+			Usage:    "Azure AD Tenant ID",
+			Required: true,
+			EnvVars:  []string{"TENANT_ID"},
+		},
+		&cli.StringFlag{
+			Name:     "address",
+			Usage:    "Address to listen on",
+			Required: false,
+			EnvVars:  []string{"ADDRESS"},
+			Value:    "0.0.0.0",
+		},
+		&cli.IntFlag{
+			Name:     "port",
+			Usage:    "Port number to listen on",
+			Required: false,
+			EnvVars:  []string{"PORT"},
+			Value:    8080,
+		},
+		&cli.StringFlag{
+			Name:     "tls-certificate-path",
+			Usage:    "Path for the TLS Certificate",
+			Required: false,
+			EnvVars:  []string{"TLS_CERTIFICATE_PATH"},
+			Value:    "",
+		},
+		&cli.StringFlag{
+			Name:     "tls-key-path",
+			Usage:    "Path for the TLS KEY",
+			Required: false,
+			EnvVars:  []string{"TLS_KEY_PATH"},
+			Value:    "",
+		},
+		&cli.BoolFlag{
+			Name:     "tls-enabled",
+			Usage:    "Should TLS be enabled for the listner?",
+			Required: false,
+			EnvVars:  []string{"TLS_ENABLED"},
+			Value:    false,
+		},
+		&cli.BoolFlag{
+			Name:     "oidc-validate-cert",
+			Usage:    "Should the OpenID Connect CA Certificate be validated?",
+			Required: false,
+			EnvVars:  []string{"OIDC_VALIDATE_CERT"},
+			Value:    true,
+		},
+		&cli.StringFlag{
+			Name:     "kubernetes-api-host",
+			Usage:    "The host for the Kubernetes API",
+			Required: false,
+			EnvVars:  []string{"KUBERNETES_API_HOST", "KUBERNETES_SERVICE_HOST"},
+			Value:    "kubernetes.default",
+		},
+		&cli.IntFlag{
+			Name:     "kubernetes-api-port",
+			Usage:    "The port for the Kubernetes API",
+			Required: false,
+			EnvVars:  []string{"KUBERNETES_API_PORT", "KUBERNETES_SERVICE_PORT"},
+			Value:    443,
+		},
+		&cli.BoolFlag{
+			Name:     "kubernetes-api-tls",
+			Usage:    "Use TLS to communicate with the Kubernetes API?",
+			Required: false,
+			EnvVars:  []string{"KUBERNETES_API_TLS"},
+			Value:    true,
+		},
+		&cli.BoolFlag{
+			Name:     "kubernetes-api-validate-cert",
+			Usage:    "Should the Kubernetes API Certificate be validated?",
+			Required: false,
+			EnvVars:  []string{"KUBERNETES_API_VALIDATE_CERT"},
+			Value:    true,
+		},
+		&cli.StringFlag{
+			Name:     "kubernetes-api-ca-cert-path",
+			Usage:    "The ca certificate path for communication to the Kubernetes API",
+			Required: false,
+			EnvVars:  []string{"KUBERNETES_API_CA_CERT_PATH"},
+			Value:    "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+		},
+		&cli.StringFlag{
+			Name:     "kubernetes-api-token-path",
+			Usage:    "The token for communication to the Kubernetes API",
+			Required: false,
+			EnvVars:  []string{"KUBERNETES_API_TOKEN_PATH"},
+			Value:    "/var/run/secrets/kubernetes.io/serviceaccount/token",
+		},
+		&cli.StringFlag{
+			Name:     "azure-ad-group-prefix",
+			Usage:    "The prefix of the Azure AD groups to be passed to the Kubernetes API",
+			Required: false,
+			EnvVars:  []string{"AZURE_AD_GROUP_PREFIX"},
+			Value:    "",
+		},
+		&cli.IntFlag{
+			Name:     "azure-ad-max-group-count",
+			Usage:    "The maximum of groups allowed to be passed to the Kubernetes API before the proxy will return unauthorized",
+			Required: false,
+			EnvVars:  []string{"AZURE_AD_MAX_GROUP_COUNT"},
+			Value:    50,
+		},
+		&cli.StringFlag{
+			Name:     "group-identifier",
+			Usage:    "What group identifier to use",
+			Required: false,
+			EnvVars:  []string{"GROUP_IDENTIFIER"},
+			Value:    "NAME",
+		},
+		&cli.StringFlag{
+			Name:     "cache-engine",
+			Usage:    "What cache engine to use",
+			Required: false,
+			EnvVars:  []string{"CACHE_ENGINE"},
+			Value:    "MEMORY",
+		},
+		&cli.StringFlag{
+			Name:     "redis-uri",
+			Usage:    "The redis uri (redis://<user>:<password>@<host>:<port>/<db_number>)",
+			Required: false,
+			EnvVars:  []string{"REDIS_URI"},
+			Value:    "redis://127.0.0.1:6379/0",
+		},
+	}
+}
 
-	clientID := fs.String("client-id", "", "Azure AD Application Client ID")
-	clientSecret := fs.String("client-secret", "", "Azure AD Application Client Secret")
-	tenantID := fs.String("tenant-id", "", "Azure AD Tenant ID")
-	address := fs.String("address", "0.0.0.0", "Address to listen on")
-	port := fs.Int("port", 8080, "Port number to listen on")
-	tlsCertificatePath := fs.String("tls-certificate-path", "", "Path for the TLS Certificate")
-	tlsKeyPath := fs.String("tls-key-path", "", "Path for the TLS KEY")
-	tlsEnabled := fs.Bool("tls-enabled", false, "Should TLS be enabled for the listner?")
-	kubernetesAPIHost := fs.String("kubernetes-api-host", "kubernetes.default", "The host for the Kubernetes API")
-	kubernetesAPIPort := fs.Int("kubernetes-api-port", 443, "The port for the Kubernetes API")
-	kubernetesAPITLS := fs.Bool("kubernetes-api-tls", true, "Use TLS to communicate with the Kubernetes API?")
-	kubernetesAPIValidateCert := fs.Bool("kubernetes-api-validate-cert", true, "Should the Kubernetes API Certificate be validated?")
-	kubernetesAPICACertPath := fs.String("kubernetes-api-ca-cert-path", "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt", "The ca certificate path for communication to the Kubernetes API")
-	kubernetesAPITokenPath := fs.String("kubernetes-api-token-path", "/var/run/secrets/kubernetes.io/serviceaccount/token", "The token for communication to the Kubernetes API")
-	azureADGroupPrefix := fs.String("azure-ad-group-prefix", "", "The prefix of the Azure AD groups to be passed to the Kubernetes API")
-	azureADMaxGroupCount := fs.Int("azure-ad-max-group-count", 50, "The maximum of groups allowed to be passed to the Kubernetes API before the proxy will return unauthorized")
-	groupIdentifier := fs.String("group-identifier", "NAME", "What group identifier to use")
-	cacheEngine := fs.String("cache-engine", "MEMORY", "What cache engine to use")
-	redisURI := fs.String("redis-uri", "redis://127.0.0.1:6379/0", "The redis uri (redis://<user>:<password>@<host>:<port>/<db_number>)")
-
-	err := fs.Parse(args)
+// NewConfig returns a Config or error
+func NewConfig(ctx context.Context, cli *cli.Context) (Config, error) {
+	kubernetesAPIUrl, err := getKubernetesAPIUrl(cli.String("kubernetes-api-host"), cli.Int("kubernetes-api-port"), cli.Bool("kubernetes-api-tls"))
 	if err != nil {
 		return Config{}, err
 	}
 
-	kubernetesAPIUrl, err := getKubernetesAPIUrl(*kubernetesAPIHost, *kubernetesAPIPort, *kubernetesAPITLS)
+	kubernetesRootCA, err := util.GetCertificate(ctx, cli.String("kubernetes-api-ca-cert-path"))
 	if err != nil {
 		return Config{}, err
 	}
 
-	kubernetesRootCA, err := util.GetCertificate(ctx, *kubernetesAPICACertPath)
+	kubernetesToken, err := util.GetStringFromFile(ctx, cli.String("kubernetes-api-token-path"))
 	if err != nil {
 		return Config{}, err
 	}
 
-	kubernetesToken, err := util.GetStringFromFile(ctx, *kubernetesAPITokenPath)
+	cacheEngine, err := models.GetCacheEngine(cli.String("cache-engine"))
 	if err != nil {
 		return Config{}, err
 	}
 
-	gIdentifier, err := models.GetGroupIdentifier(*groupIdentifier)
-	if err != nil {
-		return Config{}, err
-	}
-
-	cacheEng, err := models.GetCacheEngine(*cacheEngine)
+	gIdentifier, err := models.GetGroupIdentifier(cli.String("group-identifier"))
 	if err != nil {
 		return Config{}, err
 	}
 
 	config := Config{
-		ClientID:        *clientID,
-		ClientSecret:    *clientSecret,
-		TenantID:        *tenantID,
-		ListenerAddress: fmt.Sprintf("%s:%d", *address, *port),
+		ClientID:        cli.String("client-id"),
+		ClientSecret:    cli.String("client-secret"),
+		TenantID:        cli.String("tenant-id"),
+		ListenerAddress: fmt.Sprintf("%s:%d", cli.String("address"), cli.Int("port")),
 		ListenerTLSConfig: ListenerTLSConfig{
-			Enabled:         *tlsEnabled,
-			CertificatePath: *tlsCertificatePath,
-			KeyPath:         *tlsKeyPath,
+			Enabled:         cli.Bool("tls-enabled"),
+			CertificatePath: cli.String("tls-certificate-path"),
+			KeyPath:         cli.String("tls-key-path"),
 		},
-		CacheEngine:          cacheEng,
-		RedisURI:             *redisURI,
-		AzureADGroupPrefix:   *azureADGroupPrefix,
-		AzureADMaxGroupCount: *azureADMaxGroupCount,
+		CacheEngine:          cacheEngine,
+		RedisURI:             cli.String("redis-uri"),
+		AzureADGroupPrefix:   cli.String("azure-ad-group-prefix"),
+		AzureADMaxGroupCount: cli.Int("azure-ad-max-group-count"),
 		GroupIdentifier:      gIdentifier,
 		KubernetesConfig: KubernetesConfig{
 			URL:                 kubernetesAPIUrl,
 			RootCA:              kubernetesRootCA,
 			Token:               kubernetesToken,
-			ValidateCertificate: *kubernetesAPIValidateCert,
+			ValidateCertificate: cli.Bool("kubernetes-api-validate-cert"),
 		},
 	}
 
