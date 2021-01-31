@@ -24,12 +24,12 @@ func TestGetCacheEngine(t *testing.T) {
 		{
 			cacheEngineString:   "",
 			expectedCacheEngine: "",
-			expectedErr:         errors.New("Unknown cache engine type . Supported engines are: MEMORY or REDIS"),
+			expectedErr:         errors.New("Unknown cache engine type ''. Supported engines are: MEMORY or REDIS"),
 		},
 		{
 			cacheEngineString:   "DUMMY",
 			expectedCacheEngine: "",
-			expectedErr:         errors.New("Unknown cache engine type DUMMY. Supported engines are: MEMORY or REDIS"),
+			expectedErr:         errors.New("Unknown cache engine type 'DUMMY'. Supported engines are: MEMORY or REDIS"),
 		},
 	}
 

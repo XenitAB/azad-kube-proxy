@@ -26,6 +26,7 @@ type Config struct {
 	AzureADMaxGroupCount int `validate:"min=1,max=1000"`
 	GroupIdentifier      models.GroupIdentifier
 	KubernetesConfig     KubernetesConfig
+	Dashboard            models.Dashboard
 }
 
 // KubernetesConfig contains the Kubernetes specific configuration
@@ -183,6 +184,13 @@ func Flags(ctx context.Context) []cli.Flag {
 			EnvVars:  []string{"REDIS_URI"},
 			Value:    "redis://127.0.0.1:6379/0",
 		},
+		&cli.StringFlag{
+			Name:     "dashboard",
+			Usage:    "What Kubernetes dashboard to use",
+			Required: false,
+			EnvVars:  []string{"DASHBOARD"},
+			Value:    "NONE",
+		},
 	}
 }
 
@@ -208,7 +216,12 @@ func NewConfig(ctx context.Context, cli *cli.Context) (Config, error) {
 		return Config{}, err
 	}
 
-	gIdentifier, err := models.GetGroupIdentifier(cli.String("group-identifier"))
+	groupIdentifier, err := models.GetGroupIdentifier(cli.String("group-identifier"))
+	if err != nil {
+		return Config{}, err
+	}
+
+	dashboard, err := models.GetDashboard(cli.String("dashboard"))
 	if err != nil {
 		return Config{}, err
 	}
@@ -227,13 +240,14 @@ func NewConfig(ctx context.Context, cli *cli.Context) (Config, error) {
 		RedisURI:             cli.String("redis-uri"),
 		AzureADGroupPrefix:   cli.String("azure-ad-group-prefix"),
 		AzureADMaxGroupCount: cli.Int("azure-ad-max-group-count"),
-		GroupIdentifier:      gIdentifier,
+		GroupIdentifier:      groupIdentifier,
 		KubernetesConfig: KubernetesConfig{
 			URL:                 kubernetesAPIUrl,
 			RootCA:              kubernetesRootCA,
 			Token:               kubernetesToken,
 			ValidateCertificate: cli.Bool("kubernetes-api-validate-cert"),
 		},
+		Dashboard: dashboard,
 	}
 
 	err = config.Validate()
