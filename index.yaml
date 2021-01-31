@@ -3,9 +3,9 @@ entries:
   azad-kube-proxy:
   - apiVersion: v2
     appVersion: v0.0.7
-    created: "2021-01-31T12:24:57.447891225Z"
+    created: "2021-01-31T13:41:47.917826775Z"
     description: A Helm chart for Azure AD Kubernetes API Proxy (azad-kube-proxy)
-    digest: b6898c633dbd5cc4433f91bb5170afc696282cf225398641d83b07b4c90e127c
+    digest: 643bffacb367e6d16fe7e80d9be4388c5a39681241cb2177d4d51f965179f21c
     name: azad-kube-proxy
     type: application
     urls:
@@ -13,7 +13,7 @@ entries:
     version: v0.0.7
   - apiVersion: v2
     appVersion: v0.0.6
-    created: "2021-01-31T12:24:57.447113929Z"
+    created: "2021-01-31T13:41:47.917076164Z"
     description: A Helm chart for Azure AD Kubernetes API Proxy (azad-kube-proxy)
     digest: f68809df1c321f6f63691d90836477146397e8d1dea896224f386ee02aa77af7
     name: azad-kube-proxy
@@ -23,7 +23,7 @@ entries:
     version: v0.0.6
   - apiVersion: v2
     appVersion: v0.0.5
-    created: "2021-01-31T12:24:57.446306432Z"
+    created: "2021-01-31T13:41:47.916350953Z"
     description: A Helm chart for Azure AD Kubernetes API Proxy (azad-kube-proxy)
     digest: 73ef199f43dda35b40f99268cd5ad6472a4d89a0f39b2f5f864d1868035f25b9
     name: azad-kube-proxy
@@ -33,7 +33,7 @@ entries:
     version: v0.0.5
   - apiVersion: v2
     appVersion: v0.0.4
-    created: "2021-01-31T12:24:57.445471036Z"
+    created: "2021-01-31T13:41:47.915625041Z"
     description: A Helm chart for Azure AD Kubernetes API Proxy (azad-kube-proxy)
     digest: 413e2ebfd2f2f7049f57bcc0468b81d417730b4b9cbd2e0b97f61526552238b4
     name: azad-kube-proxy
@@ -43,7 +43,7 @@ entries:
     version: v0.0.4
   - apiVersion: v2
     appVersion: v0.0.3
-    created: "2021-01-31T12:24:57.444244941Z"
+    created: "2021-01-31T13:41:47.91489033Z"
     description: A Helm chart for Azure AD Kubernetes API Proxy (azad-kube-proxy)
     digest: 41446180576bbc3afd32b885ddda6519adf716bef44ae96e2afc70ba742a4fba
     name: azad-kube-proxy
@@ -53,7 +53,7 @@ entries:
     version: v0.0.3
   - apiVersion: v2
     appVersion: v0.0.2
-    created: "2021-01-31T12:24:57.443199745Z"
+    created: "2021-01-31T13:41:47.914094918Z"
     description: A Helm chart for Azure AD Kubernetes API Proxy (azad-kube-proxy)
     digest: 93ca133d1ee847606e82d0faf5abbca883d4af70496a4d3e68e4bffe69989c83
     name: azad-kube-proxy
@@ -61,4 +61,4 @@ entries:
     urls:
     - https://XenitAB.github.io/azad-kube-proxy/azad-kube-proxy-v0.0.2.tgz
     version: v0.0.2
-generated: "2021-01-31T12:24:57.441084954Z"
+generated: "2021-01-31T13:41:47.913131903Z"
