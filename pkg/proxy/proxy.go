@@ -17,6 +17,7 @@ import (
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/claims"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
+	"github.com/xenitab/azad-kube-proxy/pkg/dashboard"
 	"github.com/xenitab/azad-kube-proxy/pkg/handlers"
 	"github.com/xenitab/azad-kube-proxy/pkg/user"
 )
@@ -32,11 +33,12 @@ type ClientInterface interface {
 
 // Client ...
 type Client struct {
-	Config       config.Config
-	CacheClient  cache.ClientInterface
-	UserClient   user.ClientInterface
-	AzureClient  azure.ClientInterface
-	ClaimsClient claims.ClientInterface
+	Config          config.Config
+	CacheClient     cache.ClientInterface
+	UserClient      user.ClientInterface
+	AzureClient     azure.ClientInterface
+	ClaimsClient    claims.ClientInterface
+	DashboardClient dashboard.ClientInterface
 }
 
 // NewProxyClient ...
@@ -54,12 +56,18 @@ func NewProxyClient(ctx context.Context, config config.Config) (ClientInterface,
 	userClient := user.NewUserClient(config, azureClient)
 	claimsClient := claims.NewClaimsClient()
 
+	dashboardClient, err := dashboard.NewDashboardClient(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+
 	proxyClient := Client{
-		Config:       config,
-		CacheClient:  cacheClient,
-		UserClient:   userClient,
-		AzureClient:  azureClient,
-		ClaimsClient: claimsClient,
+		Config:          config,
+		CacheClient:     cacheClient,
+		UserClient:      userClient,
+		AzureClient:     azureClient,
+		ClaimsClient:    claimsClient,
+		DashboardClient: dashboardClient,
 	}
 
 	return &proxyClient, nil
@@ -97,8 +105,9 @@ func (client *Client) Start(ctx context.Context) error {
 	router := mux.NewRouter()
 	router.HandleFunc("/readyz", proxyHandlers.ReadinessHandler(ctx)).Methods("GET")
 	router.HandleFunc("/healthz", proxyHandlers.LivenessHandler(ctx)).Methods("GET")
-	router.PathPrefix("/").HandlerFunc(proxyHandlers.AzadKubeProxyHandler(ctx, proxy))
-	httpServer := client.getHTTPServer(router)
+	routerWithDashboard := client.DashboardClient.DashboardHandler(ctx, router)
+	routerWithDashboard.PathPrefix("/").HandlerFunc(proxyHandlers.AzadKubeProxyHandler(ctx, proxy))
+	httpServer := client.getHTTPServer(routerWithDashboard)
 
 	// Start HTTP server
 	go func() {
