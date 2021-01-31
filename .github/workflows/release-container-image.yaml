@@ -54,6 +54,10 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
           tags: ghcr.io/xenitab/${{ env.NAME }}:${{ steps.get_tag.outputs.tag }}
+          build-args: |
+            VERSION=${{ steps.prep.outputs.VERSION }}
+            REVISION=${{ github.sha }}
+            CREATED=${{ steps.prep.outputs.BUILD_DATE }}
           labels: |
             org.opencontainers.image.title=${{ github.event.repository.name }}
             org.opencontainers.image.description=${{ github.event.repository.description }}

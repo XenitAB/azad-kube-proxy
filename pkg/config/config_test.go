@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
@@ -18,28 +19,49 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/urfave/cli/v2"
 )
 
-// ./azad-kube-proxy --test abc --hejsan 123
-// [./azad-kube-proxy --test abc --hejsan 123]
-func TestGetConfig(t *testing.T) {
+func TestNewConfig(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
-	// Fake certificate
-	_, err := GetConfig(ctx, []string{"fake-bin"})
-	if !strings.Contains(err.Error(), "ca.crt: no such file or directory") {
-		t.Errorf("Expected err to contain 'ca.crt: no such file or directory' but it was %q", err)
+	cfg := Config{}
+
+	envVarsToClear := []string{
+		"CLIENT_ID",
+		"CLIENT_SECRET",
+		"TENANT_ID",
+		"KUBERNETES_API_CA_CERT_PATH",
+		"KUBERNETES_API_TOKEN_PATH",
+		"TLS_CERTIFICATE_PATH",
+		"TLS_KEY_PATH",
+		"TLS_ENABLED",
 	}
 
+	for _, envVar := range envVarsToClear {
+		restore := tempUnsetEnv(envVar)
+		defer restore()
+	}
+
+	app := &cli.App{
+		Name:  "test",
+		Usage: "test",
+		Flags: Flags(ctx),
+		Action: func(c *cli.Context) error {
+			var err error
+			cfg, err = NewConfig(ctx, c)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+	}
+
+	// Fake certificate
 	certPath, err := generateCertificateFile()
 	if err != nil {
 		t.Errorf("Unable to generate temporary certificate for test: %q", err)
 	}
 	defer deleteFile(t, certPath)
-
-	_, err = GetConfig(ctx, []string{"fake-bin", fmt.Sprintf("--kubernetes-api-ca-cert-path=%s", certPath)})
-	if !strings.Contains(err.Error(), "token: no such file or directory") {
-		t.Errorf("Expected err to contain 'token: no such file or directory' but it was %q", err)
-	}
 
 	// Fake token
 	tokenPath, _, err := generateRandomFile()
@@ -52,94 +74,174 @@ func TestGetConfig(t *testing.T) {
 	baseWorkingArgs := append(baseArgs, "--client-id=00000000-0000-0000-0000-000000000000", "--client-secret=supersecret", "--tenant-id=00000000-0000-0000-0000-000000000000")
 
 	cases := []struct {
-		osArgs                 []string
-		expectedErrContains    []string
-		expectedErrNotContains []string
+		cliApp              *cli.App
+		args                []string
+		expectedConfig      Config
+		expectedErrContains string
+		outBuffer           bytes.Buffer
+		errBuffer           bytes.Buffer
 	}{
 		{
-			osArgs:                 baseArgs,
-			expectedErrContains:    []string{"Config.ClientID", "Config.ClientSecret", "Config.TenantID"},
-			expectedErrNotContains: []string{},
+			cliApp:              app,
+			args:                []string{"fake-bin", "--client-id=00000000-0000-0000-0000-000000000000", "--client-secret=supersecret", "--tenant-id=00000000-0000-0000-0000-000000000000"},
+			expectedConfig:      Config{},
+			expectedErrContains: "ca.crt: no such file or directory",
+			outBuffer:           bytes.Buffer{},
+			errBuffer:           bytes.Buffer{},
 		},
 		{
-			osArgs:                 append(baseArgs, "--client-id=00000000-0000-0000-0000-000000000000"),
-			expectedErrContains:    []string{"Config.ClientSecret", "Config.TenantID"},
-			expectedErrNotContains: []string{"Config.ClientID"},
+			cliApp:              app,
+			args:                []string{"fake-bin", fmt.Sprintf("--kubernetes-api-ca-cert-path=%s", certPath), "--client-id=00000000-0000-0000-0000-000000000000", "--client-secret=supersecret", "--tenant-id=00000000-0000-0000-0000-000000000000"},
+			expectedConfig:      Config{},
+			expectedErrContains: "token: no such file or directory",
+			outBuffer:           bytes.Buffer{},
+			errBuffer:           bytes.Buffer{},
 		},
 		{
-			osArgs:                 append(baseArgs, "--client-id=00000000-0000-0000-0000-000000000000", "--client-secret=supersecret"),
-			expectedErrContains:    []string{"Config.TenantID"},
-			expectedErrNotContains: []string{"Config.ClientID", "Config.ClientSecret"},
+			cliApp:              app,
+			args:                baseArgs,
+			expectedConfig:      Config{},
+			expectedErrContains: "client-id",
+			outBuffer:           bytes.Buffer{},
+			errBuffer:           bytes.Buffer{},
 		},
 		{
-			osArgs:                 append(baseArgs, "--client-id=00000000-0000-0000-0000-000000000000", "--client-secret=supersecret", "--tenant-id=00000000-0000-0000-0000-000000000000"),
-			expectedErrContains:    []string{},
-			expectedErrNotContains: []string{"Config.ClientID", "Config.ClientSecret", "Config.TenantID"},
+			cliApp:              app,
+			args:                append(baseArgs, "--client-id=00000000-0000-0000-0000-000000000000"),
+			expectedConfig:      Config{},
+			expectedErrContains: "client-secret",
+			outBuffer:           bytes.Buffer{},
+			errBuffer:           bytes.Buffer{},
 		},
 		{
-			osArgs:                 append(baseWorkingArgs, "--address=this-shouldnt-work"),
-			expectedErrContains:    []string{},
-			expectedErrNotContains: []string{"Config.Address"},
+			cliApp:              app,
+			args:                append(baseArgs, "--client-id=00000000-0000-0000-0000-000000000000", "--client-secret=supersecret"),
+			expectedConfig:      Config{},
+			expectedErrContains: "tenant-id",
+			outBuffer:           bytes.Buffer{},
+			errBuffer:           bytes.Buffer{},
 		},
 		{
-			osArgs:                 append(baseWorkingArgs, "--does-not-exist"),
-			expectedErrContains:    []string{"unknown flag: --does-not-exist"},
-			expectedErrNotContains: []string{},
+			cliApp: app,
+			args:   append(baseArgs, "--client-id=00000000-0000-0000-0000-000000000000", "--client-secret=supersecret", "--tenant-id=00000000-0000-0000-0000-000000000000"),
+			expectedConfig: Config{
+				ClientID: "00000000-0000-0000-0000-000000000000",
+			},
+			expectedErrContains: "",
+			outBuffer:           bytes.Buffer{},
+			errBuffer:           bytes.Buffer{},
 		},
 		{
-			osArgs:                 append(baseWorkingArgs, "--kubernetes-api-port=abc"),
-			expectedErrContains:    []string{"parsing \"abc\": invalid syntax"},
-			expectedErrNotContains: []string{},
+			cliApp: app,
+			args:   append(baseWorkingArgs, "--address=this-shouldnt-work"),
+			expectedConfig: Config{
+				ClientID: "00000000-0000-0000-0000-000000000000",
+			},
+			expectedErrContains: "",
+			outBuffer:           bytes.Buffer{},
+			errBuffer:           bytes.Buffer{},
 		},
 		{
-			osArgs:                 append(baseWorkingArgs, "--kubernetes-api-host=\"a b c\""),
-			expectedErrContains:    []string{"invalid character \" \" in host name"},
-			expectedErrNotContains: []string{},
+			cliApp:              app,
+			args:                append(baseWorkingArgs, "--does-not-exist"),
+			expectedConfig:      Config{},
+			expectedErrContains: "flag provided but not defined: -does-not-exist",
+			outBuffer:           bytes.Buffer{},
+			errBuffer:           bytes.Buffer{},
 		},
 		{
-			osArgs:                 append(baseWorkingArgs, "--cache-engine=FAKE"),
-			expectedErrContains:    []string{"Unknown cache engine type FAKE."},
-			expectedErrNotContains: []string{},
+			cliApp:              app,
+			args:                append(baseWorkingArgs, "--kubernetes-api-port=abc"),
+			expectedConfig:      Config{},
+			expectedErrContains: "invalid value \"abc\" for flag -kubernetes-api-port: parse error",
+			outBuffer:           bytes.Buffer{},
+			errBuffer:           bytes.Buffer{},
 		},
 		{
-			osArgs:                 append(baseWorkingArgs, "--cache-engine=FAKE"),
-			expectedErrContains:    []string{"Unknown cache engine type FAKE."},
-			expectedErrNotContains: []string{},
+			cliApp:              app,
+			args:                append(baseWorkingArgs, "--kubernetes-api-host=\"a b c\""),
+			expectedConfig:      Config{},
+			expectedErrContains: "invalid character \" \" in host name",
+			outBuffer:           bytes.Buffer{},
+			errBuffer:           bytes.Buffer{},
 		},
 		{
-			osArgs:                 append(baseWorkingArgs, "--kubernetes-api-tls=false"),
-			expectedErrContains:    []string{},
-			expectedErrNotContains: []string{},
+			cliApp:              app,
+			args:                append(baseWorkingArgs, "--cache-engine=FAKE"),
+			expectedConfig:      Config{},
+			expectedErrContains: "Unknown cache engine type FAKE.",
+			outBuffer:           bytes.Buffer{},
+			errBuffer:           bytes.Buffer{},
 		},
 		{
-			osArgs:                 append(baseWorkingArgs, "--group-identifier=FAKE"),
-			expectedErrContains:    []string{"Unknown group identifier FAKE."},
-			expectedErrNotContains: []string{},
+			cliApp:              app,
+			args:                append(baseWorkingArgs, "--cache-engine=FAKE"),
+			expectedConfig:      Config{},
+			expectedErrContains: "Unknown cache engine type FAKE.",
+			outBuffer:           bytes.Buffer{},
+			errBuffer:           bytes.Buffer{},
+		},
+		{
+			cliApp: app,
+			args:   append(baseWorkingArgs, "--kubernetes-api-tls=false"),
+			expectedConfig: Config{
+				ClientID: "00000000-0000-0000-0000-000000000000",
+			},
+			expectedErrContains: "",
+			outBuffer:           bytes.Buffer{},
+			errBuffer:           bytes.Buffer{},
+		},
+		{
+			cliApp:              app,
+			args:                append(baseWorkingArgs, "--group-identifier=FAKE"),
+			expectedConfig:      Config{},
+			expectedErrContains: "Unknown group identifier FAKE.",
+			outBuffer:           bytes.Buffer{},
+			errBuffer:           bytes.Buffer{},
+		},
+		{
+			cliApp:              app,
+			args:                append(baseArgs, "--client-id=123", "--client-secret=supersecret", "--tenant-id=00000000-0000-0000-0000-000000000000"),
+			expectedConfig:      Config{},
+			expectedErrContains: "Key: 'Config.ClientID' Error:Field validation for 'ClientID' failed on the 'uuid' tag",
+			outBuffer:           bytes.Buffer{},
+			errBuffer:           bytes.Buffer{},
+		},
+		{
+			cliApp:              app,
+			args:                append(baseWorkingArgs, "--tls-enabled=TRUE"),
+			expectedConfig:      Config{},
+			expectedErrContains: "config.ListenerTLSConfig.CertificatePath is not set",
+			outBuffer:           bytes.Buffer{},
+			errBuffer:           bytes.Buffer{},
 		},
 	}
 
 	for _, c := range cases {
-		_, err := GetConfig(ctx, c.osArgs)
-		if err != nil && len(c.expectedErrContains) == 0 {
-			t.Errorf("Expected err to be nil but it was %q", err)
+		c.cliApp.Writer = &c.outBuffer
+		c.cliApp.ErrWriter = &c.errBuffer
+		err := c.cliApp.Run(c.args)
+		if err != nil && c.expectedErrContains == "" {
+			t.Errorf("Expected err to be nil: %q", err)
 		}
-		if err == nil && len(c.expectedErrContains) > 0 {
-			t.Errorf("Expected err but it was nil")
+
+		if err == nil && c.expectedErrContains != "" {
+			t.Errorf("Expected err to contain '%s' but was nil", c.expectedErrContains)
 		}
-		if err != nil && len(c.expectedErrContains) > 0 {
-			for _, s := range c.expectedErrContains {
-				if !strings.Contains(err.Error(), s) {
-					t.Errorf("Expected err to contain '%s' but it was %q", s, err)
-				}
+
+		if err != nil && c.expectedErrContains != "" {
+			if !strings.Contains(err.Error(), c.expectedErrContains) {
+				t.Errorf("Expected err to contain '%s' but was: %q", c.expectedErrContains, err)
 			}
 		}
-		if err != nil && len(c.expectedErrNotContains) > 0 {
-			for _, s := range c.expectedErrNotContains {
-				if strings.Contains(err.Error(), s) {
-					t.Errorf("Expected err not to contain '%s' but it was %q", s, err)
-				}
+
+		if c.expectedErrContains == "" {
+			if cfg.ClientID != c.expectedConfig.ClientID {
+				t.Errorf("Expected cfg.ClientID to be '%s' but was: %s", c.expectedConfig.ClientID, cfg.ClientID)
 			}
 		}
+
+		cfg = Config{}
 	}
 }
 
@@ -272,4 +374,10 @@ func deleteFile(t *testing.T, file string) {
 	if err != nil {
 		t.Errorf("Unable to delete file: %q", err)
 	}
+}
+
+func tempUnsetEnv(key string) func() {
+	oldEnv := os.Getenv(key)
+	os.Unsetenv(key)
+	return func() { os.Setenv(key, oldEnv) }
 }

@@ -2,6 +2,8 @@ project_name: kubectl-azad_proxy
 builds:
 - main: ./cmd/kubectl-azad-proxy/main.go
   binary: kubectl-azad_proxy
+  ldflags:
+  - -w -s -X main.Version={{ .Env.VERSION }} -X main.Revision={{ .Env.REVISION }} -X main.Created={{ .Env.CREATED }}
   env:
   - CGO_ENABLED=0
   goos:

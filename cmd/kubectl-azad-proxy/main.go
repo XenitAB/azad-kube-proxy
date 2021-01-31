@@ -11,14 +11,30 @@ import (
 	"k8s.io/klog/v2/klogr"
 )
 
+var (
+	// Version is the release version and will be set during compile time
+	Version = "v0.0.0-dev"
+
+	// Revision is the git sha
+	Revision = ""
+
+	// Created is the timestamp for when the application was created
+	Created = ""
+)
+
 func main() {
 	// Initiate the logging
 	log := klogr.New().V(0)
 	ctx := logr.NewContext(context.Background(), log)
 
+	cli.VersionPrinter = func(c *cli.Context) {
+		fmt.Printf("version=%s revision=%s created=%s\n", c.App.Version, Revision, Created)
+	}
+
 	app := &cli.App{
-		Name:  "kubectl-azad-proxy",
-		Usage: "kubectl plugin for azad-kube-proxy",
+		Name:    "kubectl-azad-proxy",
+		Usage:   "kubectl plugin for azad-kube-proxy",
+		Version: Version,
 		Commands: []*cli.Command{
 			{
 				Name:    "generate",

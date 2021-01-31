@@ -3,6 +3,10 @@ SHELL := /bin/bash
 TAG = dev
 IMG ?= azad-kube-proxy:$(TAG)
 TEST_ENV_FILE = tmp/test_env
+VERSION ?= "v0.0.0-dev"
+REVISION ?= ""
+CREATED ?= ""
+
 
 ifneq (,$(wildcard $(TEST_ENV_FILE)))
     include $(TEST_ENV_FILE)
@@ -60,7 +64,7 @@ token:
 
 .SILENT:
 build:
-	go build -o bin/azad-kube-proxy cmd/azad-kube-proxy/main.go
+	go build -ldflags "-w -s -X main.Version=$(VERSION) -X main.Revision=$(REVISION) -X main.Created=$(CREATED)" -o bin/azad-kube-proxy cmd/azad-kube-proxy/main.go
 
 .SILENT:
 build-plugin:
