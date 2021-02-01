@@ -6,8 +6,10 @@ import (
 	"crypto/x509"
 	"net/http"
 	"net/http/httputil"
+	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -20,6 +22,7 @@ import (
 	"github.com/xenitab/azad-kube-proxy/pkg/dashboard"
 	"github.com/xenitab/azad-kube-proxy/pkg/handlers"
 	"github.com/xenitab/azad-kube-proxy/pkg/user"
+	"github.com/yhat/wsutil"
 )
 
 // ClientInterface ...
@@ -102,6 +105,8 @@ func (client *Client) Start(ctx context.Context) error {
 	proxy := client.getReverseProxy(ctx)
 	proxy.ErrorHandler = proxyHandlers.ErrorHandler(ctx)
 
+	wsProxy := client.getWebsocketReverseProxy(ctx)
+
 	router := mux.NewRouter()
 	router.HandleFunc("/readyz", proxyHandlers.ReadinessHandler(ctx)).Methods("GET")
 	router.HandleFunc("/healthz", proxyHandlers.LivenessHandler(ctx)).Methods("GET")
@@ -111,7 +116,7 @@ func (client *Client) Start(ctx context.Context) error {
 		return err
 	}
 
-	// routerWithDashboard.PathPrefix("/").HandlerFunc(proxyHandlers.AzadKubeProxyHandler(ctx, proxy))
+	routerWithDashboard.PathPrefix("/").HandlerFunc(proxyHandlers.AzadKubeProxyHandler(ctx, proxy, wsProxy))
 	httpServer := client.getHTTPServer(routerWithDashboard)
 
 	// Start HTTP server
@@ -162,6 +167,15 @@ func (client *Client) getReverseProxy(ctx context.Context) *httputil.ReverseProx
 	reverseProxy := httputil.NewSingleHostReverseProxy(client.Config.KubernetesConfig.URL)
 	reverseProxy.Transport = client.getProxyTransport()
 	return reverseProxy
+}
+
+func (client *Client) getWebsocketReverseProxy(ctx context.Context) http.Handler {
+	wsScheme := "ws" + strings.TrimPrefix(client.Config.KubernetesConfig.URL.Scheme, "http")
+	wsURL := &url.URL{Scheme: wsScheme, Host: client.Config.KubernetesConfig.URL.Host}
+
+	wsProxy := wsutil.NewSingleHostReverseProxy(wsURL)
+	wsProxy.TLSClientConfig = getProxyTLSClientConfig(client.Config.KubernetesConfig.ValidateCertificate, client.Config.KubernetesConfig.RootCA)
+	return wsProxy
 }
 
 func (client *Client) getProxyTransport() *http.Transport {

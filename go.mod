@@ -5,12 +5,9 @@ go 1.15
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v0.14.1
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v0.8.0
-<<<<<<< HEAD
 	github.com/alicebob/miniredis/v2 v2.14.2
-=======
 	github.com/GeertJohan/go.rice v1.0.2
 	github.com/alicebob/miniredis/v2 v2.14.1
->>>>>>> c18ce54 (Testing dash)
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/go-logr/logr v0.4.0
 	github.com/go-logr/zapr v0.4.0
@@ -24,6 +21,7 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pquerna/cachecontrol v0.0.0-20171018203845-0dec1b30a021 // indirect
 	github.com/urfave/cli/v2 v2.3.0
+	github.com/yhat/wsutil v0.0.0-20170731153501-1d66fa95c997
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.16.0
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d

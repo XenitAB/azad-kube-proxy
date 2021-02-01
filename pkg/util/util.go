@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -54,21 +55,58 @@ func GetEncodedHash(s string) string {
 
 // GetBearerToken returns the Bearer token or an error
 func GetBearerToken(r *http.Request) (string, error) {
-	h := r.Header.Get("Authorization")
+	isWebSocket := false
+	if strings.EqualFold(r.Header.Get("Connection"), "upgrade") && r.Header.Get("Upgrade") == "websocket" {
+		isWebSocket = true
+	}
+
+	if !isWebSocket {
+		h := r.Header.Get("Authorization")
+		if h == "" {
+			return "", errors.New("No Authorization header present in request")
+		}
+
+		if !strings.Contains(h, "Bearer ") {
+			return "", errors.New("Authorization header does not contain Bearer in request")
+		}
+
+		a := strings.Split(h, "Bearer ")
+		if len(a) != 2 {
+			return "", fmt.Errorf("Authorization split by 'Bearer ' isn't length of 2 (actual length: %d)", len(a))
+		}
+
+		token := a[1]
+		if token == "" {
+			return "", fmt.Errorf("Empty token")
+		}
+
+		return token, nil
+	}
+
+	h := r.Header.Get("Sec-WebSocket-Protocol")
 	if h == "" {
-		return "", errors.New("No Authorization header present in request")
+		return "", errors.New("No Sec-WebSocket-Protocol header present in request")
 	}
 
-	if !strings.Contains(h, "Bearer ") {
-		return "", errors.New("Authorization header does not contain Bearer in request")
+	//
+	if !strings.Contains(h, "base64url.bearer.authorization.k8s.io.") {
+		return "", errors.New("Sec-WebSocket-Protocol header does not contain 'base64url.bearer.authorization.k8s.io.' in request")
 	}
 
-	a := strings.Split(h, "Bearer ")
-	if len(a) != 2 {
-		return "", fmt.Errorf("Authorization split by 'Bearer ' isn't length of 2 (actual length: %d)", len(a))
+	if !strings.Contains(h, ", base64.binary.k8s.io") {
+		return "", errors.New("Sec-WebSocket-Protocol header does not contain ', base64.binary.k8s.io' in request")
 	}
 
-	token := a[1]
+	a := strings.TrimPrefix(h, "base64url.bearer.authorization.k8s.io.")
+	a = strings.TrimSuffix(a, ", base64.binary.k8s.io")
+
+	byteToken, err := base64.RawStdEncoding.DecodeString(a)
+	if err != nil {
+		return "", errors.New("Unable to base64 decode string in Sec-WebSocket-Protocol")
+	}
+
+	token := string(byteToken)
+
 	if token == "" {
 		return "", fmt.Errorf("Empty token")
 	}

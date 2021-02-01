@@ -69,20 +69,19 @@ func (client *k8sdashClient) DashboardHandler(ctx context.Context, router *mux.R
 
 	fs := http.FileServer(http.Dir(k8sdashPath))
 
-	for _, v := range manifest.Files {
-		path := strings.TrimPrefix(v, ".")
-		log.Info("Debug", "path", path)
-		router.Path(path).Handler(fs)
-	}
-
-	static := []string{
+	staticFiles := []string{
 		"/favicon.ico",
 		"/logo.png",
 		"/manifest.json",
 	}
 
-	for _, file := range static {
-		router.Path(file).Handler(fs)
+	for _, v := range manifest.Files {
+		path := strings.TrimPrefix(v, ".")
+		staticFiles = append(staticFiles, path)
+	}
+
+	for _, file := range staticFiles {
+		router.Path(file).Handler(fs).Methods("GET")
 	}
 
 	router.Path("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -92,8 +91,33 @@ func (client *k8sdashClient) DashboardHandler(ctx context.Context, router *mux.R
 	router.HandleFunc("/oidc", client.getOIDC(ctx)).Methods("GET")
 	router.HandleFunc("/oidc", client.postOIDC(ctx)).Methods("POST")
 	router.HandleFunc("/", client.postOIDC(ctx)).Methods("POST")
+	router.Use(client.preAuth)
 
 	return router, nil
+}
+
+func (client *k8sdashClient) preAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		if !strings.Contains(authHeader, "Bearer ") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		token := strings.TrimPrefix(authHeader, "Bearer ")
+		if r.URL.Path == "/" && token != "" {
+			cookie := &http.Cookie{Name: "Authorization", Value: token, HttpOnly: false, MaxAge: 60}
+			http.SetCookie(w, cookie)
+		}
+
+		next.ServeHTTP(w, r)
+		return
+	})
 }
 
 func (client *k8sdashClient) getOIDC(ctx context.Context) func(http.ResponseWriter, *http.Request) {
@@ -102,8 +126,8 @@ func (client *k8sdashClient) getOIDC(ctx context.Context) func(http.ResponseWrit
 	return func(w http.ResponseWriter, r *http.Request) {
 		authURL, err := url.Parse(client.oidcProvider.Endpoint().AuthURL)
 		if err != nil {
-			log.Error(err, "Unable pars auth url")
-			http.Error(w, "Unable pars auth url", http.StatusInternalServerError)
+			log.Error(err, "Unable parse auth url")
+			http.Error(w, "Unable parse auth url", http.StatusInternalServerError)
 			return
 		}
 
@@ -156,9 +180,13 @@ func (client *k8sdashClient) postOIDC(ctx context.Context) func(http.ResponseWri
 			return
 		}
 
+		if reqBody.Code == "" || reqBody.RedirectURI == "" {
+			return
+		}
+
 		oauth2Config := oauth2.Config{
 			ClientID:     "0622715d-3443-4ca1-940e-0d2a360344a6",
-			ClientSecret: "somethingsecret",
+			ClientSecret: "secret",
 			RedirectURL:  reqBody.RedirectURI,
 			Endpoint:     client.oidcProvider.Endpoint(),
 			Scopes:       []string{"https://k8s-api.azadkubeproxy.onmicrosoft.com/.default"},
@@ -170,10 +198,6 @@ func (client *k8sdashClient) postOIDC(ctx context.Context) func(http.ResponseWri
 			http.Error(w, "Unable to get access token", http.StatusInternalServerError)
 			return
 		}
-
-		accessToken := oauth2Token.AccessToken
-
-		log.Info("Debug access token", "accessToken", accessToken)
 
 		body := struct {
 			AccessToken string `json:"token"`
@@ -199,46 +223,3 @@ func (client *k8sdashClient) postOIDC(ctx context.Context) func(http.ResponseWri
 		w.Header().Set("Content-Type", "application/json")
 	}
 }
-
-// app.use('/', preAuth, express.static('public'));
-// app.get('/oidc', getOidc);
-// app.post('/oidc', postOidc);
-// app.use('/*', createProxyMiddleware(proxySettings));
-// app.use(handleErrors);
-
-// const port = process.env.SERVER_PORT || 4654;
-// http.createServer(app).listen(port);
-// console.log(`Server started. Listening on port ${port}`);
-
-// function preAuth(req, res, next) {
-//     const auth = req.header('Authorization');
-
-//     // If the request already contains an authorization header, pass it through to the client (as a cookie)
-//     if (auth && req.method === 'GET' && req.path === '/') {
-//         const value = auth.replace('Bearer ', '');
-//         res.cookie('Authorization', value, {maxAge: 60, httpOnly: false});
-//         console.log('Authorization header found. Passing through to client.');
-//     }
-
-//     next();
-// }
-
-// async function getOidc(req, res) {
-//     try {
-//         const authEndpoint = await getOidcEndpoint();
-//         res.json({authEndpoint});
-//     } catch (err) {
-//         next(err);
-//     }
-// }
-
-// async function postOidc(req, res, next) {
-//     try {
-//         const body = await toString(req);
-//         const {code, redirectUri} = JSON.parse(body);
-//         const token = await oidcAuthenticate(code, redirectUri);
-//         res.json({token});
-//     } catch (err) {
-//         next(err);
-//     }
-// }

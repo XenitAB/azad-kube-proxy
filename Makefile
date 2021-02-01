@@ -78,4 +78,4 @@ build-k8sdash:
 	cp -R gitmodules/k8dash/client/* $(K8S_DASH_DIR)/
 	cd $(K8S_DASH_DIR)
 	npm install --prefix $(K8S_DASH_DIR)
-	npm run build --prefix $(K8S_DASH_DIR)
+	NODE_ENV="production" npm run build --prefix $(K8S_DASH_DIR)
