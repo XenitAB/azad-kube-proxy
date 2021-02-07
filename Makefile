@@ -74,8 +74,9 @@ build-plugin:
 
 .SILENT:
 build-k8sdash:
+	docker build gitmodules/k8dash -t k8dash:build-deps --target build-deps
+	rm -rf $(K8S_DASH_DIR)
 	mkdir -p $(K8S_DASH_DIR)
-	cp -R gitmodules/k8dash/client/* $(K8S_DASH_DIR)/
-	cd $(K8S_DASH_DIR)
-	npm install --prefix $(K8S_DASH_DIR)
-	NODE_ENV="production" npm run build --prefix $(K8S_DASH_DIR)
+	$(eval CONTAINER_ID := $(shell docker create k8dash:build-deps))
+	docker cp $(CONTAINER_ID):/usr/src/app/build/ $(K8S_DASH_DIR)
+	docker rm $(CONTAINER_ID)
