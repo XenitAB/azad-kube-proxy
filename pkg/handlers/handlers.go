@@ -29,7 +29,7 @@ const (
 type ClientInterface interface {
 	ReadinessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request)
 	LivenessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request)
-	AzadKubeProxyHandler(ctx context.Context, p *httputil.ReverseProxy, ws http.Handler) func(http.ResponseWriter, *http.Request)
+	AzadKubeProxyHandler(ctx context.Context, p *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request)
 	ErrorHandler(ctx context.Context) func(w http.ResponseWriter, r *http.Request, err error)
 }
 
@@ -87,7 +87,7 @@ func (client *Client) LivenessHandler(ctx context.Context) func(http.ResponseWri
 }
 
 // AzadKubeProxyHandler ...
-func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.ReverseProxy, ws http.Handler) func(http.ResponseWriter, *http.Request) {
+func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContext(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -186,11 +186,6 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 		}
 
 		log.Info("Request", "path", r.URL.Path, "username", user.Username, "userType", user.Type, "groupCount", len(user.Groups), "cachedUser", found, "isWebsockets", isWebsockets)
-
-		if isWebsockets {
-			ws.ServeHTTP(w, r)
-			return
-		}
 
 		p.ServeHTTP(w, r)
 		return
