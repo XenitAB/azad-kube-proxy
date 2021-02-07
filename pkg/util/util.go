@@ -98,7 +98,7 @@ func GetBearerToken(r *http.Request) (string, error) {
 	}
 
 	a := strings.TrimPrefix(h, "base64url.bearer.authorization.k8s.io.")
-	a = strings.TrimSuffix(a, ", base64.binary.k8s.io")
+	a = strings.Split(a, ", base64.binary.k8s.io")[0]
 
 	byteToken, err := base64.RawStdEncoding.DecodeString(a)
 	if err != nil {
