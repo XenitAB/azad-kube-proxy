@@ -123,6 +123,9 @@ func (client *k8sdashClient) preAuth(next http.Handler) http.Handler {
 func (client *k8sdashClient) getOIDC(ctx context.Context) func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContext(ctx)
 
+	clientID := os.Getenv("K8S_DASH_CLIENT_ID")
+	scope := os.Getenv("K8S_DASH_SCOPE")
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		authURL, err := url.Parse(client.oidcProvider.Endpoint().AuthURL)
 		if err != nil {
@@ -133,8 +136,8 @@ func (client *k8sdashClient) getOIDC(ctx context.Context) func(http.ResponseWrit
 
 		query := authURL.Query()
 
-		query.Set("client_id", "0622715d-3443-4ca1-940e-0d2a360344a6")
-		query.Set("scope", "https://k8s-api.azadkubeproxy.onmicrosoft.com/.default")
+		query.Set("client_id", clientID)
+		query.Set("scope", scope)
 		query.Set("response_type", "code")
 
 		authURLString := fmt.Sprintf("%s?%s", authURL.String(), query.Encode())
@@ -167,6 +170,10 @@ func (client *k8sdashClient) getOIDC(ctx context.Context) func(http.ResponseWrit
 func (client *k8sdashClient) postOIDC(ctx context.Context) func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContext(ctx)
 
+	clientID := os.Getenv("K8S_DASH_CLIENT_ID")
+	clientSecret := os.Getenv("K8S_DASH_CLIENT_SECRET")
+	scope := os.Getenv("K8S_DASH_SCOPE")
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		var reqBody struct {
 			Code        string `json:"code"`
@@ -185,11 +192,11 @@ func (client *k8sdashClient) postOIDC(ctx context.Context) func(http.ResponseWri
 		}
 
 		oauth2Config := oauth2.Config{
-			ClientID:     "0622715d-3443-4ca1-940e-0d2a360344a6",
-			ClientSecret: "secret",
+			ClientID:     clientID,
+			ClientSecret: clientSecret,
 			RedirectURL:  reqBody.RedirectURI,
 			Endpoint:     client.oidcProvider.Endpoint(),
-			Scopes:       []string{"https://k8s-api.azadkubeproxy.onmicrosoft.com/.default"},
+			Scopes:       []string{scope},
 		}
 
 		oauth2Token, err := oauth2Config.Exchange(ctx, reqBody.Code)
