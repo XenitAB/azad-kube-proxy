@@ -278,6 +278,9 @@ cat <<EOF > tmp/csr-config
 [req]
 distinguished_name=req
 [san]
+basicConstraints = critical,CA:true
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
 subjectAltName=@alt_names
 [alt_names]
 DNS.1 = localhost
