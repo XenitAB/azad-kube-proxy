@@ -160,6 +160,11 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 		// Remove the Authorization header that is sent to the server
 		r.Header.Del(authorizationHeader)
 
+		// Remove WebSocket Authorization header (base64url.bearer.authorization.k8s.io.<bearer>) that is sent to the server
+		wsProtoString := util.StripWebSocketBearer(r.Header.Get("Sec-WebSocket-Protocol"))
+		r.Header.Del("Sec-WebSocket-Protocol")
+		r.Header.Add("Sec-WebSocket-Protocol", wsProtoString)
+
 		// Add a new Authorization header with the token from the token path
 		r.Header.Add(authorizationHeader, fmt.Sprintf("Bearer %s", client.Config.KubernetesConfig.Token))
 
@@ -180,12 +185,7 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 			}
 		}
 
-		isWebsockets := false
-		if strings.EqualFold(r.Header.Get("Connection"), "upgrade") && r.Header.Get("Upgrade") == "websocket" {
-			isWebsockets = true
-		}
-
-		log.Info("Request", "path", r.URL.Path, "username", user.Username, "userType", user.Type, "groupCount", len(user.Groups), "cachedUser", found, "isWebsockets", isWebsockets)
+		log.Info("Request", "path", r.URL.Path, "username", user.Username, "userType", user.Type, "groupCount", len(user.Groups), "cachedUser", found)
 
 		p.ServeHTTP(w, r)
 		return

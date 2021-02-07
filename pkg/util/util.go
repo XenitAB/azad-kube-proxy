@@ -89,18 +89,25 @@ func GetBearerToken(r *http.Request) (string, error) {
 	}
 
 	//
-	if !strings.Contains(h, "base64url.bearer.authorization.k8s.io.") {
+	if !strings.Contains(strings.ToLower(h), "base64url.bearer.authorization.k8s.io.") {
 		return "", errors.New("Sec-WebSocket-Protocol header does not contain 'base64url.bearer.authorization.k8s.io.' in request")
 	}
 
-	if !strings.Contains(h, ", base64.binary.k8s.io") {
-		return "", errors.New("Sec-WebSocket-Protocol header does not contain ', base64.binary.k8s.io' in request")
+	var bearer string
+	if !strings.Contains(h, ",") {
+		bearer = strings.TrimPrefix(h, "base64url.bearer.authorization.k8s.io.")
 	}
 
-	a := strings.TrimPrefix(h, "base64url.bearer.authorization.k8s.io.")
-	a = strings.Split(a, ", base64.binary.k8s.io")[0]
+	if strings.Contains(h, ",") {
+		a := strings.Split(h, ",")
+		for _, s := range a {
+			if strings.Contains(strings.ToLower(s), "base64url.bearer.authorization.k8s.io.") {
+				bearer = strings.TrimPrefix(s, "base64url.bearer.authorization.k8s.io.")
+			}
+		}
+	}
 
-	byteToken, err := base64.RawStdEncoding.DecodeString(a)
+	byteToken, err := base64.RawStdEncoding.DecodeString(bearer)
 	if err != nil {
 		return "", errors.New("Unable to base64 decode string in Sec-WebSocket-Protocol")
 	}
@@ -112,4 +119,19 @@ func GetBearerToken(r *http.Request) (string, error) {
 	}
 
 	return token, nil
+}
+
+// StripWebSocketBearer takes the string from the header Sec-WebSocket-Protocol (r.Header.Get("Sec-WebSocket-Protocol")) and removes any bearer (base64url.bearer.authorization.k8s.io.<bearer>)
+func StripWebSocketBearer(old string) string {
+	wsProtoArray := []string{}
+	if strings.Contains(old, ",") {
+		a := strings.Split(old, ",")
+		for _, s := range a {
+			if !strings.Contains(strings.ToLower(s), "base64url.bearer.authorization.k8s.io.") {
+				wsProtoArray = append(wsProtoArray, strings.TrimSpace(s))
+			}
+		}
+	}
+
+	return strings.Join(wsProtoArray, ", ")
 }
