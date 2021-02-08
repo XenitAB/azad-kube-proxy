@@ -18,39 +18,39 @@ import (
 )
 
 // K8sdashClient ...
-type k8sdashClient struct {
+type k8dashClient struct {
 	oidcProvider *oidc.Provider
 	config       config.Config
 }
 
-func newK8sdashClient(ctx context.Context, config config.Config) (k8sdashClient, error) {
+func newK8sdashClient(ctx context.Context, config config.Config) (k8dashClient, error) {
 	log := logr.FromContext(ctx)
-	log.Info("Using dashboard: k8sdash")
+	log.Info("Using dashboard: k8dash")
 
 	issuerURL := fmt.Sprintf("https://login.microsoftonline.com/%s/v2.0", config.TenantID)
 	provider, err := oidc.NewProvider(ctx, issuerURL)
 	if err != nil {
-		return k8sdashClient{}, err
+		return k8dashClient{}, err
 	}
 
-	return k8sdashClient{
+	return k8dashClient{
 		oidcProvider: provider,
 		config:       config,
 	}, nil
 }
 
 // DashboardHandler ...
-func (client *k8sdashClient) DashboardHandler(ctx context.Context, router *mux.Router) (*mux.Router, error) {
+func (client *k8dashClient) DashboardHandler(ctx context.Context, router *mux.Router) (*mux.Router, error) {
 	log := logr.FromContext(ctx)
 
-	k8sdashPath := os.Getenv("K8S_DASH_PATH")
-	if k8sdashPath == "" {
-		err := fmt.Errorf("K8S_DASH_PATH environment variable not set")
+	k8dashPath := os.Getenv("K8DASH_PATH")
+	if k8dashPath == "" {
+		err := fmt.Errorf("K8DASH_PATH environment variable not set")
 		log.Error(err, "")
 		return nil, err
 	}
 
-	assetManifest, err := util.GetStringFromFile(ctx, fmt.Sprintf("%s/asset-manifest.json", k8sdashPath))
+	assetManifest, err := util.GetStringFromFile(ctx, fmt.Sprintf("%s/asset-manifest.json", k8dashPath))
 	if err != nil {
 		log.Error(err, "Unable to open asset manifest")
 		return nil, err
@@ -67,7 +67,7 @@ func (client *k8sdashClient) DashboardHandler(ctx context.Context, router *mux.R
 		return nil, err
 	}
 
-	fs := http.FileServer(http.Dir(k8sdashPath))
+	fs := http.FileServer(http.Dir(k8dashPath))
 
 	staticFiles := []string{
 		"/favicon.ico",
@@ -85,7 +85,7 @@ func (client *k8sdashClient) DashboardHandler(ctx context.Context, router *mux.R
 	}
 
 	router.Path("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, fmt.Sprintf("%s/index.html", k8sdashPath))
+		http.ServeFile(w, r, fmt.Sprintf("%s/index.html", k8dashPath))
 	}).Methods("GET")
 
 	router.HandleFunc("/oidc", client.getOIDC(ctx)).Methods("GET")
@@ -95,7 +95,7 @@ func (client *k8sdashClient) DashboardHandler(ctx context.Context, router *mux.R
 	return router, nil
 }
 
-func (client *k8sdashClient) preAuth(next http.Handler) http.Handler {
+func (client *k8dashClient) preAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
@@ -119,11 +119,11 @@ func (client *k8sdashClient) preAuth(next http.Handler) http.Handler {
 	})
 }
 
-func (client *k8sdashClient) getOIDC(ctx context.Context) func(http.ResponseWriter, *http.Request) {
+func (client *k8dashClient) getOIDC(ctx context.Context) func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContext(ctx)
 
-	clientID := os.Getenv("K8S_DASH_CLIENT_ID")
-	scope := os.Getenv("K8S_DASH_SCOPE")
+	clientID := os.Getenv("K8DASH_CLIENT_ID")
+	scope := os.Getenv("K8DASH_SCOPE")
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		authURL, err := url.Parse(client.oidcProvider.Endpoint().AuthURL)
@@ -167,12 +167,12 @@ func (client *k8sdashClient) getOIDC(ctx context.Context) func(http.ResponseWrit
 	}
 }
 
-func (client *k8sdashClient) postOIDC(ctx context.Context) func(http.ResponseWriter, *http.Request) {
+func (client *k8dashClient) postOIDC(ctx context.Context) func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContext(ctx)
 
-	clientID := os.Getenv("K8S_DASH_CLIENT_ID")
-	clientSecret := os.Getenv("K8S_DASH_CLIENT_SECRET")
-	scope := os.Getenv("K8S_DASH_SCOPE")
+	clientID := os.Getenv("K8DASH_CLIENT_ID")
+	clientSecret := os.Getenv("K8DASH_CLIENT_SECRET")
+	scope := os.Getenv("K8DASH_SCOPE")
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		var reqBody struct {

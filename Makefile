@@ -6,8 +6,8 @@ TEST_ENV_FILE = tmp/test_env
 VERSION ?= "v0.0.0-dev"
 REVISION ?= ""
 CREATED ?= ""
-K8S_DASH_DIR ?= ${PWD}/tmp/k8sdash
-NODE_MODULES ?= ${PWD}/tmp/k8sdash
+K8DASH_DIR ?= ${PWD}/tmp/k8dash
+NODE_MODULES ?= ${PWD}/tmp/k8dash
 
 
 ifneq (,$(wildcard $(TEST_ENV_FILE)))
@@ -73,10 +73,10 @@ build-plugin:
 	go build -o bin/kubectl-azad_proxy cmd/kubectl-azad-proxy/main.go
 
 .SILENT:
-build-k8sdash:
+build-k8dash:
 	docker build gitmodules/k8dash -t k8dash:build-deps --target build-deps
-	rm -rf $(K8S_DASH_DIR)
-	mkdir -p $(K8S_DASH_DIR)
+	rm -rf $(K8DASH_DIR)
+	mkdir -p $(K8DASH_DIR)
 	$(eval CONTAINER_ID := $(shell docker create k8dash:build-deps))
-	docker cp $(CONTAINER_ID):/usr/src/app/build/ $(K8S_DASH_DIR)
+	docker cp $(CONTAINER_ID):/usr/src/app/build/ $(K8DASH_DIR)
 	docker rm $(CONTAINER_ID)

@@ -17,19 +17,19 @@ func TestGetDashboard(t *testing.T) {
 			expectedErr:       nil,
 		},
 		{
-			dashboardString:   "K8SDASH",
+			dashboardString:   "K8DASH",
 			expectedDashboard: K8sdashDashboard,
 			expectedErr:       nil,
 		},
 		{
 			dashboardString:   "",
 			expectedDashboard: "",
-			expectedErr:       errors.New("Unknown dashboard ''. Supported engines are: NONE or K8SDASH"),
+			expectedErr:       errors.New("Unknown dashboard ''. Supported engines are: NONE or K8DASH"),
 		},
 		{
 			dashboardString:   "DUMMY",
 			expectedDashboard: "",
-			expectedErr:       errors.New("Unknown dashboard 'DUMMY'. Supported engines are: NONE or K8SDASH"),
+			expectedErr:       errors.New("Unknown dashboard 'DUMMY'. Supported engines are: NONE or K8DASH"),
 		},
 	}
 
