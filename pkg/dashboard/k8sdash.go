@@ -90,7 +90,6 @@ func (client *k8sdashClient) DashboardHandler(ctx context.Context, router *mux.R
 
 	router.HandleFunc("/oidc", client.getOIDC(ctx)).Methods("GET")
 	router.HandleFunc("/oidc", client.postOIDC(ctx)).Methods("POST")
-	router.HandleFunc("/", client.postOIDC(ctx)).Methods("POST")
 	router.Use(client.preAuth)
 
 	return router, nil
@@ -139,6 +138,7 @@ func (client *k8sdashClient) getOIDC(ctx context.Context) func(http.ResponseWrit
 		query.Set("client_id", clientID)
 		query.Set("scope", scope)
 		query.Set("response_type", "code")
+		query.Set("response_mode", "query")
 
 		authURLString := fmt.Sprintf("%s?%s", authURL.String(), query.Encode())
 
