@@ -14,7 +14,7 @@ jobs:
       - name: Clone repo
         uses: actions/checkout@v2
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@v2.4.0
         with:
           version: ${{ env.GOLANGCI_LINT_VERSION }}
 
