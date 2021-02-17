@@ -6,8 +6,7 @@ TEST_ENV_FILE = tmp/test_env
 VERSION ?= "v0.0.0-dev"
 REVISION ?= ""
 CREATED ?= ""
-K8DASH_DIR ?= ${PWD}/tmp/k8dash
-NODE_MODULES ?= ${PWD}/tmp/k8dash
+K8DASH_DIR ?= ${PWD}/static/k8dash
 
 
 ifneq (,$(wildcard $(TEST_ENV_FILE)))
@@ -80,3 +79,4 @@ build-k8dash:
 	$(eval CONTAINER_ID := $(shell docker create k8dash:build-deps))
 	docker cp $(CONTAINER_ID):/usr/src/app/build/ $(K8DASH_DIR)
 	docker rm $(CONTAINER_ID)
+	cp gitmodules/k8dash/LICENSE $(K8DASH_DIR)/

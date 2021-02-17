@@ -190,3 +190,23 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
+
+  k8dash:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v2
+      - name: Setup go
+        uses: actions/setup-go@v2.1.3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Build k8dash frontend
+        run: |
+          make build-k8dash
+      - name: Check if working tree is dirty
+        run: |
+          if [[ $(git status --porcelain) ]]; then
+            git diff
+            echo 'run make fmt and commit changes'
+            exit 1
+          fi
