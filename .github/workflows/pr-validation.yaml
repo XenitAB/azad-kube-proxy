@@ -4,7 +4,7 @@ on: pull_request
 
 env:
   NAME: "azad-kube-proxy"
-  GO_VERSION: "1.15"
+  GO_VERSION: "1.16"
   GOLANGCI_LINT_VERSION: "v1.35"
 
 jobs:
