@@ -6,7 +6,7 @@ TEST_ENV_FILE = tmp/test_env
 VERSION ?= "v0.0.0-dev"
 REVISION ?= ""
 CREATED ?= ""
-K8DASH_DIR ?= ${PWD}/static/k8dash
+K8DASH_DIR ?= ${PWD}/pkg/dashboard/static/k8dash
 
 
 ifneq (,$(wildcard $(TEST_ENV_FILE)))

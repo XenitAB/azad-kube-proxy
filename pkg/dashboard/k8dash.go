@@ -2,20 +2,33 @@ package dashboard
 
 import (
 	"context"
+	"embed"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"net/url"
-	"os"
+	"path"
 	"strings"
 
 	"github.com/coreos/go-oidc"
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
-	"github.com/xenitab/azad-kube-proxy/pkg/util"
 	"golang.org/x/oauth2"
 )
+
+//go:embed static/k8dash/build/*
+var assets embed.FS
+
+// k8dashFS implements fs.FS
+type k8dashFS struct {
+	content embed.FS
+}
+
+func (c k8dashFS) Open(name string) (fs.File, error) {
+	return c.content.Open(path.Join("static/k8dash/build/", name))
+}
 
 // K8dashClient ...
 type k8dashClient struct {
@@ -43,14 +56,7 @@ func newK8dashClient(ctx context.Context, config config.Config) (k8dashClient, e
 func (client *k8dashClient) DashboardHandler(ctx context.Context, router *mux.Router) (*mux.Router, error) {
 	log := logr.FromContext(ctx)
 
-	k8dashPath := os.Getenv("K8DASH_PATH")
-	if k8dashPath == "" {
-		err := fmt.Errorf("K8DASH_PATH environment variable not set")
-		log.Error(err, "")
-		return nil, err
-	}
-
-	assetManifest, err := util.GetStringFromFile(ctx, fmt.Sprintf("%s/asset-manifest.json", k8dashPath))
+	assetManifest, err := fs.ReadFile(k8dashFS{assets}, "asset-manifest.json")
 	if err != nil {
 		log.Error(err, "Unable to open asset manifest")
 		return nil, err
@@ -61,13 +67,13 @@ func (client *k8dashClient) DashboardHandler(ctx context.Context, router *mux.Ro
 		Endpoints []string
 	}{}
 
-	err = json.Unmarshal([]byte(assetManifest), &manifest)
+	err = json.Unmarshal(assetManifest, &manifest)
 	if err != nil {
 		log.Error(err, "Unable to unmarshal asset manifest")
 		return nil, err
 	}
 
-	fs := http.FileServer(http.Dir(k8dashPath))
+	fsServer := http.FileServer(http.FS(k8dashFS{assets}))
 
 	staticFiles := []string{
 		"/favicon.ico",
@@ -81,13 +87,9 @@ func (client *k8dashClient) DashboardHandler(ctx context.Context, router *mux.Ro
 	}
 
 	for _, file := range staticFiles {
-		router.Path(file).Handler(fs).Methods("GET")
+		router.Path(file).Handler(fsServer).Methods("GET")
 	}
-
-	router.Path("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, fmt.Sprintf("%s/index.html", k8dashPath))
-	}).Methods("GET")
-
+	router.Path("/").Handler(fsServer).Methods("GET")
 	router.HandleFunc("/oidc", client.getOIDC(ctx)).Methods("GET")
 	router.HandleFunc("/oidc", client.postOIDC(ctx)).Methods("POST")
 	router.Use(client.preAuth)
