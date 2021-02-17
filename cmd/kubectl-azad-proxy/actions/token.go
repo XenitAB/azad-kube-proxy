@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -129,7 +129,7 @@ func (t Tokens) SetToken(ctx context.Context, name string, token Token) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(t.path, fileContents, 0600)
+	err = os.WriteFile(t.path, fileContents, 0600)
 	if err != nil {
 		log.Error(err, "Unable to write token cache file", "path", t.path)
 		return err
@@ -161,7 +161,7 @@ func getFileContent(s string) ([]byte, error) {
 
 	defer file.Close() // #nosec
 
-	bytes, err := ioutil.ReadAll(file)
+	bytes, err := io.ReadAll(file)
 	if err != nil {
 		return nil, err
 	}

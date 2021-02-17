@@ -8,8 +8,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -19,7 +19,7 @@ import (
 func GetCertificate(ctx context.Context, path string) (*x509.CertPool, error) {
 	log := logr.FromContext(ctx)
 
-	cert, err := ioutil.ReadFile(path) // #nosec
+	cert, err := os.ReadFile(path) // #nosec
 	if err != nil {
 		log.Error(err, "Unable to read certificate file", "certificate-file-path", path)
 		return nil, err
@@ -35,7 +35,7 @@ func GetCertificate(ctx context.Context, path string) (*x509.CertPool, error) {
 func GetStringFromFile(ctx context.Context, path string) (string, error) {
 	log := logr.FromContext(ctx)
 
-	byteContent, err := ioutil.ReadFile(path) // #nosec
+	byteContent, err := os.ReadFile(path) // #nosec
 	if err != nil {
 		log.Error(err, "Unable to read string from file", "file-path", path)
 		return "", err

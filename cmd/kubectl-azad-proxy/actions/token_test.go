@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -253,7 +252,7 @@ func createCacheFile(path string, cachedTokens interface{}) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(path, fileContents, 0600)
+	err = os.WriteFile(path, fileContents, 0600)
 	if err != nil {
 		return err
 	}

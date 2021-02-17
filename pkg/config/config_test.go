@@ -9,7 +9,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/big"
 	"os"
@@ -408,7 +407,7 @@ func generateRandomFile() (string, string, error) {
 	filename := fmt.Sprintf("test-random-%s.pem", timestamp)
 	content := []byte(timestamp)
 
-	err := ioutil.WriteFile(filename, content, 0644)
+	err := os.WriteFile(filename, content, 0644)
 	if err != nil {
 		return "", "", fmt.Errorf("Failed to create %s: %v", filename, err)
 	}
