@@ -295,6 +295,8 @@ CERT_PATH="${PWD}/tmp/tls.crt"
 KEY_PATH="${PWD}/tmp/tls.key"
 ```
 
+Note: You may have to trust the certificate locally to be able to test it with websockets (at least with Chrome). Use the following with Arch Linux: `sudo trust anchor tmp/tls.crt`
+
 ### Creating env for tests
 
 #### Creating test user / service principal
