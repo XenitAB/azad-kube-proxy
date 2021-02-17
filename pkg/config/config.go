@@ -27,6 +27,7 @@ type Config struct {
 	GroupIdentifier      models.GroupIdentifier
 	KubernetesConfig     KubernetesConfig
 	Dashboard            models.Dashboard
+	K8dashConfig         K8dashConfig
 }
 
 // KubernetesConfig contains the Kubernetes specific configuration
@@ -42,6 +43,13 @@ type ListenerTLSConfig struct {
 	Enabled         bool
 	CertificatePath string
 	KeyPath         string
+}
+
+// K8dashConfig contains the configuration for the Dashboard k8dash
+type K8dashConfig struct {
+	ClientID     string
+	ClientSecret string
+	Scope        string
 }
 
 // Flags returns a flag array
@@ -191,6 +199,27 @@ func Flags(ctx context.Context) []cli.Flag {
 			EnvVars:  []string{"DASHBOARD"},
 			Value:    "NONE",
 		},
+		&cli.StringFlag{
+			Name:     "k8dash-client-id",
+			Usage:    "What Client ID to use with k8dash",
+			Required: false,
+			EnvVars:  []string{"K8DASH_CLIENT_ID"},
+			Value:    "",
+		},
+		&cli.StringFlag{
+			Name:     "k8dash-client-secret",
+			Usage:    "What Client Secret to use with k8dash",
+			Required: false,
+			EnvVars:  []string{"K8DASH_CLIENT_SECRET"},
+			Value:    "",
+		},
+		&cli.StringFlag{
+			Name:     "k8dash-scope",
+			Usage:    "What scope to use with k8dash",
+			Required: false,
+			EnvVars:  []string{"K8DASH_SCOPE"},
+			Value:    "",
+		},
 	}
 }
 
@@ -248,6 +277,11 @@ func NewConfig(ctx context.Context, cli *cli.Context) (Config, error) {
 			ValidateCertificate: cli.Bool("kubernetes-api-validate-cert"),
 		},
 		Dashboard: dashboard,
+		K8dashConfig: K8dashConfig{
+			ClientID:     cli.String("k8dash-client-id"),
+			ClientSecret: cli.String("k8dash-client-secret"),
+			Scope:        cli.String("k8dash-scope"),
+		},
 	}
 
 	err = config.Validate()
@@ -279,6 +313,18 @@ func (config Config) Validate() error {
 		}
 		if !fileExists(config.ListenerTLSConfig.KeyPath) {
 			return fmt.Errorf("config.ListenerTLSConfig.KeyPath is not a file: %s", config.ListenerTLSConfig.KeyPath)
+		}
+	}
+
+	if config.Dashboard == models.K8dashDashboard {
+		if len(config.K8dashConfig.ClientID) == 0 {
+			return fmt.Errorf("config.K8dashConfig.ClientID is not set")
+		}
+		if len(config.K8dashConfig.ClientSecret) == 0 {
+			return fmt.Errorf("config.K8dashConfig.ClientSecret is not set")
+		}
+		if len(config.K8dashConfig.Scope) == 0 {
+			return fmt.Errorf("config.K8dashConfig.Scope is not set")
 		}
 	}
 

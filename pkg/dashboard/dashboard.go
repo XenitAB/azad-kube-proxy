@@ -20,8 +20,8 @@ func NewDashboardClient(ctx context.Context, config config.Config) (ClientInterf
 	case models.NoneDashboard:
 		client := newNoneClient(ctx)
 		return &client, nil
-	case models.K8sdashDashboard:
-		client, err := newK8sdashClient(ctx, config)
+	case models.K8dashDashboard:
+		client, err := newK8dashClient(ctx, config)
 		if err != nil {
 			return nil, err
 		}

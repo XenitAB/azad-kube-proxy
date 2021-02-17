@@ -17,13 +17,13 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// K8sdashClient ...
+// K8dashClient ...
 type k8dashClient struct {
 	oidcProvider *oidc.Provider
 	config       config.Config
 }
 
-func newK8sdashClient(ctx context.Context, config config.Config) (k8dashClient, error) {
+func newK8dashClient(ctx context.Context, config config.Config) (k8dashClient, error) {
 	log := logr.FromContext(ctx)
 	log.Info("Using dashboard: k8dash")
 
@@ -122,8 +122,8 @@ func (client *k8dashClient) preAuth(next http.Handler) http.Handler {
 func (client *k8dashClient) getOIDC(ctx context.Context) func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContext(ctx)
 
-	clientID := os.Getenv("K8DASH_CLIENT_ID")
-	scope := os.Getenv("K8DASH_SCOPE")
+	clientID := client.config.K8dashConfig.ClientID
+	scope := client.config.K8dashConfig.Scope
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		authURL, err := url.Parse(client.oidcProvider.Endpoint().AuthURL)
@@ -170,9 +170,9 @@ func (client *k8dashClient) getOIDC(ctx context.Context) func(http.ResponseWrite
 func (client *k8dashClient) postOIDC(ctx context.Context) func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContext(ctx)
 
-	clientID := os.Getenv("K8DASH_CLIENT_ID")
-	clientSecret := os.Getenv("K8DASH_CLIENT_SECRET")
-	scope := os.Getenv("K8DASH_SCOPE")
+	clientID := client.config.K8dashConfig.ClientID
+	clientSecret := client.config.K8dashConfig.ClientSecret
+	scope := client.config.K8dashConfig.Scope
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		var reqBody struct {

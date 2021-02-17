@@ -18,7 +18,7 @@ func TestGetDashboard(t *testing.T) {
 		},
 		{
 			dashboardString:   "K8DASH",
-			expectedDashboard: K8sdashDashboard,
+			expectedDashboard: K8dashDashboard,
 			expectedErr:       nil,
 		},
 		{
