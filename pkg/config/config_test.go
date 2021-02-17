@@ -35,6 +35,11 @@ func TestNewConfig(t *testing.T) {
 		"TLS_CERTIFICATE_PATH",
 		"TLS_KEY_PATH",
 		"TLS_ENABLED",
+		"DASHBOARD",
+		"K8DASH_CLIENT_ID",
+		"K8DASH_CLIENT_SECRET",
+		"K8DASH_SCOPE",
+		"K8DASH_PATH",
 	}
 
 	for _, envVar := range envVarsToClear {
@@ -220,6 +225,40 @@ func TestNewConfig(t *testing.T) {
 			args:                append(baseWorkingArgs, "--tls-enabled=TRUE"),
 			expectedConfig:      Config{},
 			expectedErrContains: "config.ListenerTLSConfig.CertificatePath is not set",
+			outBuffer:           bytes.Buffer{},
+			errBuffer:           bytes.Buffer{},
+		},
+		{
+			cliApp:              app,
+			args:                append(baseWorkingArgs, "--dashboard=K8DASH"),
+			expectedConfig:      Config{},
+			expectedErrContains: "config.K8dashConfig.ClientID is not set",
+			outBuffer:           bytes.Buffer{},
+			errBuffer:           bytes.Buffer{},
+		},
+		{
+			cliApp:              app,
+			args:                append(baseWorkingArgs, "--dashboard=K8DASH", "--k8dash-client-id=00000000-0000-0000-0000-000000000000"),
+			expectedConfig:      Config{},
+			expectedErrContains: "config.K8dashConfig.ClientSecret is not set",
+			outBuffer:           bytes.Buffer{},
+			errBuffer:           bytes.Buffer{},
+		},
+		{
+			cliApp:              app,
+			args:                append(baseWorkingArgs, "--dashboard=K8DASH", "--k8dash-client-id=00000000-0000-0000-0000-000000000000", "--k8dash-client-secret=FAKE"),
+			expectedConfig:      Config{},
+			expectedErrContains: "config.K8dashConfig.Scope is not set",
+			outBuffer:           bytes.Buffer{},
+			errBuffer:           bytes.Buffer{},
+		},
+		{
+			cliApp: app,
+			args:   append(baseWorkingArgs, "--dashboard=K8DASH", "--k8dash-client-id=00000000-0000-0000-0000-000000000000", "--k8dash-client-secret=FAKE", "--k8dash-scope=FAKE"),
+			expectedConfig: Config{
+				ClientID: "00000000-0000-0000-0000-000000000000",
+			},
+			expectedErrContains: "",
 			outBuffer:           bytes.Buffer{},
 			errBuffer:           bytes.Buffer{},
 		},
