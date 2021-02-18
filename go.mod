@@ -23,7 +23,7 @@ require (
 	go.uber.org/zap v1.16.0
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
 	gopkg.in/square/go-jose.v2 v2.2.2 // indirect
-	k8s.io/apimachinery v0.20.2
+	k8s.io/apimachinery v0.20.3
 	k8s.io/client-go v11.0.0+incompatible
 	k8s.io/klog/v2 v2.5.0
 	k8s.io/utils v0.0.0-20210111153108-fddb29f9d009 // indirect
