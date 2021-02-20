@@ -10,9 +10,15 @@ env:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    env:
+      GO111MODULE: on
     steps:
       - name: Clone repo
         uses: actions/checkout@v2
+      - name: Setup go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GO_VERSION }}
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2.4.0
         with:
@@ -24,7 +30,7 @@ jobs:
       - name: Clone repo
         uses: actions/checkout@v2
       - name: Setup go
-        uses: actions/setup-go@v2.1.3
+        uses: actions/setup-go@v2
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Run fmt
@@ -44,7 +50,7 @@ jobs:
       - name: Clone repo
         uses: actions/checkout@v2
       - name: Setup go
-        uses: actions/setup-go@v2.1.3
+        uses: actions/setup-go@v2
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Run build
@@ -57,7 +63,7 @@ jobs:
       - name: Clone repo
         uses: actions/checkout@v2
       - name: Setup go
-        uses: actions/setup-go@v2.1.3
+        uses: actions/setup-go@v2
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Run test
@@ -81,7 +87,7 @@ jobs:
       - name: Checkout Source
         uses: actions/checkout@v2
       - name: Setup go
-        uses: actions/setup-go@v2.1.3
+        uses: actions/setup-go@v2
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Run Gosec Security Scanner
@@ -106,7 +112,7 @@ jobs:
       - name: Clone repo
         uses: actions/checkout@v2
       - name: Setup go
-        uses: actions/setup-go@v2.1.3
+        uses: actions/setup-go@v2
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: coverage
