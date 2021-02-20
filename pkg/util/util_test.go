@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -84,53 +85,147 @@ func TestGetEncodedHash(t *testing.T) {
 
 func TestGetBearerToken(t *testing.T) {
 	cases := []struct {
-		token                  string
-		addAuthorizationHeader bool
-		headerTemplate         string
-		expectedErr            error
+		token       string
+		reqFunc     func(token string) *http.Request
+		expectedErr error
 	}{
 		{
-			token:                  "token",
-			addAuthorizationHeader: true,
-			headerTemplate:         "Bearer %s",
-			expectedErr:            nil,
+			token: "token",
+			reqFunc: func(token string) *http.Request {
+				return &http.Request{
+					Header: map[string][]string{
+						"Authorization": {fmt.Sprintf("Bearer %s", token)},
+					},
+				}
+			},
+			expectedErr: nil,
 		},
 		{
-			token:                  "",
-			addAuthorizationHeader: false,
-			headerTemplate:         "",
-			expectedErr:            errors.New("No Authorization header present in request"),
+			token: "",
+			reqFunc: func(token string) *http.Request {
+				return &http.Request{}
+			},
+			expectedErr: errors.New("No Authorization header present in request"),
 		},
 		{
-			token:                  "token",
-			addAuthorizationHeader: true,
-			headerTemplate:         "%s",
-			expectedErr:            errors.New("Authorization header does not contain Bearer in request"),
+			token: "token",
+			reqFunc: func(token string) *http.Request {
+				return &http.Request{
+					Header: map[string][]string{
+						"Authorization": {fmt.Sprintf("%s", token)},
+					},
+				}
+			},
+			expectedErr: errors.New("Authorization header does not contain Bearer in request"),
 		},
 		{
-			token:                  "Bearer ",
-			addAuthorizationHeader: true,
-			headerTemplate:         "%s",
-			expectedErr:            errors.New("Empty token"),
+			token: "Bearer ",
+			reqFunc: func(token string) *http.Request {
+				return &http.Request{
+					Header: map[string][]string{
+						"Authorization": {fmt.Sprintf("%s", token)},
+					},
+				}
+			},
+			expectedErr: errors.New("Empty token"),
 		},
 		{
-			token:                  "Bearer Bearer Bearer ",
-			addAuthorizationHeader: true,
-			headerTemplate:         "%s",
-			expectedErr:            errors.New("Authorization split by 'Bearer ' isn't length of 2 (actual length: 4)"),
+			token: "Bearer Bearer Bearer ",
+			reqFunc: func(token string) *http.Request {
+				return &http.Request{
+					Header: map[string][]string{
+						"Authorization": {fmt.Sprintf("%s", token)},
+					},
+				}
+			},
+			expectedErr: errors.New("Authorization split by 'Bearer ' isn't length of 2 (actual length: 4)"),
+		},
+		{
+			token: "",
+			reqFunc: func(token string) *http.Request {
+				return &http.Request{
+					Header: map[string][]string{
+						"Connection": {"upgrade"},
+						"Upgrade":    {"websocket"},
+					},
+				}
+			},
+			expectedErr: errors.New("No Sec-WebSocket-Protocol header present in request"),
+		},
+		{
+			token: "",
+			reqFunc: func(token string) *http.Request {
+				req := &http.Request{
+					Header: map[string][]string{
+						"Connection": {"upgrade"},
+						"Upgrade":    {"websocket"},
+					},
+				}
+				req.Header.Add("Sec-WebSocket-Protocol", "fake")
+				return req
+			},
+			expectedErr: errors.New("Sec-WebSocket-Protocol header does not contain 'base64url.bearer.authorization.k8s.io.' in request"),
+		},
+		{
+			token: "",
+			reqFunc: func(token string) *http.Request {
+				req := &http.Request{
+					Header: map[string][]string{
+						"Connection": {"upgrade"},
+						"Upgrade":    {"websocket"},
+					},
+				}
+				req.Header.Add("Sec-WebSocket-Protocol", "base64url.bearer.authorization.k8s.io.")
+				return req
+			},
+			expectedErr: errors.New("Empty token"),
+		},
+		{
+			token: "",
+			reqFunc: func(token string) *http.Request {
+				req := &http.Request{
+					Header: map[string][]string{
+						"Connection": {"upgrade"},
+						"Upgrade":    {"websocket"},
+					},
+				}
+				req.Header.Add("Sec-WebSocket-Protocol", "test,abc,base64url.bearer.authorization.k8s.io.,test,abc")
+				return req
+			},
+			expectedErr: errors.New("Empty token"),
+		},
+		{
+			token: "",
+			reqFunc: func(token string) *http.Request {
+				req := &http.Request{
+					Header: map[string][]string{
+						"Connection": {"upgrade"},
+						"Upgrade":    {"websocket"},
+					},
+				}
+				req.Header.Add("Sec-WebSocket-Protocol", "base64url.bearer.authorization.k8s.io.a====")
+				return req
+			},
+			expectedErr: errors.New("Unable to base64 decode string in Sec-WebSocket-Protocol"),
+		},
+		{
+			token: "fake-token",
+			reqFunc: func(token string) *http.Request {
+				req := &http.Request{
+					Header: map[string][]string{
+						"Connection": {"upgrade"},
+						"Upgrade":    {"websocket"},
+					},
+				}
+				req.Header.Add("Sec-WebSocket-Protocol", fmt.Sprintf("base64url.bearer.authorization.k8s.io.%s", base64.RawStdEncoding.EncodeToString([]byte(token))))
+				return req
+			},
+			expectedErr: nil,
 		},
 	}
 
 	for _, c := range cases {
-		req := &http.Request{}
-		if c.addAuthorizationHeader {
-			authorizationHeader := fmt.Sprintf(c.headerTemplate, c.token)
-			req = &http.Request{
-				Header: map[string][]string{
-					"Authorization": {authorizationHeader},
-				},
-			}
-		}
+		req := c.reqFunc(c.token)
 
 		tokenResponse, err := GetBearerToken(req)
 		if tokenResponse != c.token && c.expectedErr == nil {
@@ -191,6 +286,69 @@ func generateCertificateFile() (string, error) {
 	}
 
 	return filename, nil
+}
+
+func TestStripWebSocketBearer(t *testing.T) {
+	cases := []struct {
+		input  string
+		output string
+	}{
+		{
+			input:  "",
+			output: "",
+		},
+		{
+			input:  "fake",
+			output: "fake",
+		},
+		{
+			input:  "fake,",
+			output: "fake, ",
+		},
+		{
+			input:  ",fake",
+			output: ", fake",
+		},
+		{
+			input:  ",fake,",
+			output: ", fake, ",
+		},
+		{
+			input:  "base64url.bearer.authorization.k8s.io.",
+			output: "",
+		},
+		{
+			input:  "base64url.bearer.authorization.k8s.io.,",
+			output: "",
+		},
+		{
+			input:  ",base64url.bearer.authorization.k8s.io.,",
+			output: ", ",
+		},
+		{
+			input:  "fake, base64url.bearer.authorization.k8s.io., fake",
+			output: "fake, fake",
+		},
+		{
+			input:  "fake, base64url.bearer.authorization.k8s.io.fakeToken, fake",
+			output: "fake, fake",
+		},
+		{
+			input:  "fake, base64url.bearer.authorization.k8s.io.fakeToken, fake",
+			output: "fake, fake",
+		},
+		{
+			input:  "base64url.bearer.authorization.k8s.io.fakeToken",
+			output: "",
+		},
+	}
+
+	for _, c := range cases {
+		r := StripWebSocketBearer(c.input)
+		if r != c.output {
+			t.Errorf("Result does not match expected output: result %q expected %q", r, c.output)
+		}
+	}
 }
 
 func generateRandomFile() (string, string, error) {

@@ -88,7 +88,6 @@ func GetBearerToken(r *http.Request) (string, error) {
 		return "", errors.New("No Sec-WebSocket-Protocol header present in request")
 	}
 
-	//
 	if !strings.Contains(strings.ToLower(h), "base64url.bearer.authorization.k8s.io.") {
 		return "", errors.New("Sec-WebSocket-Protocol header does not contain 'base64url.bearer.authorization.k8s.io.' in request")
 	}
@@ -115,7 +114,7 @@ func GetBearerToken(r *http.Request) (string, error) {
 	token := string(byteToken)
 
 	if token == "" {
-		return "", fmt.Errorf("Empty token")
+		return "", errors.New("Empty token")
 	}
 
 	return token, nil
@@ -130,6 +129,12 @@ func StripWebSocketBearer(old string) string {
 			if !strings.Contains(strings.ToLower(s), "base64url.bearer.authorization.k8s.io.") {
 				wsProtoArray = append(wsProtoArray, strings.TrimSpace(s))
 			}
+		}
+	}
+
+	if !strings.Contains(old, ",") {
+		if !strings.Contains(strings.ToLower(old), "base64url.bearer.authorization.k8s.io.") {
+			wsProtoArray = append(wsProtoArray, strings.TrimSpace(old))
 		}
 	}
 
