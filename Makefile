@@ -73,6 +73,8 @@ build-plugin:
 
 .SILENT:
 build-k8dash:
+	git submodule init
+	git submodule update
 	docker build gitmodules/k8dash -t k8dash:build-deps --target build-deps
 	rm -rf $(K8DASH_DIR)
 	mkdir -p $(K8DASH_DIR)
