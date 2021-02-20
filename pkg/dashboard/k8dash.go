@@ -34,6 +34,7 @@ func (c k8dashFS) Open(name string) (fs.File, error) {
 type k8dashClient struct {
 	oidcProvider *oidc.Provider
 	config       config.Config
+	authClient   authInterface
 }
 
 func newK8dashClient(ctx context.Context, config config.Config) (k8dashClient, error) {
@@ -46,9 +47,14 @@ func newK8dashClient(ctx context.Context, config config.Config) (k8dashClient, e
 		return k8dashClient{}, err
 	}
 
+	clientID := config.K8dashConfig.ClientID
+	clientSecret := config.K8dashConfig.ClientSecret
+	scope := config.K8dashConfig.Scope
+
 	return k8dashClient{
 		oidcProvider: provider,
 		config:       config,
+		authClient:   newAuthClient(clientID, clientSecret, provider.Endpoint(), []string{scope}),
 	}, nil
 }
 
@@ -172,10 +178,6 @@ func (client *k8dashClient) getOIDC(ctx context.Context) func(http.ResponseWrite
 func (client *k8dashClient) postOIDC(ctx context.Context) func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContext(ctx)
 
-	clientID := client.config.K8dashConfig.ClientID
-	clientSecret := client.config.K8dashConfig.ClientSecret
-	scope := client.config.K8dashConfig.Scope
-
 	return func(w http.ResponseWriter, r *http.Request) {
 		var reqBody struct {
 			Code        string `json:"code"`
@@ -190,18 +192,12 @@ func (client *k8dashClient) postOIDC(ctx context.Context) func(http.ResponseWrit
 		}
 
 		if reqBody.Code == "" || reqBody.RedirectURI == "" {
+			log.Error(err, "Invalid request body", "Code", reqBody.Code, "RedirectURI", reqBody.RedirectURI)
+			http.Error(w, "Invalid request body", http.StatusInternalServerError)
 			return
 		}
 
-		oauth2Config := oauth2.Config{
-			ClientID:     clientID,
-			ClientSecret: clientSecret,
-			RedirectURL:  reqBody.RedirectURI,
-			Endpoint:     client.oidcProvider.Endpoint(),
-			Scopes:       []string{scope},
-		}
-
-		oauth2Token, err := oauth2Config.Exchange(ctx, reqBody.Code)
+		oauth2Token, err := client.authClient.Exchange(ctx, reqBody.Code, reqBody.RedirectURI)
 		if err != nil {
 			log.Error(err, "Unable to get access token")
 			http.Error(w, "Unable to get access token", http.StatusInternalServerError)
@@ -231,4 +227,30 @@ func (client *k8dashClient) postOIDC(ctx context.Context) func(http.ResponseWrit
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
 	}
+}
+
+type authInterface interface {
+	Exchange(ctx context.Context, code, redirectURL string) (*oauth2.Token, error)
+}
+
+type authClient struct {
+	oauth2Config *oauth2.Config
+}
+
+func newAuthClient(clientID, clientSecret string, endpoint oauth2.Endpoint, scopes []string) authInterface {
+	return &authClient{
+		oauth2Config: &oauth2.Config{
+			ClientID:     clientID,
+			ClientSecret: clientSecret,
+			Endpoint:     endpoint,
+			Scopes:       scopes,
+		},
+	}
+}
+
+func (client *authClient) Exchange(ctx context.Context, code, redirectURL string) (*oauth2.Token, error) {
+	oauth2Config := client.oauth2Config
+	oauth2Config.RedirectURL = redirectURL
+	oauth2Token, err := oauth2Config.Exchange(ctx, code)
+	return oauth2Token, err
 }

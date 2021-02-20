@@ -13,6 +13,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
+	"golang.org/x/oauth2"
 )
 
 func TestNewK8sdashClient(t *testing.T) {
@@ -325,17 +326,21 @@ func TestK8dashPostOIDC(t *testing.T) {
 
 	cases := []struct {
 		requestFunc            func() (*http.Request, error)
+		clientFunc             func(ctx context.Context, config config.Config) (k8dashClient, error)
 		config                 config.Config
 		expectedStringContains string
 		expectedStatusCode     int
 	}{
 		{
 			requestFunc: func() (*http.Request, error) {
-				req, err := http.NewRequest("POST", "/oidc", nil)
+				req, err := http.NewRequest("POST", "/oidc", strings.NewReader("{\"code\": \"fake-code\", \"redirectUri\": \"fake-redirect-uri\"}"))
 				if err != nil {
 					return nil, fmt.Errorf("Expected err to be nil but it was %q", err)
 				}
 				return req, nil
+			},
+			clientFunc: func(ctx context.Context, config config.Config) (k8dashClient, error) {
+				return newK8dashClient(ctx, config)
 			},
 			config: config.Config{
 				TenantID: tenantID,
@@ -345,13 +350,65 @@ func TestK8dashPostOIDC(t *testing.T) {
 					Scope:        "fake-scope",
 				},
 			},
-			expectedStringContains: "",
+			expectedStringContains: "Unable to get access token",
+			expectedStatusCode:     http.StatusInternalServerError,
+		},
+		{
+			requestFunc: func() (*http.Request, error) {
+				req, err := http.NewRequest("POST", "/oidc", strings.NewReader("{\"code\": \"fake-code\", \"redirectUri\": \"fake-redirect-uri\"}"))
+				if err != nil {
+					return nil, fmt.Errorf("Expected err to be nil but it was %q", err)
+				}
+				return req, nil
+			},
+			clientFunc: func(ctx context.Context, config config.Config) (k8dashClient, error) {
+				client := k8dashClient{
+					config:     config,
+					authClient: newFakeAuthClient("fake-token", nil),
+				}
+				return client, nil
+			},
+			config: config.Config{
+				TenantID: tenantID,
+				K8dashConfig: config.K8dashConfig{
+					ClientID:     "00000000-0000-0000-0000-000000000000",
+					ClientSecret: "fake-secret",
+					Scope:        "fake-scope",
+				},
+			},
+			expectedStringContains: "{\"token\":\"fake-token\"}",
+			expectedStatusCode:     http.StatusOK,
+		},
+		{
+			requestFunc: func() (*http.Request, error) {
+				req, err := http.NewRequest("POST", "/oidc", strings.NewReader("{}"))
+				if err != nil {
+					return nil, fmt.Errorf("Expected err to be nil but it was %q", err)
+				}
+				return req, nil
+			},
+			clientFunc: func(ctx context.Context, config config.Config) (k8dashClient, error) {
+				client := k8dashClient{
+					config:     config,
+					authClient: newFakeAuthClient("fake-token", nil),
+				}
+				return client, nil
+			},
+			config: config.Config{
+				TenantID: tenantID,
+				K8dashConfig: config.K8dashConfig{
+					ClientID:     "00000000-0000-0000-0000-000000000000",
+					ClientSecret: "fake-secret",
+					Scope:        "fake-scope",
+				},
+			},
+			expectedStringContains: "Invalid request body",
 			expectedStatusCode:     http.StatusInternalServerError,
 		},
 	}
 
 	for _, c := range cases {
-		client, err := newK8dashClient(ctx, c.config)
+		client, err := c.clientFunc(ctx, c.config)
 		if err != nil {
 			t.Errorf("Expected err to be nil but it was %q", err)
 		}
@@ -378,4 +435,23 @@ func TestK8dashPostOIDC(t *testing.T) {
 			}
 		}
 	}
+}
+
+type fakeAuthClient struct {
+	fakeAccessToken string
+	fakeError       error
+}
+
+func newFakeAuthClient(fakeAccessToken string, fakeError error) authInterface {
+	return &fakeAuthClient{
+		fakeAccessToken: fakeAccessToken,
+		fakeError:       fakeError,
+	}
+}
+
+func (client *fakeAuthClient) Exchange(ctx context.Context, code, redirectURL string) (*oauth2.Token, error) {
+	oauth2Token := &oauth2.Token{
+		AccessToken: client.fakeAccessToken,
+	}
+	return oauth2Token, client.fakeError
 }
