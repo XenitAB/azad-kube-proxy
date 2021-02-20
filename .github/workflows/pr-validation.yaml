@@ -4,15 +4,21 @@ on: pull_request
 
 env:
   NAME: "azad-kube-proxy"
-  GO_VERSION: "1.15"
+  GO_VERSION: "1.16"
   GOLANGCI_LINT_VERSION: "v1.35"
 
 jobs:
   lint:
     runs-on: ubuntu-latest
+    env:
+      GO111MODULE: on
     steps:
       - name: Clone repo
         uses: actions/checkout@v2
+      - name: Setup go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GO_VERSION }}
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2.4.0
         with:
@@ -24,7 +30,7 @@ jobs:
       - name: Clone repo
         uses: actions/checkout@v2
       - name: Setup go
-        uses: actions/setup-go@v2.1.3
+        uses: actions/setup-go@v2
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Run fmt
@@ -44,7 +50,7 @@ jobs:
       - name: Clone repo
         uses: actions/checkout@v2
       - name: Setup go
-        uses: actions/setup-go@v2.1.3
+        uses: actions/setup-go@v2
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Run build
@@ -57,7 +63,7 @@ jobs:
       - name: Clone repo
         uses: actions/checkout@v2
       - name: Setup go
-        uses: actions/setup-go@v2.1.3
+        uses: actions/setup-go@v2
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Run test
@@ -80,10 +86,28 @@ jobs:
     steps:
       - name: Checkout Source
         uses: actions/checkout@v2
-      - name: Run Gosec Security Scanner
-        uses: securego/gosec@master
+      - name: Setup go
+        uses: actions/setup-go@v2
         with:
-          args: ./...
+          go-version: ${{ env.GO_VERSION }}
+      - name: Setup gosec
+        env:
+          GOSEC_VERSION: "2.6.1"
+          GOSEC_SHA: "80950b35d13a0f68b75878da030ee305def6170f6db01d1f8021ee198eb84b25"
+        run: |
+          curl -Lo ./gosec.tar.gz https://github.com/securego/gosec/releases/download/v${GOSEC_VERSION}/gosec_${GOSEC_VERSION}_linux_amd64.tar.gz
+          DOWNLOAD_GOSEC_SHA=$(openssl sha1 -sha256 gosec.tar.gz | awk '{print $2}')
+          if [[ "${GOSEC_SHA}" != "${DOWNLOAD_GOSEC_SHA}" ]]; then
+              echo "Downloaded checksum (${DOWNLOAD_GOSEC_SHA}) for terraform-docs does not match expected value: ${GOSEC_SHA}"
+              exit 1
+          fi
+          tar xzvf ./gosec.tar.gz
+          mkdir -p ~/.local/bin/
+          mv ./gosec ~/.local/bin/gosec
+      - name: Run gosec
+        run: |
+          export PATH=${PATH}:~/.local/bin
+          make gosec
 
   semgrep:
     runs-on: ubuntu-latest
@@ -102,7 +126,7 @@ jobs:
       - name: Clone repo
         uses: actions/checkout@v2
       - name: Setup go
-        uses: actions/setup-go@v2.1.3
+        uses: actions/setup-go@v2
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: coverage
@@ -190,3 +214,19 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
+
+  k8dash:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v2
+      - name: Build k8dash frontend
+        run: |
+          make build-k8dash
+      - name: Check if working tree is dirty
+        run: |
+          if [[ $(git status --porcelain) ]]; then
+            git diff
+            echo 'run make build-k8dash and commit changes'
+            exit 1
+          fi

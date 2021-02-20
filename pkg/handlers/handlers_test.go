@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -696,7 +696,7 @@ func getAccessToken(ctx context.Context, tenantID, clientID, clientSecret, scope
 			return nil, err
 		}
 
-		err = ioutil.WriteFile(tokenFilePath, fileContents, 0644)
+		err = os.WriteFile(tokenFilePath, fileContents, 0644)
 		if err != nil {
 			return nil, err
 		}
@@ -715,7 +715,7 @@ func getFileContent(s string) ([]byte, error) {
 
 	defer file.Close()
 
-	bytes, err := ioutil.ReadAll(file)
+	bytes, err := io.ReadAll(file)
 	if err != nil {
 		return nil, err
 	}

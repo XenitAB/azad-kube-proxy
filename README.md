@@ -278,6 +278,9 @@ cat <<EOF > tmp/csr-config
 [req]
 distinguished_name=req
 [san]
+basicConstraints = critical,CA:true
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
 subjectAltName=@alt_names
 [alt_names]
 DNS.1 = localhost
@@ -291,6 +294,8 @@ openssl req -newkey rsa:4096 -x509 -sha256 -days 3650 -nodes -out tmp/tls.crt -k
 CERT_PATH="${PWD}/tmp/tls.crt"
 KEY_PATH="${PWD}/tmp/tls.key"
 ```
+
+Note: You may have to trust the certificate locally to be able to test it with websockets (at least with Chrome). This is only needed when testing the dashboard. Use the following with Arch Linux: `sudo trust anchor tmp/tls.crt`
 
 ### Creating env for tests
 

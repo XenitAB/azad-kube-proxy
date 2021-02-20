@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -144,7 +144,7 @@ func getAccessToken(ctx context.Context, tenantID, clientID, clientSecret, scope
 			return nil, err
 		}
 
-		err = ioutil.WriteFile(tokenFilePath, fileContents, 0644)
+		err = os.WriteFile(tokenFilePath, fileContents, 0644)
 		if err != nil {
 			return nil, err
 		}
@@ -168,7 +168,7 @@ func getFileContent(s string) ([]byte, error) {
 
 	defer file.Close()
 
-	bytes, err := ioutil.ReadAll(file)
+	bytes, err := io.ReadAll(file)
 	if err != nil {
 		return nil, err
 	}

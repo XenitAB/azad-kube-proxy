@@ -50,7 +50,7 @@ func GetGroupIdentifier(s string) (GroupIdentifier, error) {
 	case "OBJECTID":
 		return ObjectIDGroupIdentifier, nil
 	default:
-		return "", fmt.Errorf("Unknown group identifier %s. Supported identifiers are: NAME or OBJECTID", s)
+		return "", fmt.Errorf("Unknown group identifier '%s'. Supported identifiers are: NAME or OBJECTID", s)
 	}
 }
 

@@ -160,6 +160,11 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 		// Remove the Authorization header that is sent to the server
 		r.Header.Del(authorizationHeader)
 
+		// Remove WebSocket Authorization header (base64url.bearer.authorization.k8s.io.<bearer>) that is sent to the server
+		wsProtoString := util.StripWebSocketBearer(r.Header.Get("Sec-WebSocket-Protocol"))
+		r.Header.Del("Sec-WebSocket-Protocol")
+		r.Header.Add("Sec-WebSocket-Protocol", wsProtoString)
+
 		// Add a new Authorization header with the token from the token path
 		r.Header.Add(authorizationHeader, fmt.Sprintf("Bearer %s", client.Config.KubernetesConfig.Token))
 
