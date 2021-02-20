@@ -112,7 +112,7 @@ func TestGetBearerToken(t *testing.T) {
 			reqFunc: func(token string) *http.Request {
 				return &http.Request{
 					Header: map[string][]string{
-						"Authorization": {fmt.Sprintf("%s", token)},
+						"Authorization": {token},
 					},
 				}
 			},
@@ -123,7 +123,7 @@ func TestGetBearerToken(t *testing.T) {
 			reqFunc: func(token string) *http.Request {
 				return &http.Request{
 					Header: map[string][]string{
-						"Authorization": {fmt.Sprintf("%s", token)},
+						"Authorization": {token},
 					},
 				}
 			},
@@ -134,7 +134,7 @@ func TestGetBearerToken(t *testing.T) {
 			reqFunc: func(token string) *http.Request {
 				return &http.Request{
 					Header: map[string][]string{
-						"Authorization": {fmt.Sprintf("%s", token)},
+						"Authorization": {token},
 					},
 				}
 			},

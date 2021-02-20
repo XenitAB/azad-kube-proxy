@@ -188,7 +188,6 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 		log.Info("Request", "path", r.URL.Path, "username", user.Username, "userType", user.Type, "groupCount", len(user.Groups), "cachedUser", found)
 
 		p.ServeHTTP(w, r)
-		return
 	}
 }
 

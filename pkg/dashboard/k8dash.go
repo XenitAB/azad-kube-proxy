@@ -123,7 +123,6 @@ func (client *k8dashClient) preAuth(next http.Handler) http.Handler {
 		}
 
 		next.ServeHTTP(w, r)
-		return
 	})
 }
 
