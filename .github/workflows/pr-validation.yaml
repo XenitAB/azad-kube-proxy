@@ -106,6 +106,7 @@ jobs:
           mv ./gosec ~/.local/bin/gosec
       - name: Run gosec
         run: |
+          export PATH=${PATH}:~/.local/bin
           make gosec
 
   semgrep:
