@@ -76,6 +76,8 @@ build-k8dash:
 	git submodule init
 	git submodule update
 	docker build gitmodules/k8dash -t k8dash:build-deps --target build-deps
+	# For some reason, it works all the time if it has been run twice..
+	docker build gitmodules/k8dash -t k8dash:build-deps --target build-deps
 	rm -rf $(K8DASH_DIR)
 	mkdir -p $(K8DASH_DIR)
 	$(eval CONTAINER_ID := $(shell docker create k8dash:build-deps))
