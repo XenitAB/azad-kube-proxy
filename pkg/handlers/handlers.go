@@ -13,6 +13,7 @@ import (
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/claims"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
+	"github.com/xenitab/azad-kube-proxy/pkg/health"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 	"github.com/xenitab/azad-kube-proxy/pkg/user"
 	"github.com/xenitab/azad-kube-proxy/pkg/util"
@@ -40,11 +41,17 @@ type Client struct {
 	OIDCVerifier *oidc.IDTokenVerifier
 	UserClient   user.ClientInterface
 	ClaimsClient claims.ClientInterface
+	HealthClient health.ClientInterface
 }
 
 // NewHandlersClient ...
 func NewHandlersClient(ctx context.Context, config config.Config, cacheClient cache.ClientInterface, userClient user.ClientInterface, claimsClient claims.ClientInterface) (ClientInterface, error) {
 	oidcVerifier, err := claimsClient.GetOIDCVerifier(ctx, config.TenantID, config.ClientID)
+	if err != nil {
+		return nil, err
+	}
+
+	healthClient, err := health.NewHealthClient(ctx, config)
 	if err != nil {
 		return nil, err
 	}
@@ -55,6 +62,7 @@ func NewHandlersClient(ctx context.Context, config config.Config, cacheClient ca
 		OIDCVerifier: oidcVerifier,
 		UserClient:   userClient,
 		ClaimsClient: claimsClient,
+		HealthClient: healthClient,
 	}
 
 	return handlersClient, nil
@@ -63,8 +71,19 @@ func NewHandlersClient(ctx context.Context, config config.Config, cacheClient ca
 // ReadinessHandler ...
 func (client *Client) ReadinessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContext(ctx)
+	ready, err := client.HealthClient.Ready(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		if !ready {
+			log.Error(err, "Ready check failed")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Header().Set("Content-Type", "application/json")
+			if _, err := w.Write([]byte("{\"status\": \"error\"}")); err != nil {
+				log.Error(err, "Could not write response data")
+			}
+			return
+		}
+
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
 		if _, err := w.Write([]byte("{\"status\": \"ok\"}")); err != nil {
