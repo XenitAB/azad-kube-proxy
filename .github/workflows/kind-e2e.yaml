@@ -6,7 +6,7 @@ on:
   push:
     branches: [ main ]
   schedule:
-    - cron: '20 3 * * 6'
+    - cron: '0 4 * * *'
 
 env:
   NAME: "azad-kube-proxy"
