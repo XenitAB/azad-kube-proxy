@@ -8,7 +8,7 @@ import (
 	"github.com/xenitab/azad-kube-proxy/pkg/util"
 	k8sapiauthorization "k8s.io/api/authorization/v1"
 	k8sapimachinerymetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8sclientauthorization "k8s.io/client-go/kubernetes/typed/authorization/v1"
+	k8s "k8s.io/client-go/kubernetes"
 	k8sclientrest "k8s.io/client-go/rest"
 )
 
@@ -19,7 +19,7 @@ type ClientInterface interface {
 
 // Client ...
 type Client struct {
-	K8sAuthorizationClient *k8sclientauthorization.AuthorizationV1Client
+	K8sClient k8s.Interface
 }
 
 // NewHealthClient ...
@@ -38,13 +38,13 @@ func NewHealthClient(ctx context.Context, config config.Config) (ClientInterface
 		TLSClientConfig: k8sTLSConfig,
 	}
 
-	k8sAuthorizationClient, err := k8sclientauthorization.NewForConfig(k8sRestConfig)
+	k8sClient, err := k8s.NewForConfig(k8sRestConfig)
 	if err != nil {
 		return nil, err
 	}
 
 	healthClient := &Client{
-		K8sAuthorizationClient: k8sAuthorizationClient,
+		K8sClient: k8sClient,
 	}
 
 	return healthClient, nil
@@ -56,7 +56,7 @@ func (client *Client) Ready(ctx context.Context) (bool, error) {
 
 	selfSubjectRulesReview := &k8sapiauthorization.SelfSubjectRulesReview{Spec: k8sapiauthorization.SelfSubjectRulesReviewSpec{Namespace: "default"}}
 	createOptions := k8sapimachinerymetav1.CreateOptions{}
-	res, err := client.K8sAuthorizationClient.SelfSubjectRulesReviews().Create(ctx, selfSubjectRulesReview, createOptions)
+	res, err := client.K8sClient.AuthorizationV1().SelfSubjectRulesReviews().Create(ctx, selfSubjectRulesReview, createOptions)
 	if err != nil {
 		return false, err
 	}

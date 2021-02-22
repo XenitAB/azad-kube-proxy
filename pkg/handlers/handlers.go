@@ -45,13 +45,8 @@ type Client struct {
 }
 
 // NewHandlersClient ...
-func NewHandlersClient(ctx context.Context, config config.Config, cacheClient cache.ClientInterface, userClient user.ClientInterface, claimsClient claims.ClientInterface) (ClientInterface, error) {
+func NewHandlersClient(ctx context.Context, config config.Config, cacheClient cache.ClientInterface, userClient user.ClientInterface, claimsClient claims.ClientInterface, healthClient health.ClientInterface) (ClientInterface, error) {
 	oidcVerifier, err := claimsClient.GetOIDCVerifier(ctx, config.TenantID, config.ClientID)
-	if err != nil {
-		return nil, err
-	}
-
-	healthClient, err := health.NewHealthClient(ctx, config)
 	if err != nil {
 		return nil, err
 	}

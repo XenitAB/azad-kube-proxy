@@ -23,6 +23,7 @@ import (
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/claims"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
+	"github.com/xenitab/azad-kube-proxy/pkg/health"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 	"github.com/xenitab/azad-kube-proxy/pkg/user"
 )
@@ -37,14 +38,26 @@ func TestNewHandlersClient(t *testing.T) {
 	fakeClaimsClient := newFakeClaimsClient(nil, nil, claims.AzureClaims{}, &oidc.IDTokenVerifier{})
 	fakeCacheClient := newFakeCacheClient("", "", nil, false, nil)
 	fakeUserClient := newFakeUserClient("", "", nil, nil)
+	fakeHealthClient := newFakeHealthClient()
+	fakeURL, err := url.Parse("https://fake-url")
+	if err != nil {
+		t.Errorf("Expected err to be nil but it was %q", err)
+	}
 
-	_, err := NewHandlersClient(ctx, config.Config{TenantID: tenantID}, fakeCacheClient, fakeUserClient, fakeClaimsClient)
+	cfg := config.Config{
+		TenantID: tenantID,
+		KubernetesConfig: config.KubernetesConfig{
+			URL: fakeURL,
+		},
+	}
+
+	_, err = NewHandlersClient(ctx, cfg, fakeCacheClient, fakeUserClient, fakeClaimsClient, fakeHealthClient)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
 
 	fakeClaimsClient = newFakeClaimsClient(nil, errors.New("fake error"), claims.AzureClaims{}, &oidc.IDTokenVerifier{})
-	_, err = NewHandlersClient(ctx, config.Config{TenantID: tenantID}, fakeCacheClient, fakeUserClient, fakeClaimsClient)
+	_, err = NewHandlersClient(ctx, cfg, fakeCacheClient, fakeUserClient, fakeClaimsClient, fakeHealthClient)
 	if !strings.Contains(err.Error(), "fake error") {
 		t.Errorf("Expected err to contain 'fake error' but it was %q", err)
 	}
@@ -59,14 +72,23 @@ func TestReadinessHandler(t *testing.T) {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
 
-	config := config.Config{
+	fakeURL, err := url.Parse("https://fake-url")
+	if err != nil {
+		t.Errorf("Expected err to be nil but it was %q", err)
+	}
+
+	cfg := config.Config{
 		TenantID: tenantID,
+		KubernetesConfig: config.KubernetesConfig{
+			URL: fakeURL,
+		},
 	}
 
 	fakeCacheClient := newFakeCacheClient("", "", nil, true, nil)
 	fakeUserClient := newFakeUserClient("", "", nil, nil)
 	claimsClient := claims.NewClaimsClient()
-	proxyHandlers, err := NewHandlersClient(ctx, config, fakeCacheClient, fakeUserClient, claimsClient)
+	fakeHealthClient := newFakeHealthClient()
+	proxyHandlers, err := NewHandlersClient(ctx, cfg, fakeCacheClient, fakeUserClient, claimsClient, fakeHealthClient)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
@@ -98,14 +120,23 @@ func TestLivenessHandler(t *testing.T) {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
 
-	config := config.Config{
+	fakeURL, err := url.Parse("https://fake-url")
+	if err != nil {
+		t.Errorf("Expected err to be nil but it was %q", err)
+	}
+
+	cfg := config.Config{
 		TenantID: tenantID,
+		KubernetesConfig: config.KubernetesConfig{
+			URL: fakeURL,
+		},
 	}
 
 	fakeCacheClient := newFakeCacheClient("", "", nil, true, nil)
 	fakeUserClient := newFakeUserClient("", "", nil, nil)
 	claimsClient := claims.NewClaimsClient()
-	proxyHandlers, err := NewHandlersClient(ctx, config, fakeCacheClient, fakeUserClient, claimsClient)
+	fakeHealthClient := newFakeHealthClient()
+	proxyHandlers, err := NewHandlersClient(ctx, cfg, fakeCacheClient, fakeUserClient, claimsClient, fakeHealthClient)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
@@ -150,6 +181,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 	claimsClient := claims.NewClaimsClient()
 	fakeCacheClient := newFakeCacheClient("", "", nil, false, nil)
 	fakeUserClient := newFakeUserClient("", "", nil, nil)
+	fakeHealthClient := newFakeHealthClient()
 
 	fakeBackend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("{\"fake\": true}"))
@@ -485,7 +517,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 			c.userClient = c.userFunction(c.userClient)
 		}
 
-		proxyHandlers, err := NewHandlersClient(ctx, c.config, c.cacheClient, c.userClient, c.claimsClient)
+		proxyHandlers, err := NewHandlersClient(ctx, c.config, c.cacheClient, c.userClient, c.claimsClient, fakeHealthClient)
 		if err != nil {
 			t.Errorf("Expected err to be nil but it was %q", err)
 		}
@@ -625,6 +657,16 @@ func (client *fakeClaimsClient) NewClaims(t *oidc.IDToken) (claims.AzureClaims, 
 	}
 
 	return client.fakeAzureClaims, client.newClaimsFakeError
+}
+
+type fakeHealthClient struct{}
+
+func newFakeHealthClient() health.ClientInterface {
+	return &fakeHealthClient{}
+}
+
+func (client *fakeHealthClient) Ready(ctx context.Context) (bool, error) {
+	return true, nil
 }
 
 func (client *fakeClaimsClient) GetOIDCVerifier(ctx context.Context, tenantID, clientID string) (*oidc.IDTokenVerifier, error) {
