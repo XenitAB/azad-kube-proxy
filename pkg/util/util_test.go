@@ -351,6 +351,62 @@ func TestStripWebSocketBearer(t *testing.T) {
 	}
 }
 
+func TestSliceContains(t *testing.T) {
+	cases := []struct {
+		inputSlice     []string
+		inputString    string
+		expectedResult bool
+	}{
+		{
+			inputSlice:     []string{""},
+			inputString:    "",
+			expectedResult: true,
+		},
+		{
+			inputSlice:     []string{},
+			inputString:    "",
+			expectedResult: false,
+		},
+		{
+			inputSlice:     []string{"a"},
+			inputString:    "a",
+			expectedResult: true,
+		},
+		{
+			inputSlice:     []string{"a"},
+			inputString:    "b",
+			expectedResult: false,
+		},
+		{
+			inputSlice:     []string{"a", "b", "c"},
+			inputString:    "b",
+			expectedResult: true,
+		},
+		{
+			inputSlice:     []string{"a", "b", "c", "d", "e", "f"},
+			inputString:    "g",
+			expectedResult: false,
+		},
+		{
+			inputSlice:     []string{"A", "B", "C", "D", "E", "F"},
+			inputString:    "a",
+			expectedResult: false,
+		},
+		{
+			inputSlice:     []string{"A", "B", "C", "D", "E", "F"},
+			inputString:    "F",
+			expectedResult: true,
+		},
+	}
+
+	for _, c := range cases {
+		r := SliceContains(c.inputSlice, c.inputString)
+		if r != c.expectedResult {
+			t.Errorf("Expected result %t but got %t. InputSlice: %q, InputString: %s", c.expectedResult, r, c.inputSlice, c.inputString)
+		}
+	}
+}
+
 func generateRandomFile() (string, string, error) {
 	timestamp := strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
 	filename := fmt.Sprintf("test-random-%s.pem", timestamp)

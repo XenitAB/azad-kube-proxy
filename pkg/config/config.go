@@ -34,6 +34,7 @@ type Config struct {
 type KubernetesConfig struct {
 	URL                 *url.URL
 	RootCA              *x509.CertPool
+	RootCAString        string
 	Token               string
 	ValidateCertificate bool
 }
@@ -235,6 +236,11 @@ func NewConfig(ctx context.Context, cli *cli.Context) (Config, error) {
 		return Config{}, err
 	}
 
+	kubernetesRootCAString, err := util.GetStringFromFile(ctx, cli.String("kubernetes-api-ca-cert-path"))
+	if err != nil {
+		return Config{}, err
+	}
+
 	kubernetesToken, err := util.GetStringFromFile(ctx, cli.String("kubernetes-api-token-path"))
 	if err != nil {
 		return Config{}, err
@@ -273,6 +279,7 @@ func NewConfig(ctx context.Context, cli *cli.Context) (Config, error) {
 		KubernetesConfig: KubernetesConfig{
 			URL:                 kubernetesAPIUrl,
 			RootCA:              kubernetesRootCA,
+			RootCAString:        kubernetesRootCAString,
 			Token:               kubernetesToken,
 			ValidateCertificate: cli.Bool("kubernetes-api-validate-cert"),
 		},

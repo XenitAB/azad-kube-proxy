@@ -19,6 +19,7 @@ import (
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"github.com/xenitab/azad-kube-proxy/pkg/dashboard"
 	"github.com/xenitab/azad-kube-proxy/pkg/handlers"
+	"github.com/xenitab/azad-kube-proxy/pkg/health"
 	"github.com/xenitab/azad-kube-proxy/pkg/user"
 )
 
@@ -39,6 +40,7 @@ type Client struct {
 	AzureClient     azure.ClientInterface
 	ClaimsClient    claims.ClientInterface
 	DashboardClient dashboard.ClientInterface
+	HealthClient    health.ClientInterface
 }
 
 // NewProxyClient ...
@@ -61,6 +63,11 @@ func NewProxyClient(ctx context.Context, config config.Config) (ClientInterface,
 		return nil, err
 	}
 
+	healthClient, err := health.NewHealthClient(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+
 	proxyClient := Client{
 		Config:          config,
 		CacheClient:     cacheClient,
@@ -68,6 +75,7 @@ func NewProxyClient(ctx context.Context, config config.Config) (ClientInterface,
 		AzureClient:     azureClient,
 		ClaimsClient:    claimsClient,
 		DashboardClient: dashboardClient,
+		HealthClient:    healthClient,
 	}
 
 	return &proxyClient, nil
@@ -94,7 +102,7 @@ func (client *Client) Start(ctx context.Context) error {
 	defer stopGroupSync()
 
 	// Configure reverse proxy and http server
-	proxyHandlers, err := handlers.NewHandlersClient(ctx, client.Config, client.CacheClient, client.UserClient, client.ClaimsClient)
+	proxyHandlers, err := handlers.NewHandlersClient(ctx, client.Config, client.CacheClient, client.UserClient, client.ClaimsClient, client.HealthClient)
 	if err != nil {
 		return err
 	}
