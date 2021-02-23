@@ -119,7 +119,7 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 		verifiedToken, err := client.OIDCVerifier.Verify(ctx, token)
 		if err != nil {
 			log.Error(err, "Unable to verify token")
-			http.Error(w, "Unable to verify token", http.StatusForbidden)
+			http.Error(w, "Unable to verify token", http.StatusUnauthorized)
 			return
 		}
 
