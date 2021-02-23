@@ -15,6 +15,17 @@ spec:
       matchLabels:
         os: darwin
         arch: amd64
+  - {{addURIAndSha "https://github.com/XenitAB/azad-kube-proxy/releases/download/{{ .TagName }}/kubectl-azad_proxy-darwin-arm64.zip" .TagName }}
+    bin: kubectl-azad_proxy
+    files:
+    - from: kubectl-azad_proxy
+      to: .
+    - from: LICENSE
+      to: .
+    selector:
+      matchLabels:
+        os: darwin
+        arch: arm64
   - {{addURIAndSha "https://github.com/XenitAB/azad-kube-proxy/releases/download/{{ .TagName }}/kubectl-azad_proxy-linux-amd64.zip" .TagName }}
     bin: kubectl-azad_proxy
     files:
@@ -26,6 +37,28 @@ spec:
       matchLabels:
         os: linux
         arch: amd64
+  - {{addURIAndSha "https://github.com/XenitAB/azad-kube-proxy/releases/download/{{ .TagName }}/kubectl-azad_proxy-linux-arm64.zip" .TagName }}
+    bin: kubectl-azad_proxy
+    files:
+    - from: kubectl-azad_proxy
+      to: .
+    - from: LICENSE
+      to: .
+    selector:
+      matchLabels:
+        os: linux
+        arch: arm64
+  - {{addURIAndSha "https://github.com/XenitAB/azad-kube-proxy/releases/download/{{ .TagName }}/kubectl-azad_proxy-linux-arm.zip" .TagName }}
+    bin: kubectl-azad_proxy
+    files:
+    - from: kubectl-azad_proxy
+      to: .
+    - from: LICENSE
+      to: .
+    selector:
+      matchLabels:
+        os: linux
+        arch: arm
   - {{addURIAndSha "https://github.com/XenitAB/azad-kube-proxy/releases/download/{{ .TagName }}/kubectl-azad_proxy-windows-amd64.zip" .TagName }}
     bin: kubectl-azad_proxy.exe
     files:
