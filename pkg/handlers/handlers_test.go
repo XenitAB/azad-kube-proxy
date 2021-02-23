@@ -265,7 +265,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 			cacheClient:         memCacheClient,
 			claimsClient:        claimsClient,
 			userClient:          fakeUserClient,
-			expectedResCode:     http.StatusForbidden,
+			expectedResCode:     http.StatusUnauthorized,
 			expectedErrContains: "Unable to verify token",
 		},
 		{
@@ -299,7 +299,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 			cacheClient:         fakeCacheClient,
 			claimsClient:        claimsClient,
 			userClient:          fakeUserClient,
-			expectedResCode:     http.StatusForbidden,
+			expectedResCode:     http.StatusUnauthorized,
 			expectedErrContains: "Unable to verify token",
 		},
 		{
