@@ -28,6 +28,7 @@ type Config struct {
 	KubernetesConfig     KubernetesConfig
 	Dashboard            models.Dashboard
 	K8dashConfig         K8dashConfig
+	CORSConfig           CORSConfig
 }
 
 // KubernetesConfig contains the Kubernetes specific configuration
@@ -51,6 +52,15 @@ type K8dashConfig struct {
 	ClientID     string
 	ClientSecret string
 	Scope        string
+}
+
+// CORSConfig contains the CORS configuration for the proxy
+type CORSConfig struct {
+	Enabled                     bool
+	AllowedOriginsDefaultScheme string
+	AllowedOrigins              []string
+	AllowedHeaders              []string
+	AllowedMethods              []string
 }
 
 // Flags returns a flag array
@@ -221,6 +231,38 @@ func Flags(ctx context.Context) []cli.Flag {
 			EnvVars:  []string{"K8DASH_SCOPE"},
 			Value:    "",
 		},
+		&cli.BoolFlag{
+			Name:     "cors-enabled",
+			Usage:    "Should CORS be enabled for the proxy?",
+			Required: false,
+			EnvVars:  []string{"CORS_ENABLED"},
+			Value:    true,
+		},
+		&cli.StringSliceFlag{
+			Name:     "cors-allowed-origins",
+			Usage:    "The allowed origins for CORS (Access-Control-Allow-Origin). Defaults to the current host (based on host header - https://<host>).",
+			Required: false,
+			EnvVars:  []string{"CORS_ALLOWED_ORIGINS"},
+		},
+		&cli.StringFlag{
+			Name:     "cors-allowed-origins-default-scheme",
+			Usage:    "If cors-allowed-origins is left to default, what scheme should be used? (https for https://<host>)",
+			Required: false,
+			EnvVars:  []string{"CORS_ALLOWED_ORIGINS_DEFAULT_SCHEME"},
+			Value:    "https",
+		},
+		&cli.StringSliceFlag{
+			Name:     "cors-allowed-headers",
+			Usage:    "The allowed headers for CORS (Access-Control-Allow-Headers). Defaults to: *",
+			Required: false,
+			EnvVars:  []string{"CORS_ALLOWED_HEADERS"},
+		},
+		&cli.StringSliceFlag{
+			Name:     "cors-allowed-methods",
+			Usage:    "The allowed methods for CORS (Access-Control-Allow-Methods). Defaults to: GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS",
+			Required: false,
+			EnvVars:  []string{"CORS_ALLOWED_METHODS"},
+		},
 	}
 }
 
@@ -238,7 +280,7 @@ func NewConfig(ctx context.Context, cli *cli.Context) (Config, error) {
 
 	kubernetesRootCAString, err := util.GetStringFromFile(ctx, cli.String("kubernetes-api-ca-cert-path"))
 	if err != nil {
-		return Config{}, err
+		return Config{}, err // NOTE FOR TESTS: Can't reach with test since it will always error before on kubernetesRootCA
 	}
 
 	kubernetesToken, err := util.GetStringFromFile(ctx, cli.String("kubernetes-api-token-path"))
@@ -288,6 +330,13 @@ func NewConfig(ctx context.Context, cli *cli.Context) (Config, error) {
 			ClientID:     cli.String("k8dash-client-id"),
 			ClientSecret: cli.String("k8dash-client-secret"),
 			Scope:        cli.String("k8dash-scope"),
+		},
+		CORSConfig: CORSConfig{
+			Enabled:                     cli.Bool("cors-enabled"),
+			AllowedOriginsDefaultScheme: cli.String("cors-allowed-origins-default-scheme"),
+			AllowedOrigins:              cli.StringSlice("cors-allowed-origins"),
+			AllowedHeaders:              cli.StringSlice("cors-allowed-headers"),
+			AllowedMethods:              cli.StringSlice("cors-allowed-methods"),
 		},
 	}
 
