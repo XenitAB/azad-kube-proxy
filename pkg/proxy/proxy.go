@@ -17,6 +17,7 @@ import (
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/claims"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
+	"github.com/xenitab/azad-kube-proxy/pkg/cors"
 	"github.com/xenitab/azad-kube-proxy/pkg/dashboard"
 	"github.com/xenitab/azad-kube-proxy/pkg/handlers"
 	"github.com/xenitab/azad-kube-proxy/pkg/health"
@@ -41,6 +42,7 @@ type Client struct {
 	ClaimsClient    claims.ClientInterface
 	DashboardClient dashboard.ClientInterface
 	HealthClient    health.ClientInterface
+	CORSClient      cors.ClientInterface
 }
 
 // NewProxyClient ...
@@ -68,6 +70,8 @@ func NewProxyClient(ctx context.Context, config config.Config) (ClientInterface,
 		return nil, err
 	}
 
+	corsClient := cors.NewCORSClient(config)
+
 	proxyClient := Client{
 		Config:          config,
 		CacheClient:     cacheClient,
@@ -76,6 +80,7 @@ func NewProxyClient(ctx context.Context, config config.Config) (ClientInterface,
 		ClaimsClient:    claimsClient,
 		DashboardClient: dashboardClient,
 		HealthClient:    healthClient,
+		CORSClient:      corsClient,
 	}
 
 	return &proxyClient, nil
@@ -114,14 +119,15 @@ func (client *Client) Start(ctx context.Context) error {
 	router.HandleFunc("/readyz", proxyHandlers.ReadinessHandler(ctx)).Methods("GET")
 	router.HandleFunc("/healthz", proxyHandlers.LivenessHandler(ctx)).Methods("GET")
 
-	routerWithDashboard, err := client.DashboardClient.DashboardHandler(ctx, router)
+	router, err = client.DashboardClient.DashboardHandler(ctx, router)
 	if err != nil {
 		return err
 	}
 
-	routerWithDashboard.PathPrefix("/").HandlerFunc(proxyHandlers.AzadKubeProxyHandler(ctx, proxy))
+	router.PathPrefix("/").HandlerFunc(proxyHandlers.AzadKubeProxyHandler(ctx, proxy))
+	router.Use(client.CORSClient.Middleware)
 
-	httpServer := client.getHTTPServer(routerWithDashboard)
+	httpServer := client.getHTTPServer(router)
 
 	// Start HTTP server
 	go func() {
