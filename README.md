@@ -8,6 +8,13 @@ Azure AD Kubernetes API Proxy
 ![KinD End-to-End](https://github.com/xenitab/azad-kube-proxy/workflows/KinD%20End-to-End/badge.svg?branch=main)
 ![Trivy](https://github.com/xenitab/azad-kube-proxy/workflows/Trivy/badge.svg?branch=main)
 
+## Charles the mascot
+
+![Charles the mascot](assets/charles_the_mascot_300px.png)
+
+A turtle has a **shield** on the **back**, to protect it. A reverse proxy is a **shield** for the **back**end. Charles loves his **back**end and protects it with his **shield**.
+
+*Created by [@cimcake](https://www.instagram.com/cimcake)*
 
 ## Description
 
@@ -43,7 +50,6 @@ The kubectl plugin can be installed through Krew.
 kubectl krew install azad-proxy
 ```
 
-
 ### Usage
 
 ### Proxy
@@ -52,9 +58,13 @@ Setup the proxy (using Helm Chart or other way). It is recommended to set it up 
 
 Using ingress-nginx, cert-manager and external-dns - you will be able to handle the blue/green deployments with ease.
 
+You can also enable an integrated dashboard, provided by [k8dash](https://github.com/indeedeng/k8dash).
+
 It is not tested with MSI / aad-pod-identity yet, but may work with some tweaks.
 
 Configuration can be found in [pkg/config/config.go](pkg/config/config.go).
+
+You will need to configure an Azure AD App and Service Principal for the proxy and another Azure AD App for the dashboard (if you want to use it). Right now, the documentation for creating these can be found in the [Local Development](#local-development) section.
 
 ### Plugin
 
@@ -212,7 +222,7 @@ The following alternatives exists:
 
 ## Local development
 
-### Creating the Azure AD Application
+### Proxy - Creating the Azure AD Application
 
 ```shell
 AZ_APP_NAME="k8s-api"
@@ -230,6 +240,18 @@ az ad app permission add --id ${AZ_APP_ID} --api 00000003-0000-0000-c000-0000000
 az ad app permission admin-consent --id ${AZ_APP_ID}
 ```
 
+### Dashboard - Creating the Azure AD Application
+
+```shell
+AZ_APP_DASH_NAME="k8dash"
+AZ_APP_DASH_REPLY_URL="https://localhost:8443/"
+AZ_APP_DASH_ID=$(az ad app create --display-name ${AZ_APP_DASH_NAME} --reply-urls ${AZ_APP_DASH_REPLY_URL} --query appId -o tsv)
+AZ_APP_DASH_OBJECT_ID=$(az ad app show --id ${AZ_APP_DASH_ID} --output tsv --query objectId)
+# This adds permission for the dashboard to the k8s-api app added above. Note that the variables from above are needed.
+az rest --method PATCH --uri "https://graph.microsoft.com/beta/applications/${AZ_APP_OBJECT_ID}" --body "{\"api\":{\"preAuthorizedApplications\":[{\"appId\":\"04b07795-8ddb-461a-bbee-02f9e1bf7b46\",\"permissionIds\":[\"${AZ_APP_PERMISSION_ID}\"]},{\"appId\":\"${AZ_APP_DASH_ID}\",\"permissionIds\":[\"${AZ_APP_PERMISSION_ID}\"]}]}}"
+az rest --method PATCH --uri "https://graph.microsoft.com/beta/applications/${AZ_APP_DASH_OBJECT_ID}" --body '{"api":{"requestedAccessTokenVersion": 2}}'
+AZ_APP_DASH_SECRET=$(az ad sp credential reset --name ${AZ_APP_DASH_ID} --credential-description "azad-kube-proxy" --output tsv --query password)
+```
 ### Setting up Kind cluster
 
 ```shell
@@ -348,6 +370,10 @@ echo "TLS_CERTIFICATE_PATH=${CERT_PATH}" >> ${PWD}/tmp/test_env
 echo "TLS_KEY_PATH=${KEY_PATH}" >> ${PWD}/tmp/test_env
 echo "PORT=8443" >> ${PWD}/tmp/test_env
 echo "NODE_IP=${NODE_IP}" >> ${PWD}/tmp/test_env
+echo "DASHBOARD=K8DASH" >> ${PWD}/tmp/test_env
+echo "K8DASH_CLIENT_ID=${AZ_APP_DASH_ID}" >> ${PWD}/tmp/test_env
+echo "K8DASH_CLIENT_SECRET=${AZ_APP_DASH_SECRET}" >> ${PWD}/tmp/test_env
+echo "K8DASH_SCOPE=${AZ_APP_URI}/.default" >> ${PWD}/tmp/test_env
 ```
 
 ### Running the proxy
