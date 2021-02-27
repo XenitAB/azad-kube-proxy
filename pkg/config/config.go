@@ -27,6 +27,7 @@ type Config struct {
 	GroupIdentifier      models.GroupIdentifier
 	KubernetesConfig     KubernetesConfig
 	Dashboard            models.Dashboard
+	Metrics              models.Metrics
 	K8dashConfig         K8dashConfig
 	CORSConfig           CORSConfig
 }
@@ -211,6 +212,13 @@ func Flags(ctx context.Context) []cli.Flag {
 			Value:    "NONE",
 		},
 		&cli.StringFlag{
+			Name:     "metrics",
+			Usage:    "What metrics library to use",
+			Required: false,
+			EnvVars:  []string{"METRICS"},
+			Value:    "PROMETHEUS",
+		},
+		&cli.StringFlag{
 			Name:     "k8dash-client-id",
 			Usage:    "What Client ID to use with k8dash",
 			Required: false,
@@ -303,6 +311,11 @@ func NewConfig(ctx context.Context, cli *cli.Context) (Config, error) {
 		return Config{}, err
 	}
 
+	metrics, err := models.GetMetrics(cli.String("metrics"))
+	if err != nil {
+		return Config{}, err
+	}
+
 	config := Config{
 		ClientID:        cli.String("client-id"),
 		ClientSecret:    cli.String("client-secret"),
@@ -326,6 +339,7 @@ func NewConfig(ctx context.Context, cli *cli.Context) (Config, error) {
 			ValidateCertificate: cli.Bool("kubernetes-api-validate-cert"),
 		},
 		Dashboard: dashboard,
+		Metrics:   metrics,
 		K8dashConfig: K8dashConfig{
 			ClientID:     cli.String("k8dash-client-id"),
 			ClientSecret: cli.String("k8dash-client-secret"),
