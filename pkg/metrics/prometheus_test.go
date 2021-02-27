@@ -1,11 +1,9 @@
-package dashboard
+package metrics
 
 import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"net/http/httputil"
-	"net/url"
 	"strings"
 	"testing"
 
@@ -13,32 +11,21 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func TestNoneDashboardHandler(t *testing.T) {
+func TestPrometheusMetricsHandler(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
-	req, err := http.NewRequest("GET", "/", nil)
+	req, err := http.NewRequest("GET", "/metrics", nil)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
 
-	client := newNoneClient(ctx)
+	client := newPrometheusClient(ctx)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
 
-	fakeBackend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte("{\"fake\": true}"))
-	}))
-	defer fakeBackend.Close()
-	fakeBackendURL, err := url.Parse(fakeBackend.URL)
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
-	}
-
-	proxy := httputil.NewSingleHostReverseProxy(fakeBackendURL)
 	rr := httptest.NewRecorder()
 	router := mux.NewRouter()
-	router.PathPrefix("/").Handler(proxy)
-	router, err = client.DashboardHandler(ctx, router)
+	router, err = client.MetricsHandler(ctx, router)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
@@ -50,7 +37,7 @@ func TestNoneDashboardHandler(t *testing.T) {
 	}
 
 	// Check the response body is what we expect.
-	expectedStringContains := "{\"fake\": true}"
+	expectedStringContains := "# HELP go_gc_duration_seconds A summary of the pause duration of garbage collection cycles."
 	if !strings.Contains(rr.Body.String(), expectedStringContains) {
 		t.Errorf("handler returned unexpected body: got %v expected to contain %v",
 			rr.Body.String(), expectedStringContains)

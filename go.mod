@@ -18,6 +18,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pquerna/cachecontrol v0.0.0-20171018203845-0dec1b30a021 // indirect
+	github.com/prometheus/client_golang v1.9.0
 	github.com/rs/cors v1.7.0
 	github.com/urfave/cli/v2 v2.3.0
 	go.uber.org/multierr v1.6.0 // indirect

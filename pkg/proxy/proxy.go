@@ -21,6 +21,7 @@ import (
 	"github.com/xenitab/azad-kube-proxy/pkg/dashboard"
 	"github.com/xenitab/azad-kube-proxy/pkg/handlers"
 	"github.com/xenitab/azad-kube-proxy/pkg/health"
+	"github.com/xenitab/azad-kube-proxy/pkg/metrics"
 	"github.com/xenitab/azad-kube-proxy/pkg/user"
 )
 
@@ -41,6 +42,7 @@ type Client struct {
 	AzureClient     azure.ClientInterface
 	ClaimsClient    claims.ClientInterface
 	DashboardClient dashboard.ClientInterface
+	MetricsClient   metrics.ClientInterface
 	HealthClient    health.ClientInterface
 	CORSClient      cors.ClientInterface
 }
@@ -65,6 +67,11 @@ func NewProxyClient(ctx context.Context, config config.Config) (ClientInterface,
 		return nil, err
 	}
 
+	metricsClient, err := metrics.NewMetricsClient(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+
 	healthClient, err := health.NewHealthClient(ctx, config)
 	if err != nil {
 		return nil, err
@@ -79,6 +86,7 @@ func NewProxyClient(ctx context.Context, config config.Config) (ClientInterface,
 		AzureClient:     azureClient,
 		ClaimsClient:    claimsClient,
 		DashboardClient: dashboardClient,
+		MetricsClient:   metricsClient,
 		HealthClient:    healthClient,
 		CORSClient:      corsClient,
 	}
@@ -118,6 +126,11 @@ func (client *Client) Start(ctx context.Context) error {
 	router := mux.NewRouter()
 	router.HandleFunc("/readyz", proxyHandlers.ReadinessHandler(ctx)).Methods("GET")
 	router.HandleFunc("/healthz", proxyHandlers.LivenessHandler(ctx)).Methods("GET")
+
+	router, err = client.MetricsClient.MetricsHandler(ctx, router)
+	if err != nil {
+		return err
+	}
 
 	router, err = client.DashboardClient.DashboardHandler(ctx, router)
 	if err != nil {

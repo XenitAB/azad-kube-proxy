@@ -1,4 +1,4 @@
-package dashboard
+package metrics
 
 import (
 	"context"
@@ -13,9 +13,9 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func TestNoneDashboardHandler(t *testing.T) {
+func TestNoneMetricsHandler(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
-	req, err := http.NewRequest("GET", "/", nil)
+	req, err := http.NewRequest("GET", "/metrics", nil)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
@@ -38,7 +38,7 @@ func TestNoneDashboardHandler(t *testing.T) {
 	rr := httptest.NewRecorder()
 	router := mux.NewRouter()
 	router.PathPrefix("/").Handler(proxy)
-	router, err = client.DashboardHandler(ctx, router)
+	router, err = client.MetricsHandler(ctx, router)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
