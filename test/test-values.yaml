@@ -2,16 +2,6 @@ application:
   port: 8443
   scheme: HTTPS
 
-podArgs:
-  - --client-id=$(CLIENT_ID)
-  - --client-secret=$(CLIENT_SECRET)
-  - --tenant-id=$(TENANT_ID)
-  - --azure-ad-group-prefix=$(AZURE_AD_GROUP_PREFIX)
-  - --tls-enabled=true
-  - --tls-certificate-path=/mnt/tls/tls.crt
-  - --tls-key-path=/mnt/tls/tls.key
-  - --port=8443
-
 podEnv:
   - name: CLIENT_ID
     valueFrom:
@@ -30,6 +20,14 @@ podEnv:
         key: TENANT_ID
   - name: AZURE_AD_GROUP_PREFIX
     value: ""
+  - name: TLS_ENABLED
+    value: "true"
+  - name: TLS_CERTIFICATE_PATH
+    value: "/mnt/tls/tls.crt"
+  - name: TLS_KEY_PATH
+    value: "/mnt/tls/tls.key"
+  - name: PORT
+    value: "8443"
 
 secret:
   create: true
