@@ -42,6 +42,8 @@ kubectl create namespace azad-kube-proxy
 helm upgrade --namespace azad-kube-proxy --version <ver> --install azad-kube-proxy azad-kube-proxy/azad-kube-proxy
 ```
 
+Example of using the Helm chart with Terraform can be found here (module): [github.com/XenitAB/terraform-modules//modules/kubernetes/azad-kube-proxy](https://github.com/XenitAB/terraform-modules/tree/main/modules/kubernetes/azad-kube-proxy)
+
 ### Plugin (Krew / kubectl plugin)
 
 The kubectl plugin can be installed through Krew.
