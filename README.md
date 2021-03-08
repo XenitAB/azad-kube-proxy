@@ -35,7 +35,7 @@ Helm chart is located in [charts/azad-kube-proxy](charts/azad-kube-proxy) and pu
 Example usage:
 
 ```shell
-helm repo add dhkey-operator https://xenitab.github.io/azad-kube-proxy/
+helm repo add azad-kube-proxy https://xenitab.github.io/azad-kube-proxy/
 helm repo update
 
 kubectl create namespace azad-kube-proxy
