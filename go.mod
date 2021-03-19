@@ -6,6 +6,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v0.14.2
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v0.8.0
 	github.com/alicebob/miniredis/v2 v2.14.3
+	github.com/bombsimon/logrusr v1.0.0
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/go-logr/logr v0.4.0
 	github.com/go-logr/zapr v0.4.0
@@ -20,6 +21,7 @@ require (
 	github.com/pquerna/cachecontrol v0.0.0-20171018203845-0dec1b30a021 // indirect
 	github.com/prometheus/client_golang v1.9.0
 	github.com/rs/cors v1.7.0
+	github.com/sirupsen/logrus v1.6.0
 	github.com/urfave/cli/v2 v2.3.0
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.16.0
@@ -29,7 +31,7 @@ require (
 	k8s.io/api v0.20.4
 	k8s.io/apimachinery v0.20.4
 	k8s.io/client-go v11.0.0+incompatible
-	k8s.io/klog/v2 v2.8.0
+	k8s.io/klog/v2 v2.8.0 // indirect
 	k8s.io/utils v0.0.0-20210111153108-fddb29f9d009 // indirect
 )
 
