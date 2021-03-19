@@ -3,7 +3,7 @@ module github.com/xenitab/azad-kube-proxy
 go 1.16
 
 require (
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v0.14.1
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v0.14.2
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v0.8.0
 	github.com/alicebob/miniredis/v2 v2.14.3
 	github.com/bombsimon/logrusr v1.0.0
@@ -29,7 +29,7 @@ require (
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
 	gopkg.in/square/go-jose.v2 v2.2.2 // indirect
 	k8s.io/api v0.20.4
-	k8s.io/apimachinery v0.20.4
+	k8s.io/apimachinery v0.20.5
 	k8s.io/client-go v11.0.0+incompatible
 	k8s.io/klog/v2 v2.8.0 // indirect
 	k8s.io/utils v0.0.0-20210111153108-fddb29f9d009 // indirect
