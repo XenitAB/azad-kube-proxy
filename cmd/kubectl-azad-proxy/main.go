@@ -110,8 +110,8 @@ func main() {
 
 	err := app.Run(os.Args)
 	if err != nil {
-		customError := customerrors.To(err)
-		log.Error(customError, "Application returned error", "ErrorType", customError.ErrorType)
+		customErr := customerrors.To(err)
+		log.Error(customErr, "Application returned error", "ErrorType", customErr.ErrorType)
 		os.Exit(1)
 	}
 
