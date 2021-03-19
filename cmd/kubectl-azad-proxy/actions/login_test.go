@@ -163,7 +163,7 @@ func TestLogin(t *testing.T) {
 		},
 		{
 			loginConfig:         cfgErr,
-			expectedErrContains: "Default Azure Credential: ",
+			expectedErrContains: "Auth error: ",
 		},
 	}
 

@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/bombsimon/logrusr"
 	"github.com/go-logr/logr"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"github.com/xenitab/azad-kube-proxy/cmd/kubectl-azad-proxy/actions"
-	"k8s.io/klog/v2/klogr"
+	"github.com/xenitab/azad-kube-proxy/cmd/kubectl-azad-proxy/customerrors"
+	"github.com/xenitab/azad-kube-proxy/pkg/util"
 )
 
 var (
@@ -24,23 +27,36 @@ var (
 
 func main() {
 	// Initiate the logging
-	log := klogr.New().V(0)
+	logrusLog := logrus.New()
+	if util.SliceContains(os.Args, "--debug") || util.SliceContains(os.Args, "-debug") {
+		logrusLog.Level = 10
+	}
+	log := logrusr.NewLogger(logrusLog)
 	ctx := logr.NewContext(context.Background(), log)
 
 	cli.VersionPrinter = func(c *cli.Context) {
 		fmt.Printf("version=%s revision=%s created=%s\n", c.App.Version, Revision, Created)
 	}
 
+	globalFlags := []cli.Flag{
+		&cli.BoolFlag{
+			Name:  "debug",
+			Usage: "Should debugging be enabled?",
+			Value: false,
+		},
+	}
+
 	app := &cli.App{
 		Name:    "kubectl-azad-proxy",
 		Usage:   "kubectl plugin for azad-kube-proxy",
 		Version: Version,
+		Flags:   globalFlags,
 		Commands: []*cli.Command{
 			{
 				Name:    "generate",
 				Aliases: []string{"g"},
 				Usage:   "Generate kubeconfig",
-				Flags:   actions.GenerateFlags(ctx),
+				Flags:   append(actions.GenerateFlags(ctx), globalFlags...),
 				Action: func(c *cli.Context) error {
 					cfg, err := actions.NewGenerateConfig(ctx, c)
 					if err != nil {
@@ -53,7 +69,7 @@ func main() {
 				Name:    "login",
 				Aliases: []string{"l"},
 				Usage:   "Login to Azure AD app and return token",
-				Flags:   actions.LoginFlags(ctx),
+				Flags:   append(actions.LoginFlags(ctx), globalFlags...),
 				Action: func(c *cli.Context) error {
 					cfg, err := actions.NewLoginConfig(ctx, c)
 					if err != nil {
@@ -73,7 +89,7 @@ func main() {
 				Name:    "discover",
 				Aliases: []string{"d"},
 				Usage:   "Discovery for the azad-kube-proxy enabled apps and their configuration",
-				Flags:   actions.DiscoverFlags(ctx),
+				Flags:   append(actions.DiscoverFlags(ctx), globalFlags...),
 				Action: func(c *cli.Context) error {
 					cfg, err := actions.NewDiscoverConfig(ctx, c)
 					if err != nil {
@@ -94,7 +110,8 @@ func main() {
 
 	err := app.Run(os.Args)
 	if err != nil {
-		log.Error(err, "App exited with error")
+		customError := customerrors.To(err)
+		log.Error(customError, "Application returned error", "ErrorType", customError.ErrorType)
 		os.Exit(1)
 	}
 
