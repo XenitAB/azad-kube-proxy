@@ -109,8 +109,8 @@ func TestNewTokens(t *testing.T) {
 	defer deleteFile(t, fakeFileErr)
 
 	_, err = NewTokens(ctx, fakeFileErr, defaultAzureCredentialOptions)
-	if !strings.Contains(err.Error(), "json: cannot unmarshal bool") {
-		t.Errorf("Expected err contain 'json: cannot unmarshal bool' but was: %q", err)
+	if !strings.Contains(err.Error(), "Token cache error: ") {
+		t.Errorf("Expected err contain 'Token cache error: ' but was: %q", err)
 	}
 }
 
@@ -204,7 +204,7 @@ func TestGetToken(t *testing.T) {
 		},
 		{
 			tokens:              realFalseTokens,
-			expectedErrContains: "Default Azure Credential: ",
+			expectedErrContains: "Auth error: ",
 			clusterName:         "realfalse-cluster-1",
 			resource:            resource,
 		},
