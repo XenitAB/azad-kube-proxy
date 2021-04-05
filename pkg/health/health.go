@@ -15,15 +15,22 @@ import (
 // ClientInterface ...
 type ClientInterface interface {
 	Ready(ctx context.Context) (bool, error)
+	Live(ctx context.Context) (bool, error)
+}
+
+// Validator ...
+type Validator interface {
+	Valid(ctx context.Context) bool
 }
 
 // Client ...
 type Client struct {
-	K8sClient k8s.Interface
+	k8sClient k8s.Interface
+	validator Validator
 }
 
 // NewHealthClient ...
-func NewHealthClient(ctx context.Context, config config.Config) (ClientInterface, error) {
+func NewHealthClient(ctx context.Context, config config.Config, validator Validator) (ClientInterface, error) {
 	k8sTLSConfig := k8sclientrest.TLSClientConfig{Insecure: true}
 	if config.KubernetesConfig.ValidateCertificate {
 		k8sTLSConfig = k8sclientrest.TLSClientConfig{
@@ -44,7 +51,8 @@ func NewHealthClient(ctx context.Context, config config.Config) (ClientInterface
 	}
 
 	healthClient := &Client{
-		K8sClient: k8sClient,
+		k8sClient: k8sClient,
+		validator: validator,
 	}
 
 	return healthClient, nil
@@ -56,7 +64,7 @@ func (client *Client) Ready(ctx context.Context) (bool, error) {
 
 	selfSubjectRulesReview := &k8sapiauthorization.SelfSubjectRulesReview{Spec: k8sapiauthorization.SelfSubjectRulesReviewSpec{Namespace: "default"}}
 	createOptions := k8sapimachinerymetav1.CreateOptions{}
-	res, err := client.K8sClient.AuthorizationV1().SelfSubjectRulesReviews().Create(ctx, selfSubjectRulesReview, createOptions)
+	res, err := client.k8sClient.AuthorizationV1().SelfSubjectRulesReviews().Create(ctx, selfSubjectRulesReview, createOptions)
 	if err != nil {
 		return false, err
 	}
@@ -75,4 +83,10 @@ func (client *Client) Ready(ctx context.Context) (bool, error) {
 	}
 
 	return true, nil
+}
+
+// Live ...
+func (client *Client) Live(ctx context.Context) (bool, error) {
+	valid := client.validator.Valid(ctx)
+	return valid, nil
 }

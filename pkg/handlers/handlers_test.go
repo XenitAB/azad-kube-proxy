@@ -659,13 +659,27 @@ func (client *fakeClaimsClient) NewClaims(t *oidc.IDToken) (claims.AzureClaims, 
 	return client.fakeAzureClaims, client.newClaimsFakeError
 }
 
-type fakeHealthClient struct{}
+type fakeHealthClient struct {
+	ready      bool
+	readyError error
+	live       bool
+	liveError  error
+}
 
 func newFakeHealthClient() health.ClientInterface {
-	return &fakeHealthClient{}
+	return &fakeHealthClient{
+		ready:      true,
+		readyError: nil,
+		live:       true,
+		liveError:  nil,
+	}
 }
 
 func (client *fakeHealthClient) Ready(ctx context.Context) (bool, error) {
+	return true, nil
+}
+
+func (client *fakeHealthClient) Live(ctx context.Context) (bool, error) {
 	return true, nil
 }
 

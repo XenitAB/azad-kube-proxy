@@ -66,9 +66,9 @@ func NewHandlersClient(ctx context.Context, config config.Config, cacheClient ca
 // ReadinessHandler ...
 func (client *Client) ReadinessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContext(ctx)
-	ready, err := client.HealthClient.Ready(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		ready, err := client.HealthClient.Ready(ctx)
 		if !ready {
 			log.Error(err, "Ready check failed")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -92,6 +92,17 @@ func (client *Client) LivenessHandler(ctx context.Context) func(http.ResponseWri
 	log := logr.FromContext(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		live, err := client.HealthClient.Live(ctx)
+		if !live {
+			log.Error(err, "Live check failed")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Header().Set("Content-Type", "application/json")
+			if _, err := w.Write([]byte("{\"status\": \"error\"}")); err != nil {
+				log.Error(err, "Could not write response data")
+			}
+			return
+		}
+
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
 		if _, err := w.Write([]byte("{\"status\": \"ok\"}")); err != nil {

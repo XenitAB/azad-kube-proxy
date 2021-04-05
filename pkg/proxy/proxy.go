@@ -72,7 +72,7 @@ func NewProxyClient(ctx context.Context, config config.Config) (ClientInterface,
 		return nil, err
 	}
 
-	healthClient, err := health.NewHealthClient(ctx, config)
+	healthClient, err := health.NewHealthClient(ctx, config, azureClient)
 	if err != nil {
 		return nil, err
 	}

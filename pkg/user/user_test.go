@@ -25,6 +25,11 @@ func (client *fakeAzureClient) StartSyncGroups(ctx context.Context, syncInterval
 	return nil, nil, nil
 }
 
+// Valid ...
+func (client *fakeAzureClient) Valid(ctx context.Context) bool {
+	return true
+}
+
 func TestGetUser(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 	config := config.Config{}
