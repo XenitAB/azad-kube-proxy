@@ -45,7 +45,8 @@ func TestNewHealthClient(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		_, err := NewHealthClient(ctx, c.config)
+		validator := &fakeValidator{}
+		_, err := NewHealthClient(ctx, c.config, validator)
 		if err != nil && c.expectedErrContains == "" {
 			t.Errorf("Expected err to be nil: %q", err)
 		}
@@ -66,10 +67,10 @@ func TestReady(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 
 	fakeClient := &Client{
-		K8sClient: k8sfake.NewSimpleClientset(),
+		k8sClient: k8sfake.NewSimpleClientset(),
 	}
 
-	fakeClient.K8sClient.(*k8sfake.Clientset).Fake.PrependReactor("create", "selfsubjectrulesreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+	fakeClient.k8sClient.(*k8sfake.Clientset).Fake.PrependReactor("create", "selfsubjectrulesreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 		object := &k8sapiauthorization.SelfSubjectRulesReview{
 			Status: k8sapiauthorization.SubjectRulesReviewStatus{
 				ResourceRules: []k8sapiauthorization.ResourceRule{
@@ -98,7 +99,7 @@ func TestReady(t *testing.T) {
 		{
 			clientFunc: func(c *Client) ClientInterface {
 				return &Client{
-					K8sClient: k8sfake.NewSimpleClientset(),
+					k8sClient: k8sfake.NewSimpleClientset(),
 				}
 			},
 			expectedErrContains: "Impersonate rule not found",
@@ -128,4 +129,38 @@ func TestReady(t *testing.T) {
 			t.Errorf("Expected ready to be '%t' but was: %t", c.expectedReady, ready)
 		}
 	}
+}
+
+func TestLive(t *testing.T) {
+	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+
+	validator := &fakeValidator{}
+	fakeConfig := config.Config{
+		KubernetesConfig: config.KubernetesConfig{
+			ValidateCertificate: true,
+			URL:                 &url.URL{Scheme: "https", Host: "fake-url"},
+			Token:               "fake-token",
+			RootCAString:        "fake-ca-string",
+		},
+	}
+	client, err := NewHealthClient(ctx, fakeConfig, validator)
+	if err != nil {
+		t.Errorf("Expected err to be nil: %q", err)
+	}
+
+	live, err := client.Live(ctx)
+	if err != nil {
+		t.Errorf("Expected err to be nil: %q", err)
+	}
+
+	if !live {
+		t.Errorf("Expected live to be 'true': %T", live)
+	}
+}
+
+type fakeValidator struct{}
+
+// Valid ...
+func (client *fakeValidator) Valid(ctx context.Context) bool {
+	return true
 }

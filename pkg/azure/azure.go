@@ -22,6 +22,7 @@ type userInterface interface {
 type ClientInterface interface {
 	GetUserGroups(ctx context.Context, objectID string, userType models.UserType) ([]models.Group, error)
 	StartSyncGroups(ctx context.Context, syncInterval time.Duration) (*time.Ticker, chan bool, error)
+	Valid(ctx context.Context) bool
 }
 
 // Client ...
@@ -34,6 +35,7 @@ type Client struct {
 	groups               *groups
 	user                 *user
 	servicePrincipalUser *servicePrincipalUser
+	authorizer           hamiltonAuth.Authorizer
 }
 
 // NewAzureClient returns an Azure client or error
@@ -73,7 +75,30 @@ func NewAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graph
 		user:                 newUser(ctx, cacheClient, usersClient),
 		servicePrincipalUser: newServicePrincipalUser(ctx, cacheClient, servicePrincipalsClient),
 		groups:               newGroups(ctx, cacheClient, groupsClient, graphFilter),
+		authorizer:           authorizer,
 	}, nil
+}
+
+func (client *Client) Valid(ctx context.Context) bool {
+	log := logr.FromContext(ctx)
+	token, err := client.authorizer.Token()
+
+	if err != nil {
+		log.Error(err, "Unable to get token from authorizer")
+		return false
+	}
+
+	if !token.Valid() {
+		log.Error(fmt.Errorf("Token not valid"), "Token not valid", "access_token", token.AccessToken)
+		return false
+	}
+
+	if time.Now().After(token.Expiry) {
+		log.Error(fmt.Errorf("Token expired"), "Token expired", "expiry", token.Expiry)
+		return false
+	}
+
+	return true
 }
 
 // GetUserGroups ...
