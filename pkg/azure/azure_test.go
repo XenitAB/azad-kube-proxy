@@ -80,6 +80,41 @@ func TestNewAzureClient(t *testing.T) {
 	}
 }
 
+func TestValid(t *testing.T) {
+	clientID := getEnvOrSkip(t, "CLIENT_ID")
+	clientSecret := getEnvOrSkip(t, "CLIENT_SECRET")
+	tenantID := getEnvOrSkip(t, "TENANT_ID")
+	graphFilter := ""
+	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+
+	memCache, err := cache.NewCache(ctx, models.MemoryCacheEngine, config.Config{})
+	if err != nil {
+		t.Errorf("Expected err to be nil but it was %q", err)
+	}
+
+	azureClient, err := NewAzureClient(ctx, clientID, clientSecret, tenantID, graphFilter, memCache)
+	if err != nil {
+		t.Errorf("Expected err to be nil but it was %q", err)
+	}
+
+	cases := []struct {
+		client      *Client
+		expectedRes bool
+	}{
+		{
+			client:      azureClient,
+			expectedRes: true,
+		},
+	}
+
+	for _, c := range cases {
+		valid := c.client.Valid(ctx)
+		if !valid {
+			t.Errorf("Expected valid to be %T but it was %T", c.expectedRes, valid)
+		}
+	}
+}
+
 func TestGetUserGroups(t *testing.T) {
 	clientID := getEnvOrSkip(t, "CLIENT_ID")
 	clientSecret := getEnvOrSkip(t, "CLIENT_SECRET")
