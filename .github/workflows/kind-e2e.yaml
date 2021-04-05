@@ -45,7 +45,7 @@ jobs:
       - name: Set up KinD
         uses: engineerd/setup-kind@v0.5.0
       - name: Set up helm
-        uses: azure/setup-helm@v1
+        uses: azure/setup-helm@v1.1
       - name: Build and load (current arch)
         run: |
           docker buildx build --load -t ${{ env.NAME }}:${{ steps.prep.outputs.VERSION }} .
