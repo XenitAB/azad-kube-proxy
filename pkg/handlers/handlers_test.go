@@ -38,7 +38,7 @@ func TestNewHandlersClient(t *testing.T) {
 	fakeClaimsClient := newFakeClaimsClient(nil, nil, claims.AzureClaims{}, &oidc.IDTokenVerifier{})
 	fakeCacheClient := newFakeCacheClient("", "", nil, false, nil)
 	fakeUserClient := newFakeUserClient("", "", nil, nil)
-	fakeHealthClient := newFakeHealthClient()
+	fakeHealthClient := newFakeHealthClient(true, nil, true, nil)
 	fakeURL, err := url.Parse("https://fake-url")
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
@@ -87,27 +87,45 @@ func TestReadinessHandler(t *testing.T) {
 	fakeCacheClient := newFakeCacheClient("", "", nil, true, nil)
 	fakeUserClient := newFakeUserClient("", "", nil, nil)
 	claimsClient := claims.NewClaimsClient()
-	fakeHealthClient := newFakeHealthClient()
-	proxyHandlers, err := NewHandlersClient(ctx, cfg, fakeCacheClient, fakeUserClient, claimsClient, fakeHealthClient)
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
+
+	cases := []struct {
+		healthClient    health.ClientInterface
+		expectedString  string
+		expectedResCode int
+	}{
+		{
+			healthClient:    newFakeHealthClient(true, nil, true, nil),
+			expectedString:  `{"status": "ok"}`,
+			expectedResCode: http.StatusOK,
+		},
+		{
+			healthClient:    newFakeHealthClient(false, nil, false, nil),
+			expectedString:  `{"status": "error"}`,
+			expectedResCode: http.StatusInternalServerError,
+		},
 	}
 
-	rr := httptest.NewRecorder()
-	router := mux.NewRouter()
-	router.HandleFunc("/readyz", proxyHandlers.ReadinessHandler(ctx)).Methods("GET")
-	router.ServeHTTP(rr, req)
+	for _, c := range cases {
+		proxyHandlers, err := NewHandlersClient(ctx, cfg, fakeCacheClient, fakeUserClient, claimsClient, c.healthClient)
+		if err != nil {
+			t.Errorf("Expected err to be nil but it was %q", err)
+		}
 
-	// Check the status code is what we expect.
-	if rr.Code != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
-	}
+		rr := httptest.NewRecorder()
+		router := mux.NewRouter()
+		router.HandleFunc("/readyz", proxyHandlers.ReadinessHandler(ctx)).Methods("GET")
+		router.ServeHTTP(rr, req)
 
-	// Check the response body is what we expect.
-	expected := `{"status": "ok"}`
-	if rr.Body.String() != expected {
-		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), expected)
+		// Check the status code is what we expect.
+		if rr.Code != c.expectedResCode {
+			t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, c.expectedResCode)
+		}
+
+		// Check the response body is what we expect.
+		if rr.Body.String() != c.expectedString {
+			t.Errorf("handler returned unexpected body: got %v want %v",
+				rr.Body.String(), c.expectedString)
+		}
 	}
 }
 
@@ -135,27 +153,45 @@ func TestLivenessHandler(t *testing.T) {
 	fakeCacheClient := newFakeCacheClient("", "", nil, true, nil)
 	fakeUserClient := newFakeUserClient("", "", nil, nil)
 	claimsClient := claims.NewClaimsClient()
-	fakeHealthClient := newFakeHealthClient()
-	proxyHandlers, err := NewHandlersClient(ctx, cfg, fakeCacheClient, fakeUserClient, claimsClient, fakeHealthClient)
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
+
+	cases := []struct {
+		healthClient    health.ClientInterface
+		expectedString  string
+		expectedResCode int
+	}{
+		{
+			healthClient:    newFakeHealthClient(true, nil, true, nil),
+			expectedString:  `{"status": "ok"}`,
+			expectedResCode: http.StatusOK,
+		},
+		{
+			healthClient:    newFakeHealthClient(false, nil, false, nil),
+			expectedString:  `{"status": "error"}`,
+			expectedResCode: http.StatusInternalServerError,
+		},
 	}
 
-	rr := httptest.NewRecorder()
-	router := mux.NewRouter()
-	router.HandleFunc("/healthz", proxyHandlers.LivenessHandler(ctx)).Methods("GET")
-	router.ServeHTTP(rr, req)
+	for _, c := range cases {
+		proxyHandlers, err := NewHandlersClient(ctx, cfg, fakeCacheClient, fakeUserClient, claimsClient, c.healthClient)
+		if err != nil {
+			t.Errorf("Expected err to be nil but it was %q", err)
+		}
 
-	// Check the status code is what we expect.
-	if rr.Code != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
-	}
+		rr := httptest.NewRecorder()
+		router := mux.NewRouter()
+		router.HandleFunc("/healthz", proxyHandlers.LivenessHandler(ctx)).Methods("GET")
+		router.ServeHTTP(rr, req)
 
-	// Check the response body is what we expect.
-	expected := `{"status": "ok"}`
-	if rr.Body.String() != expected {
-		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), expected)
+		// Check the status code is what we expect.
+		if rr.Code != c.expectedResCode {
+			t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, c.expectedResCode)
+		}
+
+		// Check the response body is what we expect.
+		if rr.Body.String() != c.expectedString {
+			t.Errorf("handler returned unexpected body: got %v want %v",
+				rr.Body.String(), c.expectedString)
+		}
 	}
 }
 
@@ -181,7 +217,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 	claimsClient := claims.NewClaimsClient()
 	fakeCacheClient := newFakeCacheClient("", "", nil, false, nil)
 	fakeUserClient := newFakeUserClient("", "", nil, nil)
-	fakeHealthClient := newFakeHealthClient()
+	fakeHealthClient := newFakeHealthClient(true, nil, true, nil)
 
 	fakeBackend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("{\"fake\": true}"))
@@ -666,21 +702,21 @@ type fakeHealthClient struct {
 	liveError  error
 }
 
-func newFakeHealthClient() health.ClientInterface {
+func newFakeHealthClient(ready bool, readyError error, live bool, liveError error) health.ClientInterface {
 	return &fakeHealthClient{
-		ready:      true,
-		readyError: nil,
-		live:       true,
-		liveError:  nil,
+		ready,
+		readyError,
+		live,
+		liveError,
 	}
 }
 
 func (client *fakeHealthClient) Ready(ctx context.Context) (bool, error) {
-	return true, nil
+	return client.ready, client.readyError
 }
 
 func (client *fakeHealthClient) Live(ctx context.Context) (bool, error) {
-	return true, nil
+	return client.live, client.liveError
 }
 
 func (client *fakeClaimsClient) GetOIDCVerifier(ctx context.Context, tenantID, clientID string) (*oidc.IDTokenVerifier, error) {
