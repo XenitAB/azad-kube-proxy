@@ -25,12 +25,12 @@ type Validator interface {
 
 // Client ...
 type Client struct {
-	k8sClient k8s.Interface
-	validator Validator
+	k8sClient         k8s.Interface
+	livenessValidator Validator
 }
 
 // NewHealthClient ...
-func NewHealthClient(ctx context.Context, config config.Config, validator Validator) (ClientInterface, error) {
+func NewHealthClient(ctx context.Context, config config.Config, livenessValidator Validator) (ClientInterface, error) {
 	k8sTLSConfig := k8sclientrest.TLSClientConfig{Insecure: true}
 	if config.KubernetesConfig.ValidateCertificate {
 		k8sTLSConfig = k8sclientrest.TLSClientConfig{
@@ -51,8 +51,8 @@ func NewHealthClient(ctx context.Context, config config.Config, validator Valida
 	}
 
 	healthClient := &Client{
-		k8sClient: k8sClient,
-		validator: validator,
+		k8sClient:         k8sClient,
+		livenessValidator: livenessValidator,
 	}
 
 	return healthClient, nil
@@ -87,6 +87,6 @@ func (client *Client) Ready(ctx context.Context) (bool, error) {
 
 // Live ...
 func (client *Client) Live(ctx context.Context) (bool, error) {
-	valid := client.validator.Valid(ctx)
+	valid := client.livenessValidator.Valid(ctx)
 	return valid, nil
 }
