@@ -10,7 +10,6 @@ on:
 
 env:
   NAME: "azad-kube-proxy"
-  GO_VERSION: "1.16"
 
 jobs:
   end-to-end:
@@ -21,7 +20,7 @@ jobs:
       - name: Setup go
         uses: actions/setup-go@v2
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: "^1.16.2"
       - name: Prepare
         id: prep
         run: |
