@@ -2,7 +2,6 @@ package azure
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -84,20 +83,18 @@ func (client *Client) Valid(ctx context.Context) bool {
 	log := logr.FromContext(ctx)
 	token, err := client.authorizer.Token()
 
-	log.Info("Debug", "token", token.AccessToken)
-
 	if err != nil {
 		log.Error(err, "Unable to get token from authorizer")
 		return false
 	}
 
 	if !token.Valid() {
-		log.Error(errors.New("Token not valid"), "Token not valid", "access_token", token.AccessToken)
+		log.Error(fmt.Errorf("Token not valid"), "Token not valid", "access_token", token.AccessToken)
 		return false
 	}
 
 	if time.Now().After(token.Expiry) {
-		log.Error(errors.New("Token expired"), "Token expired", "expiry", token.Expiry)
+		log.Error(fmt.Errorf("Token expired"), "Token expired", "expiry", token.Expiry)
 		return false
 	}
 
