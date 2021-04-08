@@ -10,7 +10,7 @@ require (
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/go-logr/logr v0.4.0
 	github.com/go-logr/zapr v0.4.0
-	github.com/go-playground/validator/v10 v10.4.1
+	github.com/go-playground/validator/v10 v10.5.0
 	github.com/go-redis/redis/v8 v8.8.0
 	github.com/google/go-cmp v0.5.5
 	github.com/gorilla/mux v1.8.0
