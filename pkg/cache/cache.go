@@ -3,7 +3,6 @@ package cache
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
@@ -19,11 +18,13 @@ type ClientInterface interface {
 
 // NewCache ...
 func NewCache(ctx context.Context, cacheEngine models.CacheEngine, config config.Config) (ClientInterface, error) {
+	ttl := 4 * config.GroupSyncInterval
+
 	switch cacheEngine {
 	case models.RedisCacheEngine:
-		return NewRedisCache(ctx, config.RedisURI, 5*time.Minute)
+		return NewRedisCache(ctx, config.RedisURI, ttl)
 	case models.MemoryCacheEngine:
-		return NewMemoryCache(5*time.Minute, 10*time.Minute)
+		return NewMemoryCache(ttl, 2*ttl)
 	default:
 		return nil, fmt.Errorf("Unknown cache engine: %s", cacheEngine)
 	}
