@@ -24,6 +24,7 @@ func NewCache(ctx context.Context, cacheEngine models.CacheEngine, config config
 	case models.RedisCacheEngine:
 		return NewRedisCache(ctx, config.RedisURI, ttl)
 	case models.MemoryCacheEngine:
+		// 2 * ttl for cleanupInterval - no specific reason. (defaultExpiration time.Duration, cleanupInterval time.Duration)
 		return NewMemoryCache(ttl, 2*ttl)
 	default:
 		return nil, fmt.Errorf("Unknown cache engine: %s", cacheEngine)
