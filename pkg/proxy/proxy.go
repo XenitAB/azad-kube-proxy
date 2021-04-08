@@ -104,7 +104,7 @@ func (client *Client) Start(ctx context.Context) error {
 
 	// Initiate group sync
 	log.Info("Starting group sync")
-	syncTicker, syncChan, err := client.AzureClient.StartSyncGroups(ctx, 5*time.Minute)
+	syncTicker, syncChan, err := client.AzureClient.StartSyncGroups(ctx, client.Config.GroupSyncInterval)
 	if err != nil {
 		return err
 	}

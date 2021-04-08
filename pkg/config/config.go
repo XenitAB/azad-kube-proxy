@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/urfave/cli/v2"
@@ -24,6 +25,7 @@ type Config struct {
 	RedisURI             string `validate:"uri"`
 	AzureADGroupPrefix   string
 	AzureADMaxGroupCount int `validate:"min=1,max=1000"`
+	GroupSyncInterval    time.Duration
 	GroupIdentifier      models.GroupIdentifier
 	KubernetesConfig     KubernetesConfig
 	Dashboard            models.Dashboard
@@ -183,6 +185,13 @@ func Flags(ctx context.Context) []cli.Flag {
 			EnvVars:  []string{"AZURE_AD_MAX_GROUP_COUNT"},
 			Value:    50,
 		},
+		&cli.IntFlag{
+			Name:     "group-sync-interval",
+			Usage:    "The interval groups will be synchronized (in minutes)",
+			Required: false,
+			EnvVars:  []string{"GROUP_SYNC_INTERVAL"},
+			Value:    5,
+		},
 		&cli.StringFlag{
 			Name:     "group-identifier",
 			Usage:    "What group identifier to use",
@@ -330,6 +339,7 @@ func NewConfig(ctx context.Context, cli *cli.Context) (Config, error) {
 		RedisURI:             cli.String("redis-uri"),
 		AzureADGroupPrefix:   cli.String("azure-ad-group-prefix"),
 		AzureADMaxGroupCount: cli.Int("azure-ad-max-group-count"),
+		GroupSyncInterval:    time.Duration(cli.Int("group-sync-interval")) * time.Minute,
 		GroupIdentifier:      groupIdentifier,
 		KubernetesConfig: KubernetesConfig{
 			URL:                 kubernetesAPIUrl,
