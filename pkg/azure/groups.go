@@ -46,18 +46,12 @@ func (groups *groups) syncAzureADGroupsCache(ctx context.Context, syncReason str
 	}
 
 	for _, group := range *groupsResponse {
-		_, found, err := groups.cacheClient.GetGroup(ctx, *group.ID)
+		err := groups.cacheClient.SetGroup(ctx, *group.ID, models.Group{
+			Name:     *group.DisplayName,
+			ObjectID: *group.ID,
+		})
 		if err != nil {
 			return err
-		}
-		if !found {
-			err := groups.cacheClient.SetGroup(ctx, *group.ID, models.Group{
-				Name:     *group.DisplayName,
-				ObjectID: *group.ID,
-			})
-			if err != nil {
-				return err
-			}
 		}
 	}
 
