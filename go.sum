@@ -799,6 +799,7 @@ honnef.co/go/tools v0.0.1-2020.1.3/go.mod h1:X/FiERA/W4tHapMX5mGpAtMSVEeEUOyHaw9
 k8s.io/api v0.20.2/go.mod h1:d7n6Ehyzx+S+cE3VhTGfVNNqtGc/oL9DCdYYahlurV8=
 k8s.io/api v0.20.5 h1:zsMTffV0Le2EiI0aKvlTHEnXGxk1HiqGRhJcCPiI7JI=
 k8s.io/api v0.20.5/go.mod h1:FQjAceXnVaWDeov2YUWhOb6Yt+5UjErkp6UO3nczO1Y=
+k8s.io/api v0.21.0/go.mod h1:+YbrhBBGgsxbF6o6Kj4KJPJnBmAKuXDeS3E18bgHNVU=
 k8s.io/apimachinery v0.20.2/go.mod h1:WlLqWAHZGg07AeltaI0MV5uk1Omp8xaN0JGLY6gkRpU=
 k8s.io/apimachinery v0.20.5/go.mod h1:WlLqWAHZGg07AeltaI0MV5uk1Omp8xaN0JGLY6gkRpU=
 k8s.io/apimachinery v0.21.0 h1:3Fx+41if+IRavNcKOz09FwEXDBG6ORh6iMsTSelhkMA=
