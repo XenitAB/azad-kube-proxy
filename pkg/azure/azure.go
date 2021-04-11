@@ -8,8 +8,8 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/manicminer/hamilton/auth"
 	hamiltonAuth "github.com/manicminer/hamilton/auth"
-	hamiltonClients "github.com/manicminer/hamilton/clients"
 	hamiltonEnvironments "github.com/manicminer/hamilton/environments"
+	hamiltonMsgraph "github.com/manicminer/hamilton/msgraph"
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
@@ -53,13 +53,13 @@ func NewAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graph
 		return nil, err
 	}
 
-	usersClient := hamiltonClients.NewUsersClient(tenantID)
+	usersClient := hamiltonMsgraph.NewUsersClient(tenantID)
 	usersClient.BaseClient.Authorizer = authorizer
 
-	servicePrincipalsClient := hamiltonClients.NewServicePrincipalsClient(tenantID)
+	servicePrincipalsClient := hamiltonMsgraph.NewServicePrincipalsClient(tenantID)
 	servicePrincipalsClient.BaseClient.Authorizer = authorizer
 
-	groupsClient := hamiltonClients.NewGroupsClient(tenantID)
+	groupsClient := hamiltonMsgraph.NewGroupsClient(tenantID)
 	groupsClient.BaseClient.Authorizer = authorizer
 
 	if graphFilter != "" {

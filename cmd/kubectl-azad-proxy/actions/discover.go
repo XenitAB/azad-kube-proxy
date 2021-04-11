@@ -7,9 +7,8 @@ import (
 	"strings"
 
 	hamiltonAuth "github.com/manicminer/hamilton/auth"
-	hamiltonClients "github.com/manicminer/hamilton/clients"
 	hamiltonEnvironments "github.com/manicminer/hamilton/environments"
-	hamiltonModels "github.com/manicminer/hamilton/models"
+	hamiltonMsgraph "github.com/manicminer/hamilton/msgraph"
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli/v2"
 )
@@ -152,7 +151,7 @@ func Discover(ctx context.Context, cfg DiscoverConfig) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	appsClient := hamiltonClients.NewApplicationsClient(cfg.tenantID)
+	appsClient := hamiltonMsgraph.NewApplicationsClient(cfg.tenantID)
 	appsClient.BaseClient.Authorizer = authorizer
 
 	graphFilter := fmt.Sprintf("tags/any(s: s eq '%s')", azureADAppTag)
@@ -180,7 +179,7 @@ func Discover(ctx context.Context, cfg DiscoverConfig) (string, error) {
 	return output, nil
 }
 
-func getDiscoverData(clusterApps []hamiltonModels.Application) []discover {
+func getDiscoverData(clusterApps []hamiltonMsgraph.Application) []discover {
 	discoverData := []discover{}
 
 	for _, clusterApp := range clusterApps {

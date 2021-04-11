@@ -4,17 +4,17 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
-	hamiltonClients "github.com/manicminer/hamilton/clients"
+	hamiltonMsgraph "github.com/manicminer/hamilton/msgraph"
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
 
 type user struct {
 	cacheClient cache.ClientInterface
-	usersClient *hamiltonClients.UsersClient
+	usersClient *hamiltonMsgraph.UsersClient
 }
 
-func newUser(ctx context.Context, cacheClient cache.ClientInterface, usersClient *hamiltonClients.UsersClient) *user {
+func newUser(ctx context.Context, cacheClient cache.ClientInterface, usersClient *hamiltonMsgraph.UsersClient) *user {
 	return &user{
 		cacheClient: cacheClient,
 		usersClient: usersClient,
