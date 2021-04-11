@@ -4,19 +4,18 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
-	hamiltonClients "github.com/manicminer/hamilton/clients"
-	hamiltonModels "github.com/manicminer/hamilton/models"
+	hamiltonMsgraph "github.com/manicminer/hamilton/msgraph"
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
 
 type groups struct {
 	cacheClient  cache.ClientInterface
-	groupsClient *hamiltonClients.GroupsClient
+	groupsClient *hamiltonMsgraph.GroupsClient
 	graphFilter  string
 }
 
-func newGroups(ctx context.Context, cacheClient cache.ClientInterface, groupsClient *hamiltonClients.GroupsClient, graphFilter string) *groups {
+func newGroups(ctx context.Context, cacheClient cache.ClientInterface, groupsClient *hamiltonMsgraph.GroupsClient, graphFilter string) *groups {
 	return &groups{
 		cacheClient:  cacheClient,
 		groupsClient: groupsClient,
@@ -24,7 +23,7 @@ func newGroups(ctx context.Context, cacheClient cache.ClientInterface, groupsCli
 	}
 }
 
-func (groups *groups) getAllGroups(ctx context.Context) (*[]hamiltonModels.Group, error) {
+func (groups *groups) getAllGroups(ctx context.Context) (*[]hamiltonMsgraph.Group, error) {
 	log := logr.FromContext(ctx)
 
 	groupsResponse, responseCode, err := groups.groupsClient.List(ctx, groups.graphFilter)

@@ -4,17 +4,17 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
-	hamiltonClients "github.com/manicminer/hamilton/clients"
+	hamiltonMsgraph "github.com/manicminer/hamilton/msgraph"
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
 
 type servicePrincipalUser struct {
 	cacheClient             cache.ClientInterface
-	servicePrincipalsClient *hamiltonClients.ServicePrincipalsClient
+	servicePrincipalsClient *hamiltonMsgraph.ServicePrincipalsClient
 }
 
-func newServicePrincipalUser(ctx context.Context, cacheClient cache.ClientInterface, servicePrincipalsClient *hamiltonClients.ServicePrincipalsClient) *servicePrincipalUser {
+func newServicePrincipalUser(ctx context.Context, cacheClient cache.ClientInterface, servicePrincipalsClient *hamiltonMsgraph.ServicePrincipalsClient) *servicePrincipalUser {
 	return &servicePrincipalUser{
 		cacheClient:             cacheClient,
 		servicePrincipalsClient: servicePrincipalsClient,

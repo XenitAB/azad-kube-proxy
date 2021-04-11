@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
-	hamiltonModels "github.com/manicminer/hamilton/models"
+	hamiltonMsgraph "github.com/manicminer/hamilton/msgraph"
 	"github.com/urfave/cli/v2"
 )
 
@@ -197,11 +197,11 @@ func TestDiscover(t *testing.T) {
 
 func TestGetDiscoverData(t *testing.T) {
 	cases := []struct {
-		clusterApps    []hamiltonModels.Application
+		clusterApps    []hamiltonMsgraph.Application
 		expectedOutput []discover
 	}{
 		{
-			clusterApps: []hamiltonModels.Application{
+			clusterApps: []hamiltonMsgraph.Application{
 				{
 					DisplayName:    toStringPtr("fake"),
 					IdentifierUris: toStringArrayPtr([]string{"https://fake"}),
@@ -217,7 +217,7 @@ func TestGetDiscoverData(t *testing.T) {
 			},
 		},
 		{
-			clusterApps: []hamiltonModels.Application{
+			clusterApps: []hamiltonMsgraph.Application{
 				{
 					DisplayName:    toStringPtr("fake"),
 					IdentifierUris: toStringArrayPtr([]string{"https://fake"}),
@@ -243,7 +243,7 @@ func TestGetDiscoverData(t *testing.T) {
 			},
 		},
 		{
-			clusterApps: []hamiltonModels.Application{
+			clusterApps: []hamiltonMsgraph.Application{
 				{
 					DisplayName:    toStringPtr("fake"),
 					IdentifierUris: toStringArrayPtr([]string{"https://fake"}),
@@ -259,7 +259,7 @@ func TestGetDiscoverData(t *testing.T) {
 			},
 		},
 		{
-			clusterApps: []hamiltonModels.Application{
+			clusterApps: []hamiltonMsgraph.Application{
 				{
 					DisplayName:    toStringPtr("fake"),
 					IdentifierUris: toStringArrayPtr([]string{"https://fake"}),
@@ -285,7 +285,7 @@ func TestGetDiscoverData(t *testing.T) {
 			},
 		},
 		{
-			clusterApps: []hamiltonModels.Application{
+			clusterApps: []hamiltonMsgraph.Application{
 				{
 					DisplayName:    toStringPtr("fake"),
 					IdentifierUris: toStringArrayPtr([]string{"https://fake"}),
