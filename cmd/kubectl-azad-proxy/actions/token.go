@@ -23,6 +23,22 @@ type Token struct {
 	Name                string    `json:"name"`
 }
 
+func (t *Token) expired(expiryDelta time.Duration, timeNow time.Time) bool {
+	if t.ExpirationTimestamp.IsZero() {
+		return false
+	}
+
+	return t.ExpirationTimestamp.Round(0).Add(-expiryDelta).Before(timeNow)
+}
+
+// Valid reports whether t is non-nil, has an AccessToken, and is not expired.
+func (t *Token) Valid() bool {
+	expiryDelta := 10 * time.Second
+	timeNow := time.Now
+
+	return t != nil && t.Token != "" && !t.expired(expiryDelta, timeNow())
+}
+
 // TokensInterface is the interface for the Tokens struct
 type TokensInterface interface {
 	GetPath() string
@@ -88,12 +104,16 @@ func (t Tokens) GetToken(ctx context.Context, name string, resource string) (Tok
 
 	generateNewToken := true
 	if found {
-		if token.ExpirationTimestamp.After(time.Now().Add(-5 * time.Minute)) {
+		log.V(1).Info("Existing token found")
+
+		if token.Valid() {
+			log.V(1).Info("Token valid, no need to request new one")
 			generateNewToken = false
 		}
 	}
 
 	if generateNewToken {
+		log.V(1).Info("New token will be requested")
 		azureToken, err := getAccessToken(ctx, resource, t.defaultAzureCredentialOptions)
 		if err != nil {
 			log.V(1).Info("Unable to get access token", "error", err.Error(), "resource", resource)

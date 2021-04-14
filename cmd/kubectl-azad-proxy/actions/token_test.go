@@ -240,6 +240,113 @@ func TestGetToken(t *testing.T) {
 	}
 }
 
+func TestTokenExpired(t *testing.T) {
+	cases := []struct {
+		expiryDelta         time.Duration
+		timeNow             time.Time
+		expirationTimestamp time.Time
+		expired             bool
+	}{
+		{
+			expiryDelta:         10 * time.Second,
+			timeNow:             time.Now(),
+			expirationTimestamp: time.Now().Add(1 * time.Minute),
+			expired:             false,
+		},
+		{
+			expiryDelta:         10 * time.Second,
+			timeNow:             time.Now(),
+			expirationTimestamp: time.Now().Add(-1 * time.Minute),
+			expired:             true,
+		},
+		{
+			expiryDelta:         10 * time.Second,
+			timeNow:             time.Now(),
+			expirationTimestamp: time.Now().Add(60 * time.Minute),
+			expired:             false,
+		},
+		{
+			expiryDelta:         10 * time.Second,
+			timeNow:             time.Now(),
+			expirationTimestamp: time.Now().Add(-60 * time.Minute),
+			expired:             true,
+		},
+		{
+			expiryDelta:         10 * time.Second,
+			timeNow:             time.Now(),
+			expirationTimestamp: time.Now().Add(10 * time.Second),
+			expired:             false,
+		},
+		{
+			expiryDelta:         10 * time.Second,
+			timeNow:             time.Now(),
+			expirationTimestamp: time.Now().Add(-10 * time.Second),
+			expired:             true,
+		},
+		{
+			expiryDelta:         10 * time.Second,
+			timeNow:             time.Now(),
+			expirationTimestamp: time.Now().Add(9 * time.Second),
+			expired:             true,
+		},
+		{
+			expiryDelta:         10 * time.Second,
+			timeNow:             time.Now(),
+			expirationTimestamp: time.Now().Add(-9 * time.Second),
+			expired:             true,
+		},
+	}
+
+	for idx, c := range cases {
+		token := Token{
+			Token:               "fake-token",
+			ExpirationTimestamp: c.expirationTimestamp,
+		}
+
+		if token.expired(c.expiryDelta, c.timeNow) != c.expired {
+			t.Errorf("Expected iteration %d of token.expired() to be '%t'", idx+1, c.expired)
+		}
+	}
+}
+
+func TestTokenValid(t *testing.T) {
+	cases := []struct {
+		token *Token
+		valid bool
+	}{
+		{
+			token: &Token{
+				Token:               "fake-token",
+				ExpirationTimestamp: time.Now().Add(1 * time.Minute),
+			},
+			valid: true,
+		},
+		{
+			token: &Token{
+				Token:               "fake-token",
+				ExpirationTimestamp: time.Now().Add(-1 * time.Minute),
+			},
+			valid: false,
+		},
+		{
+			token: &Token{
+				ExpirationTimestamp: time.Now().Add(1 * time.Minute),
+			},
+			valid: false,
+		},
+		{
+			token: nil,
+			valid: false,
+		},
+	}
+
+	for idx, c := range cases {
+		if c.token.Valid() != c.valid {
+			t.Errorf("Expected iteration %d of token.Valid() to be '%t'", idx+1, c.valid)
+		}
+	}
+}
+
 func tempChangeEnv(key, value string) func() {
 	oldEnv := os.Getenv(key)
 	os.Setenv(key, value)
