@@ -97,7 +97,7 @@ func (t Tokens) GetToken(ctx context.Context, name string, resource string) (Tok
 		azureToken, err := getAccessToken(ctx, resource, t.defaultAzureCredentialOptions)
 		if err != nil {
 			log.V(1).Info("Unable to get access token", "error", err.Error(), "resource", resource)
-			return Token{}, customerrors.New(customerrors.ErrorTypeAuth, err)
+			return Token{}, customerrors.New(customerrors.ErrorTypeAuthentication, err)
 		}
 
 		token = Token{
@@ -109,7 +109,7 @@ func (t Tokens) GetToken(ctx context.Context, name string, resource string) (Tok
 
 		err = t.SetToken(ctx, name, token)
 		if err != nil {
-			return Token{}, customerrors.New(customerrors.ErrorTypeAuth, err)
+			return Token{}, customerrors.New(customerrors.ErrorTypeAuthentication, err)
 		}
 
 		return token, nil

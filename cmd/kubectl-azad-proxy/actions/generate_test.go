@@ -158,7 +158,7 @@ func TestGenerate(t *testing.T) {
 		},
 		{
 			generateConfig:      cfg,
-			expectedErrContains: "but overwrite is false",
+			expectedErrContains: "Overwrite config error:",
 		},
 		{
 			generateConfig: cfg,
@@ -168,7 +168,7 @@ func TestGenerate(t *testing.T) {
 				cfg.overwrite = true
 				return cfg
 			},
-			expectedErrContains: "connect: connection refused",
+			expectedErrContains: "CA certificate error:",
 		},
 	}
 
