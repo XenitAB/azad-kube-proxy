@@ -21,12 +21,28 @@ func TestError(t *testing.T) {
 			errorContains: "Unknown",
 		},
 		{
-			customError:   New(ErrorTypeAuth, errors.New("Dummy")),
-			errorContains: "Auth error: ",
+			customError:   New(ErrorTypeAuthentication, errors.New("Dummy")),
+			errorContains: "Authentication error: ",
+		},
+		{
+			customError:   New(ErrorTypeAuthorization, errors.New("Dummy")),
+			errorContains: "Authorization error: ",
+		},
+		{
+			customError:   New(ErrorTypeKubeConfig, errors.New("Dummy")),
+			errorContains: "Kube config error: ",
 		},
 		{
 			customError:   New(ErrorTypeTokenCache, errors.New("Dummy")),
 			errorContains: "Token cache error: ",
+		},
+		{
+			customError:   New(ErrorTypeCACertificate, errors.New("Dummy")),
+			errorContains: "CA certificate error: ",
+		},
+		{
+			customError:   New(ErrorTypeOverwriteConfig, errors.New("Dummy")),
+			errorContains: "Overwrite config error: ",
 		},
 	}
 

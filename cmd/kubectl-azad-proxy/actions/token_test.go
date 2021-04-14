@@ -204,7 +204,7 @@ func TestGetToken(t *testing.T) {
 		},
 		{
 			tokens:              realFalseTokens,
-			expectedErrContains: "Auth error: ",
+			expectedErrContains: "Authentication error:",
 			clusterName:         "realfalse-cluster-1",
 			resource:            resource,
 		},

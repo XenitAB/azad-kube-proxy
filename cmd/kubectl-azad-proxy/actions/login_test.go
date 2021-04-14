@@ -163,7 +163,7 @@ func TestLogin(t *testing.T) {
 		},
 		{
 			loginConfig:         cfgErr,
-			expectedErrContains: "Auth error: ",
+			expectedErrContains: "Authentication error:",
 		},
 	}
 

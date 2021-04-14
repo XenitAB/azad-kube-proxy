@@ -167,7 +167,7 @@ func TestDiscover(t *testing.T) {
 				enableMsiAuth:          false,
 			},
 			expectedOutputContains: "",
-			expectedErrContains:    "no Authorizer could be configured, please check your configuration",
+			expectedErrContains:    "Authentication error: Please validate that you are logged on using the correct credentials",
 		},
 	}
 
