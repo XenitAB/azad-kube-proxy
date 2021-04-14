@@ -3,9 +3,13 @@ package customerrors
 type ErrorType string
 
 const (
-	ErrorTypeUnknown    ErrorType = "Unknown"
-	ErrorTypeAuth       ErrorType = "Auth"
-	ErrorTypeTokenCache ErrorType = "TokenCache"
+	ErrorTypeUnknown         ErrorType = "Unknown"
+	ErrorTypeAuthentication  ErrorType = "Authentication"
+	ErrorTypeAuthorization   ErrorType = "Authorization"
+	ErrorTypeKubeConfig      ErrorType = "KubeConfig"
+	ErrorTypeTokenCache      ErrorType = "TokenCache"
+	ErrorTypeCACertificate   ErrorType = "CACertificate"
+	ErrorTypeOverwriteConfig ErrorType = "OverwriteConfig"
 )
 
 type CustomError struct {
@@ -19,10 +23,18 @@ func (ce *CustomError) Error() string {
 		return "Unknown error"
 	case ErrorTypeUnknown:
 		return "Unknown error"
-	case ErrorTypeAuth:
-		return "Auth error: Please validate that you are logged on using the correct credentials"
+	case ErrorTypeAuthentication:
+		return "Authentication error: Please validate that you are logged on using the correct credentials"
+	case ErrorTypeAuthorization:
+		return "Authorization error: You don't have the privileges required to perform the action"
+	case ErrorTypeKubeConfig:
+		return "Kube config error: Unable to load file"
 	case ErrorTypeTokenCache:
 		return "Token cache error: Please validate that you have write access to the token cache path"
+	case ErrorTypeCACertificate:
+		return "CA certificate error: Unable to get CA certificate from server - validate that you have access to the proxy"
+	case ErrorTypeOverwriteConfig:
+		return "Overwrite config error: Overwrite config (--overwrite) is not enabled"
 	}
 }
 

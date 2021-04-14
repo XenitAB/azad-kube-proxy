@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-logr/logr"
 	hamiltonAuth "github.com/manicminer/hamilton/auth"
 	hamiltonEnvironments "github.com/manicminer/hamilton/environments"
 	hamiltonMsgraph "github.com/manicminer/hamilton/msgraph"
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli/v2"
+	"github.com/xenitab/azad-kube-proxy/cmd/kubectl-azad-proxy/customerrors"
 )
 
 var (
@@ -41,6 +43,8 @@ type DiscoverConfig struct {
 
 // NewDiscoverConfig ...
 func NewDiscoverConfig(ctx context.Context, c *cli.Context) (DiscoverConfig, error) {
+	log := logr.FromContext(ctx)
+
 	var output outputType
 	switch strings.ToUpper(c.String("output")) {
 	case "TABLE":
@@ -48,7 +52,9 @@ func NewDiscoverConfig(ctx context.Context, c *cli.Context) (DiscoverConfig, err
 	case "JSON":
 		output = jsonOutputType
 	default:
-		return DiscoverConfig{}, fmt.Errorf("Supported outputs are TABLE and JSON. The following was used: %s", c.String("output"))
+		err := fmt.Errorf("Supported outputs are TABLE and JSON. The following was used: %s", c.String("output"))
+		log.V(1).Info("Unsupported output", "error", err.Error())
+		return DiscoverConfig{}, err
 	}
 
 	enableAzureCliToken := !c.Bool("exclude-azure-cli-auth")
@@ -56,12 +62,15 @@ func NewDiscoverConfig(ctx context.Context, c *cli.Context) (DiscoverConfig, err
 	if tenantID == "" && enableAzureCliToken {
 		cliConfig, err := hamiltonAuth.NewAzureCliConfig(hamiltonAuth.MsGraph, "")
 		if err != nil {
-			return DiscoverConfig{}, err
+			log.V(1).Info("Unable to create CliConfig", "error", err.Error())
+			return DiscoverConfig{}, customerrors.New(customerrors.ErrorTypeAuthentication, err)
 		}
 
 		tenantID = cliConfig.TenantID
 		if tenantID == "" {
-			return DiscoverConfig{}, fmt.Errorf("No tenantID could be extracted from Azure CLI authentication")
+			err := fmt.Errorf("No tenantID could be extracted from Azure CLI authentication")
+			log.V(1).Info("No tenantID", "error", err.Error())
+			return DiscoverConfig{}, customerrors.New(customerrors.ErrorTypeAuthentication, err)
 		}
 	}
 
@@ -137,6 +146,8 @@ func DiscoverFlags(ctx context.Context) []cli.Flag {
 
 // Discover ...
 func Discover(ctx context.Context, cfg DiscoverConfig) (string, error) {
+	log := logr.FromContext(ctx)
+
 	authConfig := &hamiltonAuth.Config{
 		Environment:            hamiltonEnvironments.Global,
 		TenantID:               cfg.tenantID,
@@ -149,16 +160,18 @@ func Discover(ctx context.Context, cfg DiscoverConfig) (string, error) {
 
 	authorizer, err := authConfig.NewAuthorizer(ctx, hamiltonAuth.MsGraph)
 	if err != nil {
-		return "", err
+		log.V(1).Info("Unable to create authorizer", "error", err.Error())
+		return "", customerrors.New(customerrors.ErrorTypeAuthentication, err)
 	}
 	appsClient := hamiltonMsgraph.NewApplicationsClient(cfg.tenantID)
 	appsClient.BaseClient.Authorizer = authorizer
 
 	graphFilter := fmt.Sprintf("tags/any(s: s eq '%s')", azureADAppTag)
 
-	clusterApps, _, err := appsClient.List(ctx, graphFilter)
+	clusterApps, resCode, err := appsClient.List(ctx, graphFilter)
 	if err != nil {
-		return "", err
+		log.V(1).Info("Unable to to list Azure AD applications", "error", err.Error(), "responseCode", resCode)
+		return "", customerrors.New(customerrors.ErrorTypeAuthorization, err)
 	}
 
 	discoverData := getDiscoverData(*clusterApps)
@@ -170,6 +183,7 @@ func Discover(ctx context.Context, cfg DiscoverConfig) (string, error) {
 	case jsonOutputType:
 		output, err = getJSON(discoverData)
 		if err != nil {
+			log.V(1).Info("Unable to convert output to JSON", "error", err.Error())
 			return "", err
 		}
 	default:

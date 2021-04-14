@@ -12,7 +12,9 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/go-logr/logr"
 	"github.com/urfave/cli/v2"
+	"github.com/xenitab/azad-kube-proxy/cmd/kubectl-azad-proxy/customerrors"
 	k8sclientcmd "k8s.io/client-go/tools/clientcmd"
 	k8sclientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -31,10 +33,14 @@ type GenerateConfig struct {
 
 // NewGenerateConfig ...
 func NewGenerateConfig(ctx context.Context, c *cli.Context) (GenerateConfig, error) {
+	log := logr.FromContext(ctx)
+
 	proxyURL, err := url.Parse(c.String("proxy-url"))
 	if err != nil {
+		log.V(1).Info("Unable to parse proxy-url", "error", err.Error())
 		return GenerateConfig{}, err
 	}
+
 	return GenerateConfig{
 		clusterName:        c.String("cluster-name"),
 		proxyURL:           *proxyURL,
@@ -120,9 +126,12 @@ func GenerateFlags(ctx context.Context) []cli.Flag {
 
 // Generate ...
 func Generate(ctx context.Context, cfg GenerateConfig) error {
+	log := logr.FromContext(ctx)
+
 	kubeCfg, err := k8sclientcmd.LoadFromFile(cfg.kubeConfig)
 	if err != nil && !strings.Contains(err.Error(), "no such file or directory") {
-		return err
+		log.V(1).Info("Unable to load kubeConfig", "error", err.Error(), "kubeConfig", cfg.kubeConfig)
+		return customerrors.New(customerrors.ErrorTypeKubeConfig, err)
 	}
 
 	if err != nil && strings.Contains(err.Error(), "no such file or directory") {
@@ -132,22 +141,29 @@ func Generate(ctx context.Context, cfg GenerateConfig) error {
 	var found bool
 	_, found = kubeCfg.Clusters[cfg.clusterName]
 	if found && !cfg.overwrite {
-		return fmt.Errorf("Cluster (%s) was found in config (%s) but overwrite is %t", cfg.clusterName, cfg.kubeConfig, cfg.overwrite)
+		err := fmt.Errorf("Cluster (%s) was found in config (%s) but overwrite is %t", cfg.clusterName, cfg.kubeConfig, cfg.overwrite)
+		log.V(1).Info("Overwrite is not enabled", "error", err.Error())
+		return customerrors.New(customerrors.ErrorTypeOverwriteConfig, err)
 	}
 
 	_, found = kubeCfg.Contexts[cfg.clusterName]
 	if found && !cfg.overwrite {
-		return fmt.Errorf("Context (%s) was found in config (%s) but overwrite is %t", cfg.clusterName, cfg.kubeConfig, cfg.overwrite)
+		err := fmt.Errorf("Context (%s) was found in config (%s) but overwrite is %t", cfg.clusterName, cfg.kubeConfig, cfg.overwrite)
+		log.V(1).Info("Overwrite is not enabled", "error", err.Error())
+		return customerrors.New(customerrors.ErrorTypeOverwriteConfig, err)
 	}
 
 	_, found = kubeCfg.AuthInfos[cfg.clusterName]
 	if found && !cfg.overwrite {
-		return fmt.Errorf("User (%s) was found in config (%s) but overwrite is %t", cfg.clusterName, cfg.kubeConfig, cfg.overwrite)
+		err := fmt.Errorf("User (%s) was found in config (%s) but overwrite is %t", cfg.clusterName, cfg.kubeConfig, cfg.overwrite)
+		log.V(1).Info("Overwrite is not enabled", "error", err.Error())
+		return customerrors.New(customerrors.ErrorTypeOverwriteConfig, err)
 	}
 
 	caCerts, err := getCACertificates(cfg.proxyURL, cfg.insecureSkipVerify)
 	if err != nil {
-		return err
+		log.V(1).Info("Unable to connect get CA certificates", "error", err.Error())
+		return customerrors.New(customerrors.ErrorTypeCACertificate, err)
 	}
 
 	serverScheme := cfg.proxyURL.Scheme
@@ -211,7 +227,8 @@ func Generate(ctx context.Context, cfg GenerateConfig) error {
 
 	err = k8sclientcmd.WriteToFile(*kubeCfg, cfg.kubeConfig)
 	if err != nil {
-		return err
+		log.V(1).Info("Unable to write to kubeConfig", "error", err.Error())
+		return customerrors.New(customerrors.ErrorTypeKubeConfig, err)
 	}
 
 	return nil
@@ -251,8 +268,6 @@ func getCACertificates(url url.URL, insecureSkipVerify bool) ([]byte, error) {
 			pemCerts = append(pemCerts, pemCertBytes...)
 		}
 	}
-
-	// b64Certs := base64.StdEncoding.EncodeToString(pemCerts)
 
 	return pemCerts, nil
 }
