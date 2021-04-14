@@ -290,8 +290,8 @@ github.com/lightstep/lightstep-tracer-go v0.18.1/go.mod h1:jlF1pusYV4pidLvZ+XD0U
 github.com/lyft/protoc-gen-validate v0.0.13/go.mod h1:XbGvPuh87YZc5TdIa2/I4pLk0QoUACkjt2znoq26NVQ=
 github.com/mailru/easyjson v0.0.0-20190614124828-94de47d64c63/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
 github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
-github.com/manicminer/hamilton v0.10.0 h1:o2az12UEyOEiyNJxUtB2oQq6JI80QWMBaVCntCzzTas=
-github.com/manicminer/hamilton v0.10.0/go.mod h1:j/n0It21FsOl/7JJQiJspQT1jw/gpcbnUh/A194j3HU=
+github.com/manicminer/hamilton v0.11.0 h1:rmok12pak8OJlsArFD3SbJLqeaiJnGEeuISEmD1OeAY=
+github.com/manicminer/hamilton v0.11.0/go.mod h1:j/n0It21FsOl/7JJQiJspQT1jw/gpcbnUh/A194j3HU=
 github.com/mattn/go-colorable v0.0.9/go.mod h1:9vuHe8Xs5qXnSaW/c/ABM9alt+Vo+STaOChaDxuIBZU=
 github.com/mattn/go-isatty v0.0.3/go.mod h1:M+lRXTBqGeGNdLjl/ufCoiOlB5xdOkqRJdNxMWT7Zi4=
 github.com/mattn/go-isatty v0.0.4/go.mod h1:M+lRXTBqGeGNdLjl/ufCoiOlB5xdOkqRJdNxMWT7Zi4=
