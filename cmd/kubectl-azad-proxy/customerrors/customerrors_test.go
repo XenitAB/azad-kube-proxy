@@ -44,6 +44,10 @@ func TestError(t *testing.T) {
 			customError:   New(ErrorTypeOverwriteConfig, errors.New("Dummy")),
 			errorContains: "Overwrite config error: ",
 		},
+		{
+			customError:   New(ErrorTypeMenu, errors.New("Dummy")),
+			errorContains: "Menu error: ",
+		},
 	}
 
 	for _, c := range cases {

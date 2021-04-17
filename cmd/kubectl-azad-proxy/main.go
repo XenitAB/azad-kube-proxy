@@ -105,6 +105,20 @@ func main() {
 					return nil
 				},
 			},
+			{
+				Name:    "menu",
+				Aliases: []string{"m"},
+				Usage:   "Menu for the azad-kube-proxy configuration",
+				Flags:   append(actions.MenuFlags(ctx), globalFlags...),
+				Action: func(c *cli.Context) error {
+					cfg, err := actions.NewMenuConfig(ctx, c)
+					if err != nil {
+						return err
+					}
+
+					return actions.Menu(ctx, cfg)
+				},
+			},
 		},
 	}
 

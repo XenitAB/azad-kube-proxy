@@ -52,9 +52,7 @@ func NewDiscoverConfig(ctx context.Context, c *cli.Context) (DiscoverConfig, err
 	case "JSON":
 		output = jsonOutputType
 	default:
-		err := fmt.Errorf("Supported outputs are TABLE and JSON. The following was used: %s", c.String("output"))
-		log.V(1).Info("Unsupported output", "error", err.Error())
-		return DiscoverConfig{}, err
+		output = tableOutputType
 	}
 
 	enableAzureCliToken := !c.Bool("exclude-azure-cli-auth")
@@ -148,6 +146,31 @@ func DiscoverFlags(ctx context.Context) []cli.Flag {
 func Discover(ctx context.Context, cfg DiscoverConfig) (string, error) {
 	log := logr.FromContext(ctx)
 
+	apps, err := runDiscover(ctx, cfg)
+	if err != nil {
+		return "", err
+	}
+
+	var output string
+	switch cfg.outputType {
+	case tableOutputType:
+		output = getTable(apps)
+	case jsonOutputType:
+		output, err = getJSON(apps)
+		if err != nil {
+			log.V(1).Info("Unable to convert output to JSON", "error", err.Error())
+			return "", err
+		}
+	default:
+		return "", fmt.Errorf("Unknown output type: %s", cfg.outputType)
+	}
+
+	return output, nil
+}
+
+func runDiscover(ctx context.Context, cfg DiscoverConfig) ([]discover, error) {
+	log := logr.FromContext(ctx)
+
 	authConfig := &hamiltonAuth.Config{
 		Environment:            hamiltonEnvironments.Global,
 		TenantID:               cfg.tenantID,
@@ -161,8 +184,9 @@ func Discover(ctx context.Context, cfg DiscoverConfig) (string, error) {
 	authorizer, err := authConfig.NewAuthorizer(ctx, hamiltonAuth.MsGraph)
 	if err != nil {
 		log.V(1).Info("Unable to create authorizer", "error", err.Error())
-		return "", customerrors.New(customerrors.ErrorTypeAuthentication, err)
+		return []discover{}, customerrors.New(customerrors.ErrorTypeAuthentication, err)
 	}
+
 	appsClient := hamiltonMsgraph.NewApplicationsClient(cfg.tenantID)
 	appsClient.BaseClient.Authorizer = authorizer
 
@@ -171,26 +195,12 @@ func Discover(ctx context.Context, cfg DiscoverConfig) (string, error) {
 	clusterApps, resCode, err := appsClient.List(ctx, graphFilter)
 	if err != nil {
 		log.V(1).Info("Unable to to list Azure AD applications", "error", err.Error(), "responseCode", resCode)
-		return "", customerrors.New(customerrors.ErrorTypeAuthorization, err)
+		return []discover{}, customerrors.New(customerrors.ErrorTypeAuthorization, err)
 	}
 
 	discoverData := getDiscoverData(*clusterApps)
 
-	var output string
-	switch cfg.outputType {
-	case tableOutputType:
-		output = getTable(discoverData)
-	case jsonOutputType:
-		output, err = getJSON(discoverData)
-		if err != nil {
-			log.V(1).Info("Unable to convert output to JSON", "error", err.Error())
-			return "", err
-		}
-	default:
-		return "", fmt.Errorf("Unknown output type: %s", cfg.outputType)
-	}
-
-	return output, nil
+	return discoverData, nil
 }
 
 func getDiscoverData(clusterApps []hamiltonMsgraph.Application) []discover {
