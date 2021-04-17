@@ -2,7 +2,7 @@ package actions
 
 import (
 	"context"
-	"fmt"
+	"net/url"
 
 	"github.com/go-logr/logr"
 	"github.com/manifoldco/promptui"
@@ -12,6 +12,7 @@ import (
 
 type MenuConfig struct {
 	discoverConfig DiscoverConfig
+	generateConfig GenerateConfig
 }
 
 // NewMenuConfig ...
@@ -21,8 +22,14 @@ func NewMenuConfig(ctx context.Context, c *cli.Context) (MenuConfig, error) {
 		return MenuConfig{}, err
 	}
 
+	generateConfig, err := NewGenerateConfig(ctx, c)
+	if err != nil {
+		return MenuConfig{}, err
+	}
+
 	return MenuConfig{
 		discoverConfig,
+		generateConfig,
 	}, nil
 }
 
@@ -82,56 +89,54 @@ func MenuFlags(ctx context.Context) []cli.Flag {
 func Menu(ctx context.Context, cfg MenuConfig) error {
 	log := logr.FromContext(ctx)
 
-	// apps, err := runDiscover(ctx, cfg.discoverConfig)
-	// if err != nil {
-	// 	log.V(1).Info("Unable to run discovery", "error", err.Error())
-	// 	return err
-	// }
-
-	appsTest := []discover{
-		{
-			ClusterName: "dev",
-			ProxyURL:    "https://dev.example.com",
-			Resource:    "https://dev.example.com",
-		},
-		{
-			ClusterName: "qa",
-			ProxyURL:    "https://qa.example.com",
-			Resource:    "https://qa.example.com",
-		},
-		{
-			ClusterName: "prod",
-			ProxyURL:    "https://prod.example.com",
-			Resource:    "https://prod.example.com",
-		},
+	apps, err := runDiscover(ctx, cfg.discoverConfig)
+	if err != nil {
+		log.V(1).Info("Unable to run discovery", "error", err.Error())
+		return err
 	}
 
 	templates := &promptui.SelectTemplates{
 		Label:    "{{ . }}?",
-		Active:   "\U00002714 {{ .ClusterName | cyan }} ({{ .ProxyURL | red }})",
-		Inactive: "  {{ .ClusterName | cyan }} ({{ .ProxyURL | red }})",
-		Selected: "\U00002714 {{ .ClusterName | red | cyan }}",
+		Active:   "\U00002714 {{ .ClusterName | green }}",
+		Inactive: "  {{ .ClusterName }}",
+		Selected: "\U00002714 {{ .ClusterName | green }}",
 		Details: `
 --------- Cluster ----------
-{{ "ClusterName:" | faint }}	{{ .ClusterName }}
-{{ "ProxyURL:" | faint }}	{{ .ProxyURL }}
-{{ "Resource:" | faint }}	{{ .Resource }}`,
+{{ "Cluster name:" | faint }}	{{ .ClusterName }}
+{{ "Proxy URL:" | faint }}	{{ .ProxyURL }}
+{{ "Resource URL:" | faint }}	{{ .Resource }}`,
 	}
 
 	prompt := promptui.Select{
 		Label:     "Choose what cluster to configure",
-		Items:     appsTest,
+		Items:     apps,
 		Templates: templates,
 	}
 
-	_, result, err := prompt.Run()
+	idx, _, err := prompt.Run()
 
 	if err != nil {
 		log.V(1).Info("Unable to menu prompt", "error", err.Error())
 		return customerrors.New(customerrors.ErrorTypeMenu, err)
 	}
 
-	fmt.Printf("You choose %q\n", result)
+	cluster := apps[idx]
+	proxyURL, err := url.Parse(cluster.ProxyURL)
+	if err != nil {
+		log.V(1).Info("Unable to parse Proxy URL", "error", err.Error())
+		return customerrors.New(customerrors.ErrorTypeMenu, err)
+	}
+
+	generateCfg := cfg.generateConfig
+	generateCfg.clusterName = cluster.ClusterName
+	generateCfg.resource = cluster.Resource
+	generateCfg.proxyURL = *proxyURL
+
+	err = Generate(ctx, generateCfg)
+	if err != nil {
+		log.V(1).Info("Unable to generate config", "error", err.Error())
+		return err
+	}
 
 	return nil
 }
