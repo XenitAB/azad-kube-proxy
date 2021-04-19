@@ -47,6 +47,13 @@ func MenuFlags(ctx context.Context) []cli.Flag {
 			Required: false,
 		},
 		&cli.StringFlag{
+			Name:     "token-cache",
+			Usage:    "The token cache path to cache tokens",
+			EnvVars:  []string{"TOKEN_CACHE"},
+			Value:    "~/.kube/azad-proxy.json",
+			Required: false,
+		},
+		&cli.StringFlag{
 			Name:     "tenant-id",
 			Usage:    "Azure Tenant ID used with ENV auth",
 			EnvVars:  []string{"AZURE_TENANT_ID"},
