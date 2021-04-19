@@ -122,6 +122,55 @@ func TestNewGenerateConfig(t *testing.T) {
 	}
 }
 
+func TestMergeGenerateConfig(t *testing.T) {
+	cfg := &GenerateConfig{
+		clusterName:        "test",
+		proxyURL:           getURL("https://www.google.com"),
+		resource:           "https://fake",
+		kubeConfig:         "/tmp/kubeconfig",
+		tokenCache:         "/tmp/tokencache",
+		overwrite:          false,
+		insecureSkipVerify: false,
+		defaultAzureCredentialOptions: &azidentity.DefaultAzureCredentialOptions{
+			ExcludeAzureCLICredential:    false,
+			ExcludeEnvironmentCredential: false,
+			ExcludeMSICredential:         false,
+		},
+	}
+
+	cfg.Merge(GenerateConfig{
+		clusterName:        "test2",
+		proxyURL:           getURL("https://www.example.com"),
+		resource:           "https://fake2",
+		kubeConfig:         "/tmp2/kubeconfig",
+		tokenCache:         "/tmp2/tokencache",
+		overwrite:          true,
+		insecureSkipVerify: true,
+	})
+
+	if cfg.clusterName != "test2" {
+		t.Errorf("Expected cfg.clusterName to be 'test2' but was: %s", cfg.clusterName)
+	}
+	if cfg.proxyURL.String() != "https://www.example.com" {
+		t.Errorf("Expected cfg.proxyURL.String() to be 'https://www.example.com' but was: %s", cfg.proxyURL.String())
+	}
+	if cfg.resource != "https://fake2" {
+		t.Errorf("Expected cfg.resource to be 'https://fake2' but was: %s", cfg.resource)
+	}
+	if cfg.kubeConfig != "/tmp2/kubeconfig" {
+		t.Errorf("Expected cfg.kubeConfig to be '/tmp2/kubeconfig' but was: %s", cfg.kubeConfig)
+	}
+	if cfg.tokenCache != "/tmp2/tokencache" {
+		t.Errorf("Expected cfg.tokenCache to be '/tmp2/tokencache' but was: %s", cfg.tokenCache)
+	}
+	if cfg.overwrite != true {
+		t.Errorf("Expected cfg.overwrite to be 'true' but was: %t", cfg.overwrite)
+	}
+	if cfg.insecureSkipVerify != true {
+		t.Errorf("Expected cfg.insecureSkipVerify to be 'true' but was: %t", cfg.insecureSkipVerify)
+	}
+}
+
 func TestGenerate(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 	curDir, err := os.Getwd()
