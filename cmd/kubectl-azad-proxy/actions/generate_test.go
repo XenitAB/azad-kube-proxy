@@ -15,9 +15,9 @@ import (
 	k8sclientcmd "k8s.io/client-go/tools/clientcmd"
 )
 
-func TestNewGenerateConfig(t *testing.T) {
+func TestNewGenerateClient(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
-	cfg := GenerateConfig{}
+	client := &GenerateClient{}
 
 	app := &cli.App{
 		Name:  "test",
@@ -30,7 +30,7 @@ func TestNewGenerateConfig(t *testing.T) {
 				Flags:   GenerateFlags(ctx),
 				Action: func(c *cli.Context) error {
 					var err error
-					cfg, err = NewGenerateConfig(ctx, c)
+					client, err = NewGenerateClient(ctx, c)
 					if err != nil {
 						return err
 					}
@@ -43,7 +43,7 @@ func TestNewGenerateConfig(t *testing.T) {
 	cases := []struct {
 		cliApp              *cli.App
 		args                []string
-		expectedConfig      GenerateConfig
+		expectedConfig      *GenerateClient
 		expectedErrContains string
 		outBuffer           bytes.Buffer
 		errBuffer           bytes.Buffer
@@ -51,7 +51,7 @@ func TestNewGenerateConfig(t *testing.T) {
 		{
 			cliApp:              app,
 			args:                []string{"fake-binary", "test"},
-			expectedConfig:      GenerateConfig{},
+			expectedConfig:      &GenerateClient{},
 			expectedErrContains: "cluster-name",
 			outBuffer:           bytes.Buffer{},
 			errBuffer:           bytes.Buffer{},
@@ -59,7 +59,7 @@ func TestNewGenerateConfig(t *testing.T) {
 		{
 			cliApp:              app,
 			args:                []string{"fake-binary", "test", "--cluster-name=test"},
-			expectedConfig:      GenerateConfig{},
+			expectedConfig:      &GenerateClient{},
 			expectedErrContains: "proxy-url",
 			outBuffer:           bytes.Buffer{},
 			errBuffer:           bytes.Buffer{},
@@ -67,7 +67,7 @@ func TestNewGenerateConfig(t *testing.T) {
 		{
 			cliApp:              app,
 			args:                []string{"fake-binary", "test", "--cluster-name=test", "--proxy-url=https://fake"},
-			expectedConfig:      GenerateConfig{},
+			expectedConfig:      &GenerateClient{},
 			expectedErrContains: "resource",
 			outBuffer:           bytes.Buffer{},
 			errBuffer:           bytes.Buffer{},
@@ -75,7 +75,7 @@ func TestNewGenerateConfig(t *testing.T) {
 		{
 			cliApp: app,
 			args:   []string{"fake-binary", "test", "--cluster-name=test", "--proxy-url=https://fake", "--resource=https://fake"},
-			expectedConfig: GenerateConfig{
+			expectedConfig: &GenerateClient{
 				clusterName: "test",
 				proxyURL:    getURL("https://fake"),
 				resource:    "https://fake",
@@ -105,25 +105,25 @@ func TestNewGenerateConfig(t *testing.T) {
 		}
 
 		if c.expectedErrContains == "" {
-			if cfg.clusterName != c.expectedConfig.clusterName {
-				t.Errorf("Expected cfg.clusterName to be '%s' but was: %s", c.expectedConfig.clusterName, cfg.clusterName)
+			if client.clusterName != c.expectedConfig.clusterName {
+				t.Errorf("Expected client.clusterName to be '%s' but was: %s", c.expectedConfig.clusterName, client.clusterName)
 			}
-			if cfg.proxyURL.Host != c.expectedConfig.proxyURL.Host {
-				t.Errorf("Expected cfg.proxyURL.Host to be '%s' but was: %s", c.expectedConfig.proxyURL.Host, cfg.proxyURL.Host)
+			if client.proxyURL.Host != c.expectedConfig.proxyURL.Host {
+				t.Errorf("Expected client.proxyURL.Host to be '%s' but was: %s", c.expectedConfig.proxyURL.Host, client.proxyURL.Host)
 			}
-			if cfg.proxyURL.Scheme != c.expectedConfig.proxyURL.Scheme {
-				t.Errorf("Expected cfg.proxyURL.Scheme to be '%s' but was: %s", c.expectedConfig.proxyURL.Scheme, cfg.proxyURL.Scheme)
+			if client.proxyURL.Scheme != c.expectedConfig.proxyURL.Scheme {
+				t.Errorf("Expected client.proxyURL.Scheme to be '%s' but was: %s", c.expectedConfig.proxyURL.Scheme, client.proxyURL.Scheme)
 			}
-			if cfg.resource != c.expectedConfig.resource {
-				t.Errorf("Expected cfg.resource to be '%s' but was: %s", c.expectedConfig.resource, cfg.resource)
+			if client.resource != c.expectedConfig.resource {
+				t.Errorf("Expected client.resource to be '%s' but was: %s", c.expectedConfig.resource, client.resource)
 			}
 		}
-		cfg = GenerateConfig{}
+		client = &GenerateClient{}
 	}
 }
 
-func TestMergeGenerateConfig(t *testing.T) {
-	cfg := &GenerateConfig{
+func TestMergeGenerateClient(t *testing.T) {
+	client := &GenerateClient{
 		clusterName:        "test",
 		proxyURL:           getURL("https://www.google.com"),
 		resource:           "https://fake",
@@ -138,7 +138,7 @@ func TestMergeGenerateConfig(t *testing.T) {
 		},
 	}
 
-	cfg.Merge(GenerateConfig{
+	client.Merge(GenerateClient{
 		clusterName:        "test2",
 		proxyURL:           getURL("https://www.example.com"),
 		resource:           "https://fake2",
@@ -148,26 +148,26 @@ func TestMergeGenerateConfig(t *testing.T) {
 		insecureSkipVerify: true,
 	})
 
-	if cfg.clusterName != "test2" {
-		t.Errorf("Expected cfg.clusterName to be 'test2' but was: %s", cfg.clusterName)
+	if client.clusterName != "test2" {
+		t.Errorf("Expected client.clusterName to be 'test2' but was: %s", client.clusterName)
 	}
-	if cfg.proxyURL.String() != "https://www.example.com" {
-		t.Errorf("Expected cfg.proxyURL.String() to be 'https://www.example.com' but was: %s", cfg.proxyURL.String())
+	if client.proxyURL.String() != "https://www.example.com" {
+		t.Errorf("Expected client.proxyURL.String() to be 'https://www.example.com' but was: %s", client.proxyURL.String())
 	}
-	if cfg.resource != "https://fake2" {
-		t.Errorf("Expected cfg.resource to be 'https://fake2' but was: %s", cfg.resource)
+	if client.resource != "https://fake2" {
+		t.Errorf("Expected client.resource to be 'https://fake2' but was: %s", client.resource)
 	}
-	if cfg.kubeConfig != "/tmp2/kubeconfig" {
-		t.Errorf("Expected cfg.kubeConfig to be '/tmp2/kubeconfig' but was: %s", cfg.kubeConfig)
+	if client.kubeConfig != "/tmp2/kubeconfig" {
+		t.Errorf("Expected client.kubeConfig to be '/tmp2/kubeconfig' but was: %s", client.kubeConfig)
 	}
-	if cfg.tokenCache != "/tmp2/tokencache" {
-		t.Errorf("Expected cfg.tokenCache to be '/tmp2/tokencache' but was: %s", cfg.tokenCache)
+	if client.tokenCache != "/tmp2/tokencache" {
+		t.Errorf("Expected client.tokenCache to be '/tmp2/tokencache' but was: %s", client.tokenCache)
 	}
-	if cfg.overwrite != true {
-		t.Errorf("Expected cfg.overwrite to be 'true' but was: %t", cfg.overwrite)
+	if client.overwrite != true {
+		t.Errorf("Expected client.overwrite to be 'true' but was: %t", client.overwrite)
 	}
-	if cfg.insecureSkipVerify != true {
-		t.Errorf("Expected cfg.insecureSkipVerify to be 'true' but was: %t", cfg.insecureSkipVerify)
+	if client.insecureSkipVerify != true {
+		t.Errorf("Expected client.insecureSkipVerify to be 'true' but was: %t", client.insecureSkipVerify)
 	}
 }
 
@@ -181,7 +181,7 @@ func TestGenerate(t *testing.T) {
 	kubeConfigFile := fmt.Sprintf("%s/../../../tmp/test-generate-kubeconfig", curDir)
 	defer deleteFile(t, kubeConfigFile)
 
-	cfg := GenerateConfig{
+	client := &GenerateClient{
 		clusterName:        "test",
 		proxyURL:           getURL("https://www.google.com"),
 		resource:           "https://fake",
@@ -197,36 +197,36 @@ func TestGenerate(t *testing.T) {
 	}
 
 	cases := []struct {
-		generateConfig      GenerateConfig
-		generateConfigFunc  func(oldCfg GenerateConfig) GenerateConfig
+		GenerateClient      *GenerateClient
+		GenerateClientFunc  func(oldCfg *GenerateClient) *GenerateClient
 		expectedErrContains string
 	}{
 		{
-			generateConfig:      cfg,
+			GenerateClient:      client,
 			expectedErrContains: "",
 		},
 		{
-			generateConfig:      cfg,
+			GenerateClient:      client,
 			expectedErrContains: "Overwrite config error:",
 		},
 		{
-			generateConfig: cfg,
-			generateConfigFunc: func(oldCfg GenerateConfig) GenerateConfig {
-				cfg := oldCfg
-				cfg.proxyURL = getURL("https://localhost:12345")
-				cfg.overwrite = true
-				return cfg
+			GenerateClient: client,
+			GenerateClientFunc: func(oldClient *GenerateClient) *GenerateClient {
+				client := oldClient
+				client.proxyURL = getURL("https://localhost:12345")
+				client.overwrite = true
+				return client
 			},
 			expectedErrContains: "CA certificate error:",
 		},
 	}
 
 	for _, c := range cases {
-		if c.generateConfigFunc != nil {
-			c.generateConfig = c.generateConfigFunc(c.generateConfig)
+		if c.GenerateClientFunc != nil {
+			c.GenerateClient = c.GenerateClientFunc(c.GenerateClient)
 		}
 
-		err := Generate(ctx, c.generateConfig)
+		err := c.GenerateClient.Generate(ctx)
 		if err != nil && c.expectedErrContains == "" {
 			t.Errorf("Expected err to be nil: %q", err)
 		}
@@ -242,17 +242,17 @@ func TestGenerate(t *testing.T) {
 		}
 
 		if c.expectedErrContains == "" {
-			kubeCfg, err := k8sclientcmd.LoadFromFile(c.generateConfig.kubeConfig)
+			kubeCfg, err := k8sclientcmd.LoadFromFile(c.GenerateClient.kubeConfig)
 			if err != nil && c.expectedErrContains == "" {
 				t.Errorf("Expected err to be nil: %q", err)
 			}
 
-			if kubeCfg.Clusters[c.generateConfig.clusterName].Server != fmt.Sprintf("%s://%s", c.generateConfig.proxyURL.Scheme, c.generateConfig.proxyURL.Host) {
-				t.Errorf("Expected kubeCfg.Clusters[c.generateConfig.clusterName].Server to be '%s' but was: %s", fmt.Sprintf("%s://%s", c.generateConfig.proxyURL.Scheme, c.generateConfig.proxyURL.Host), kubeCfg.Clusters[c.generateConfig.clusterName].Server)
+			if kubeCfg.Clusters[c.GenerateClient.clusterName].Server != fmt.Sprintf("%s://%s", c.GenerateClient.proxyURL.Scheme, c.GenerateClient.proxyURL.Host) {
+				t.Errorf("Expected kubeCfg.Clusters[c.GenerateClient.clusterName].Server to be '%s' but was: %s", fmt.Sprintf("%s://%s", c.GenerateClient.proxyURL.Scheme, c.GenerateClient.proxyURL.Host), kubeCfg.Clusters[c.GenerateClient.clusterName].Server)
 			}
 
-			if len(kubeCfg.Clusters[c.generateConfig.clusterName].CertificateAuthorityData) < 0 {
-				t.Errorf("Expected length of kubeCfg.Clusters[c.generateConfig.clusterName].CertificateAuthorityData to be lager than 0 but was: %d", len(kubeCfg.Clusters[c.generateConfig.clusterName].CertificateAuthorityData))
+			if len(kubeCfg.Clusters[c.GenerateClient.clusterName].CertificateAuthorityData) < 0 {
+				t.Errorf("Expected length of kubeCfg.Clusters[c.GenerateClient.clusterName].CertificateAuthorityData to be lager than 0 but was: %d", len(kubeCfg.Clusters[c.GenerateClient.clusterName].CertificateAuthorityData))
 			}
 		}
 	}

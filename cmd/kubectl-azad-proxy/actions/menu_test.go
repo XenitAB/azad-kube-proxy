@@ -3,13 +3,14 @@ package actions
 import (
 	"bytes"
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
 	"github.com/urfave/cli/v2"
 )
 
-func TestNewMenuConfig(t *testing.T) {
+func TestNewMenuClient(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 
 	restoreAzureCLIAuth := tempChangeEnv("EXCLUDE_AZURE_CLI_AUTH", "true")
@@ -25,7 +26,7 @@ func TestNewMenuConfig(t *testing.T) {
 				Usage:   "test",
 				Flags:   MenuFlags(ctx),
 				Action: func(c *cli.Context) error {
-					_, err := NewMenuConfig(ctx, c)
+					_, err := NewMenuClient(ctx, c)
 					if err != nil {
 						return err
 					}
@@ -40,6 +41,84 @@ func TestNewMenuConfig(t *testing.T) {
 	err := app.Run([]string{"fake-binary", "test"})
 	if err != nil {
 		t.Errorf("Expected err to be nil: %q", err)
+	}
+}
+
+func TestMenu(t *testing.T) {
+	tenantID := getEnvOrSkip(t, "TENANT_ID")
+	clientID := getEnvOrSkip(t, "CLIENT_ID")
+	clientSecret := getEnvOrSkip(t, "CLIENT_SECRET")
+	resource := getEnvOrSkip(t, "TEST_USER_SP_RESOURCE")
+
+	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+
+	cases := []struct {
+		DiscoverClient         *DiscoverClient
+		expectedOutputContains string
+		expectedErrContains    string
+	}{
+		{
+			DiscoverClient: &DiscoverClient{
+				outputType:             tableOutputType,
+				tenantID:               tenantID,
+				clientID:               clientID,
+				clientSecret:           clientSecret,
+				enableClientSecretAuth: true,
+				enableAzureCliToken:    false,
+				enableMsiAuth:          false,
+			},
+			expectedOutputContains: resource,
+			expectedErrContains:    "",
+		},
+		{
+			DiscoverClient: &DiscoverClient{
+				outputType:             jsonOutputType,
+				tenantID:               tenantID,
+				clientID:               clientID,
+				clientSecret:           clientSecret,
+				enableClientSecretAuth: true,
+				enableAzureCliToken:    false,
+				enableMsiAuth:          false,
+			},
+			expectedOutputContains: resource,
+			expectedErrContains:    "",
+		},
+		{
+			DiscoverClient: &DiscoverClient{
+				outputType:             jsonOutputType,
+				tenantID:               tenantID,
+				clientID:               clientID,
+				clientSecret:           clientSecret,
+				enableClientSecretAuth: false,
+				enableAzureCliToken:    false,
+				enableMsiAuth:          false,
+			},
+			expectedOutputContains: "",
+			expectedErrContains:    "Authentication error: Please validate that you are logged on using the correct credentials",
+		},
+	}
+
+	for _, c := range cases {
+		rawRes, err := c.DiscoverClient.Discover(ctx)
+		if err != nil && c.expectedErrContains == "" {
+			t.Errorf("Expected err to be nil: %q", err)
+		}
+
+		if err == nil && c.expectedErrContains != "" {
+			t.Errorf("Expected err to contain '%s' but was nil", c.expectedErrContains)
+		}
+
+		if err != nil && c.expectedErrContains != "" {
+			if !strings.Contains(err.Error(), c.expectedErrContains) {
+				t.Errorf("Expected err to contain '%s' but was: %q", c.expectedErrContains, err)
+			}
+		}
+
+		if c.expectedErrContains == "" {
+			if !strings.Contains(rawRes, c.expectedOutputContains) {
+				t.Errorf("Expected output to contain '%s' but was: %s", c.expectedErrContains, rawRes)
+			}
+		}
 	}
 }
 

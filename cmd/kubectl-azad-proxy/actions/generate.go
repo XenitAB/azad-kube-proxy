@@ -19,8 +19,8 @@ import (
 	k8sclientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-// GenerateConfig ...
-type GenerateConfig struct {
+// GenerateClient ...
+type GenerateClient struct {
 	clusterName                   string
 	proxyURL                      url.URL
 	resource                      string
@@ -31,47 +31,17 @@ type GenerateConfig struct {
 	defaultAzureCredentialOptions *azidentity.DefaultAzureCredentialOptions
 }
 
-func (c *GenerateConfig) Merge(cfg GenerateConfig) {
-	if cfg.clusterName != "" {
-		c.clusterName = cfg.clusterName
-	}
-
-	if cfg.proxyURL.String() != "" {
-		c.proxyURL = cfg.proxyURL
-	}
-
-	if cfg.resource != "" {
-		c.resource = cfg.resource
-	}
-
-	if cfg.kubeConfig != "" {
-		c.kubeConfig = cfg.kubeConfig
-	}
-
-	if cfg.tokenCache != "" {
-		c.tokenCache = cfg.tokenCache
-	}
-
-	if cfg.overwrite != c.overwrite {
-		c.overwrite = cfg.overwrite
-	}
-
-	if cfg.insecureSkipVerify != c.insecureSkipVerify {
-		c.insecureSkipVerify = cfg.insecureSkipVerify
-	}
-}
-
-// NewGenerateConfig ...
-func NewGenerateConfig(ctx context.Context, c *cli.Context) (GenerateConfig, error) {
+// NewGenerateClient ...
+func NewGenerateClient(ctx context.Context, c *cli.Context) (*GenerateClient, error) {
 	log := logr.FromContext(ctx)
 
 	proxyURL, err := url.Parse(c.String("proxy-url"))
 	if err != nil {
 		log.V(1).Info("Unable to parse proxy-url", "error", err.Error())
-		return GenerateConfig{}, err
+		return nil, err
 	}
 
-	return GenerateConfig{
+	return &GenerateClient{
 		clusterName:        c.String("cluster-name"),
 		proxyURL:           *proxyURL,
 		resource:           c.String("resource"),
@@ -157,12 +127,12 @@ func GenerateFlags(ctx context.Context) []cli.Flag {
 }
 
 // Generate ...
-func Generate(ctx context.Context, cfg GenerateConfig) error {
+func (client *GenerateClient) Generate(ctx context.Context) error {
 	log := logr.FromContext(ctx)
 
-	kubeCfg, err := k8sclientcmd.LoadFromFile(cfg.kubeConfig)
+	kubeCfg, err := k8sclientcmd.LoadFromFile(client.kubeConfig)
 	if err != nil && !strings.Contains(err.Error(), "no such file or directory") {
-		log.V(1).Info("Unable to load kubeConfig", "error", err.Error(), "kubeConfig", cfg.kubeConfig)
+		log.V(1).Info("Unable to load kubeConfig", "error", err.Error(), "kubeConfig", client.kubeConfig)
 		return customerrors.New(customerrors.ErrorTypeKubeConfig, err)
 	}
 
@@ -171,39 +141,39 @@ func Generate(ctx context.Context, cfg GenerateConfig) error {
 	}
 
 	var found bool
-	_, found = kubeCfg.Clusters[cfg.clusterName]
-	if found && !cfg.overwrite {
-		err := fmt.Errorf("Cluster (%s) was found in config (%s) but overwrite is %t", cfg.clusterName, cfg.kubeConfig, cfg.overwrite)
+	_, found = kubeCfg.Clusters[client.clusterName]
+	if found && !client.overwrite {
+		err := fmt.Errorf("Cluster (%s) was found in config (%s) but overwrite is %t", client.clusterName, client.kubeConfig, client.overwrite)
 		log.V(1).Info("Overwrite is not enabled", "error", err.Error())
 		return customerrors.New(customerrors.ErrorTypeOverwriteConfig, err)
 	}
 
-	_, found = kubeCfg.Contexts[cfg.clusterName]
-	if found && !cfg.overwrite {
-		err := fmt.Errorf("Context (%s) was found in config (%s) but overwrite is %t", cfg.clusterName, cfg.kubeConfig, cfg.overwrite)
+	_, found = kubeCfg.Contexts[client.clusterName]
+	if found && !client.overwrite {
+		err := fmt.Errorf("Context (%s) was found in config (%s) but overwrite is %t", client.clusterName, client.kubeConfig, client.overwrite)
 		log.V(1).Info("Overwrite is not enabled", "error", err.Error())
 		return customerrors.New(customerrors.ErrorTypeOverwriteConfig, err)
 	}
 
-	_, found = kubeCfg.AuthInfos[cfg.clusterName]
-	if found && !cfg.overwrite {
-		err := fmt.Errorf("User (%s) was found in config (%s) but overwrite is %t", cfg.clusterName, cfg.kubeConfig, cfg.overwrite)
+	_, found = kubeCfg.AuthInfos[client.clusterName]
+	if found && !client.overwrite {
+		err := fmt.Errorf("User (%s) was found in config (%s) but overwrite is %t", client.clusterName, client.kubeConfig, client.overwrite)
 		log.V(1).Info("Overwrite is not enabled", "error", err.Error())
 		return customerrors.New(customerrors.ErrorTypeOverwriteConfig, err)
 	}
 
-	caCerts, err := getCACertificates(cfg.proxyURL, cfg.insecureSkipVerify)
+	caCerts, err := getCACertificates(client.proxyURL, client.insecureSkipVerify)
 	if err != nil {
 		log.V(1).Info("Unable to connect get CA certificates", "error", err.Error())
 		return customerrors.New(customerrors.ErrorTypeCACertificate, err)
 	}
 
-	serverScheme := cfg.proxyURL.Scheme
+	serverScheme := client.proxyURL.Scheme
 	if !strings.EqualFold(serverScheme, "https") {
 		serverScheme = "https"
 	}
 
-	server := fmt.Sprintf("%s://%s", serverScheme, cfg.proxyURL.Host)
+	server := fmt.Sprintf("%s://%s", serverScheme, client.proxyURL.Host)
 
 	cluster := &k8sclientcmdapi.Cluster{
 		CertificateAuthorityData: caCerts,
@@ -221,51 +191,81 @@ func Generate(ctx context.Context, cfg GenerateConfig) error {
 			Env: []k8sclientcmdapi.ExecEnvVar{
 				{
 					Name:  "CLUSTER_NAME",
-					Value: cfg.clusterName,
+					Value: client.clusterName,
 				},
 				{
 					Name:  "RESOURCE",
-					Value: cfg.resource,
+					Value: client.resource,
 				},
 				{
 					Name:  "TOKEN_CACHE",
-					Value: cfg.tokenCache,
+					Value: client.tokenCache,
 				},
 				{
 					Name:  "EXCLUDE_AZURE_CLI_AUTH",
-					Value: fmt.Sprintf("%t", cfg.defaultAzureCredentialOptions.ExcludeAzureCLICredential),
+					Value: fmt.Sprintf("%t", client.defaultAzureCredentialOptions.ExcludeAzureCLICredential),
 				},
 				{
 					Name:  "EXCLUDE_ENVIRONMENT_AUTH",
-					Value: fmt.Sprintf("%t", cfg.defaultAzureCredentialOptions.ExcludeEnvironmentCredential),
+					Value: fmt.Sprintf("%t", client.defaultAzureCredentialOptions.ExcludeEnvironmentCredential),
 				},
 				{
 					Name:  "EXCLUDE_MSI_AUTH",
-					Value: fmt.Sprintf("%t", cfg.defaultAzureCredentialOptions.ExcludeMSICredential),
+					Value: fmt.Sprintf("%t", client.defaultAzureCredentialOptions.ExcludeMSICredential),
 				},
 			},
 		},
 	}
 
 	context := &k8sclientcmdapi.Context{
-		Cluster:  cfg.clusterName,
-		AuthInfo: cfg.clusterName,
+		Cluster:  client.clusterName,
+		AuthInfo: client.clusterName,
 	}
 
-	kubeCfg.AuthInfos[cfg.clusterName] = authInfo
-	kubeCfg.Clusters[cfg.clusterName] = cluster
-	kubeCfg.Contexts[cfg.clusterName] = context
-	kubeCfg.CurrentContext = cfg.clusterName
+	kubeCfg.AuthInfos[client.clusterName] = authInfo
+	kubeCfg.Clusters[client.clusterName] = cluster
+	kubeCfg.Contexts[client.clusterName] = context
+	kubeCfg.CurrentContext = client.clusterName
 
-	err = k8sclientcmd.WriteToFile(*kubeCfg, cfg.kubeConfig)
+	err = k8sclientcmd.WriteToFile(*kubeCfg, client.kubeConfig)
 	if err != nil {
 		log.V(1).Info("Unable to write to kubeConfig", "error", err.Error())
 		return customerrors.New(customerrors.ErrorTypeKubeConfig, err)
 	}
 
-	log.V(0).Info("Configuration written", "kubeConfig", cfg.kubeConfig, "clusterName", cfg.clusterName)
+	log.V(0).Info("Configuration written", "kubeConfig", client.kubeConfig, "clusterName", client.clusterName)
 
 	return nil
+}
+
+func (client *GenerateClient) Merge(new GenerateClient) {
+	if new.clusterName != "" {
+		client.clusterName = new.clusterName
+	}
+
+	if new.proxyURL.String() != "" {
+		client.proxyURL = new.proxyURL
+	}
+
+	if new.resource != "" {
+		client.resource = new.resource
+	}
+
+	if new.kubeConfig != "" {
+		client.kubeConfig = new.kubeConfig
+	}
+
+	if new.tokenCache != "" {
+		client.tokenCache = new.tokenCache
+	}
+
+	if new.overwrite != client.overwrite {
+		client.overwrite = new.overwrite
+	}
+
+	if new.insecureSkipVerify != client.insecureSkipVerify {
+		client.insecureSkipVerify = new.insecureSkipVerify
+	}
 }
 
 func getCACertificates(url url.URL, insecureSkipVerify bool) ([]byte, error) {

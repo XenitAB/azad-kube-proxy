@@ -11,9 +11,9 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func TestNewDiscoverConfig(t *testing.T) {
+func TestNewDiscoverClient(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
-	cfg := DiscoverConfig{}
+	client := &DiscoverClient{}
 
 	restoreAzureCLIAuth := tempChangeEnv("EXCLUDE_AZURE_CLI_AUTH", "true")
 	defer restoreAzureCLIAuth()
@@ -29,7 +29,7 @@ func TestNewDiscoverConfig(t *testing.T) {
 				Flags:   DiscoverFlags(ctx),
 				Action: func(c *cli.Context) error {
 					var err error
-					cfg, err = NewDiscoverConfig(ctx, c)
+					client, err = NewDiscoverClient(ctx, c)
 					if err != nil {
 						return err
 					}
@@ -42,7 +42,7 @@ func TestNewDiscoverConfig(t *testing.T) {
 	cases := []struct {
 		cliApp              *cli.App
 		args                []string
-		expectedConfig      DiscoverConfig
+		expectedConfig      *DiscoverClient
 		expectedErrContains string
 		outBuffer           bytes.Buffer
 		errBuffer           bytes.Buffer
@@ -50,7 +50,7 @@ func TestNewDiscoverConfig(t *testing.T) {
 		{
 			cliApp: app,
 			args:   []string{"fake-binary", "test"},
-			expectedConfig: DiscoverConfig{
+			expectedConfig: &DiscoverClient{
 				outputType: tableOutputType,
 			},
 			expectedErrContains: "",
@@ -60,7 +60,7 @@ func TestNewDiscoverConfig(t *testing.T) {
 		{
 			cliApp: app,
 			args:   []string{"fake-binary", "test", "--output=TABLE"},
-			expectedConfig: DiscoverConfig{
+			expectedConfig: &DiscoverClient{
 				outputType: tableOutputType,
 			},
 			expectedErrContains: "",
@@ -70,7 +70,7 @@ func TestNewDiscoverConfig(t *testing.T) {
 		{
 			cliApp: app,
 			args:   []string{"fake-binary", "test", "--output=JSON"},
-			expectedConfig: DiscoverConfig{
+			expectedConfig: &DiscoverClient{
 				outputType: jsonOutputType,
 			},
 			expectedErrContains: "",
@@ -80,7 +80,7 @@ func TestNewDiscoverConfig(t *testing.T) {
 		{
 			cliApp: app,
 			args:   []string{"fake-binary", "test", "--output=FAKE"},
-			expectedConfig: DiscoverConfig{
+			expectedConfig: &DiscoverClient{
 				outputType: jsonOutputType,
 			},
 			expectedErrContains: "Supported outputs are TABLE and JSON. The following was used: FAKE",
@@ -108,12 +108,12 @@ func TestNewDiscoverConfig(t *testing.T) {
 		}
 
 		if c.expectedErrContains == "" {
-			if cfg.outputType != c.expectedConfig.outputType {
-				t.Errorf("Expected cfg.clusterName to be '%s' but was: %s", c.expectedConfig.outputType, cfg.outputType)
+			if client.outputType != c.expectedConfig.outputType {
+				t.Errorf("Expected client.clusterName to be '%s' but was: %s", c.expectedConfig.outputType, client.outputType)
 			}
 		}
 
-		cfg = DiscoverConfig{}
+		client = &DiscoverClient{}
 	}
 }
 
@@ -126,12 +126,12 @@ func TestDiscover(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 
 	cases := []struct {
-		discoverConfig         DiscoverConfig
+		DiscoverClient         *DiscoverClient
 		expectedOutputContains string
 		expectedErrContains    string
 	}{
 		{
-			discoverConfig: DiscoverConfig{
+			DiscoverClient: &DiscoverClient{
 				outputType:             tableOutputType,
 				tenantID:               tenantID,
 				clientID:               clientID,
@@ -144,7 +144,7 @@ func TestDiscover(t *testing.T) {
 			expectedErrContains:    "",
 		},
 		{
-			discoverConfig: DiscoverConfig{
+			DiscoverClient: &DiscoverClient{
 				outputType:             jsonOutputType,
 				tenantID:               tenantID,
 				clientID:               clientID,
@@ -157,7 +157,7 @@ func TestDiscover(t *testing.T) {
 			expectedErrContains:    "",
 		},
 		{
-			discoverConfig: DiscoverConfig{
+			DiscoverClient: &DiscoverClient{
 				outputType:             jsonOutputType,
 				tenantID:               tenantID,
 				clientID:               clientID,
@@ -172,7 +172,7 @@ func TestDiscover(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		rawRes, err := Discover(ctx, c.discoverConfig)
+		rawRes, err := c.DiscoverClient.Discover(ctx)
 		if err != nil && c.expectedErrContains == "" {
 			t.Errorf("Expected err to be nil: %q", err)
 		}

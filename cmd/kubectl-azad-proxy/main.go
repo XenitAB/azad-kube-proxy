@@ -58,11 +58,11 @@ func main() {
 				Usage:   "Generate kubeconfig",
 				Flags:   append(actions.GenerateFlags(ctx), globalFlags...),
 				Action: func(c *cli.Context) error {
-					cfg, err := actions.NewGenerateConfig(ctx, c)
+					client, err := actions.NewGenerateClient(ctx, c)
 					if err != nil {
 						return err
 					}
-					return actions.Generate(ctx, cfg)
+					return client.Generate(ctx)
 				},
 			},
 			{
@@ -71,12 +71,12 @@ func main() {
 				Usage:   "Login to Azure AD app and return token",
 				Flags:   append(actions.LoginFlags(ctx), globalFlags...),
 				Action: func(c *cli.Context) error {
-					cfg, err := actions.NewLoginConfig(ctx, c)
+					client, err := actions.NewLoginClient(ctx, c)
 					if err != nil {
 						return err
 					}
 
-					output, err := actions.Login(ctx, cfg)
+					output, err := client.Login(ctx)
 					if err != nil {
 						return err
 					}
@@ -91,12 +91,12 @@ func main() {
 				Usage:   "Discovery for the azad-kube-proxy enabled apps and their configuration",
 				Flags:   append(actions.DiscoverFlags(ctx), globalFlags...),
 				Action: func(c *cli.Context) error {
-					cfg, err := actions.NewDiscoverConfig(ctx, c)
+					client, err := actions.NewDiscoverClient(ctx, c)
 					if err != nil {
 						return err
 					}
 
-					output, err := actions.Discover(ctx, cfg)
+					output, err := client.Discover(ctx)
 					if err != nil {
 						return err
 					}
@@ -111,12 +111,12 @@ func main() {
 				Usage:   "Menu for the azad-kube-proxy configuration",
 				Flags:   append(actions.MenuFlags(ctx), globalFlags...),
 				Action: func(c *cli.Context) error {
-					cfg, err := actions.NewMenuConfig(ctx, c)
+					client, err := actions.NewMenuClient(ctx, c)
 					if err != nil {
 						return err
 					}
 
-					return actions.Menu(ctx, cfg)
+					return client.Menu(ctx)
 				},
 			},
 		},

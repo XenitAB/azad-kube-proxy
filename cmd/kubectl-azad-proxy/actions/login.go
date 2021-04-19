@@ -10,17 +10,17 @@ import (
 	k8sclientauth "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
 )
 
-// LoginConfig ...
-type LoginConfig struct {
+// LoginClient ...
+type LoginClient struct {
 	clusterName                   string
 	resource                      string
 	tokenCache                    string
 	defaultAzureCredentialOptions *azidentity.DefaultAzureCredentialOptions
 }
 
-// NewLoginConfig ...
-func NewLoginConfig(ctx context.Context, c *cli.Context) (LoginConfig, error) {
-	return LoginConfig{
+// NewLoginClient ...
+func NewLoginClient(ctx context.Context, c *cli.Context) (*LoginClient, error) {
+	return &LoginClient{
 		clusterName: c.String("cluster-name"),
 		resource:    c.String("resource"),
 		tokenCache:  c.String("token-cache"),
@@ -75,13 +75,13 @@ func LoginFlags(ctx context.Context) []cli.Flag {
 }
 
 // Login ...
-func Login(ctx context.Context, cfg LoginConfig) (string, error) {
-	tokens, err := NewTokens(ctx, cfg.tokenCache, cfg.defaultAzureCredentialOptions)
+func (client *LoginClient) Login(ctx context.Context) (string, error) {
+	tokens, err := NewTokens(ctx, client.tokenCache, client.defaultAzureCredentialOptions)
 	if err != nil {
 		return "", err
 	}
 
-	token, err := tokens.GetToken(ctx, cfg.clusterName, cfg.resource)
+	token, err := tokens.GetToken(ctx, client.clusterName, client.resource)
 	if err != nil {
 		return "", err
 	}

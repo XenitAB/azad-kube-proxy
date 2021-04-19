@@ -10,26 +10,26 @@ import (
 	"github.com/xenitab/azad-kube-proxy/cmd/kubectl-azad-proxy/customerrors"
 )
 
-type MenuConfig struct {
-	discoverConfig *DiscoverConfig
-	generateConfig *GenerateConfig
+type MenuClient struct {
+	DiscoverClient *DiscoverClient
+	GenerateClient *GenerateClient
 }
 
-// NewMenuConfig ...
-func NewMenuConfig(ctx context.Context, c *cli.Context) (MenuConfig, error) {
-	discoverConfig, err := NewDiscoverConfig(ctx, c)
+// NewMenuClient ...
+func NewMenuClient(ctx context.Context, c *cli.Context) (*MenuClient, error) {
+	DiscoverClient, err := NewDiscoverClient(ctx, c)
 	if err != nil {
-		return MenuConfig{}, err
+		return nil, err
 	}
 
-	generateConfig, err := NewGenerateConfig(ctx, c)
+	GenerateClient, err := NewGenerateClient(ctx, c)
 	if err != nil {
-		return MenuConfig{}, err
+		return nil, err
 	}
 
-	return MenuConfig{
-		&discoverConfig,
-		&generateConfig,
+	return &MenuClient{
+		DiscoverClient,
+		GenerateClient,
 	}, nil
 }
 
@@ -42,11 +42,11 @@ func MenuFlags(ctx context.Context) []cli.Flag {
 }
 
 // Menu ...
-func Menu(ctx context.Context, cfg MenuConfig) error {
+func (client *MenuClient) Menu(ctx context.Context) error {
 	log := logr.FromContext(ctx)
 
 	// Run discovery of Azure AD applications
-	apps, err := runDiscover(ctx, *cfg.discoverConfig)
+	apps, err := client.DiscoverClient.Run(ctx)
 	if err != nil {
 		log.V(1).Info("Unable to run discovery", "error", err.Error())
 		return err
@@ -84,15 +84,17 @@ func Menu(ctx context.Context, cfg MenuConfig) error {
 		return customerrors.New(customerrors.ErrorTypeMenu, err)
 	}
 
-	// Update the generateConfig based on the selected cluster (overwrite = false)
-	cfg.generateConfig.Merge(GenerateConfig{
+	log.V(1).Info("Proxy URL", "proxyURL", proxyURL.String())
+
+	// Update the GenerateClient based on the selected cluster (overwrite = false)
+	client.GenerateClient.Merge(GenerateClient{
 		clusterName: cluster.ClusterName,
 		resource:    cluster.Resource,
 		proxyURL:    *proxyURL,
 		overwrite:   false,
 	})
 
-	err = Generate(ctx, *cfg.generateConfig)
+	err = client.GenerateClient.Generate(ctx)
 
 	// If the config already exists inside of KubeConfig, ask user if it should be overwritten
 	if customerrors.To(err).ErrorType == customerrors.ErrorTypeOverwriteConfig {
@@ -114,11 +116,11 @@ func Menu(ctx context.Context, cfg MenuConfig) error {
 		}
 
 		// If user chose 'Yes', update config to allow overwrite and run again
-		cfg.generateConfig.Merge(GenerateConfig{
+		client.GenerateClient.Merge(GenerateClient{
 			overwrite: true,
 		})
 
-		err = Generate(ctx, *cfg.generateConfig)
+		err = client.GenerateClient.Generate(ctx)
 		if err != nil {
 			log.V(1).Info("Unable to generate config", "error", err.Error())
 			return err

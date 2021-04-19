@@ -30,8 +30,8 @@ type discover struct {
 	ProxyURL    string `json:"proxy_url"`
 }
 
-// DiscoverConfig ...
-type DiscoverConfig struct {
+// DiscoverClient ...
+type DiscoverClient struct {
 	outputType
 	tenantID               string
 	clientID               string
@@ -41,8 +41,8 @@ type DiscoverConfig struct {
 	enableMsiAuth          bool
 }
 
-// NewDiscoverConfig ...
-func NewDiscoverConfig(ctx context.Context, c *cli.Context) (DiscoverConfig, error) {
+// NewDiscoverClient ...
+func NewDiscoverClient(ctx context.Context, c *cli.Context) (*DiscoverClient, error) {
 	log := logr.FromContext(ctx)
 
 	var output outputType
@@ -54,7 +54,7 @@ func NewDiscoverConfig(ctx context.Context, c *cli.Context) (DiscoverConfig, err
 	default:
 		err := fmt.Errorf("Supported outputs are TABLE and JSON. The following was used: %s", c.String("output"))
 		log.V(1).Info("Unsupported output", "error", err.Error())
-		return DiscoverConfig{}, err
+		return nil, err
 	}
 
 	enableAzureCliToken := !c.Bool("exclude-azure-cli-auth")
@@ -63,18 +63,18 @@ func NewDiscoverConfig(ctx context.Context, c *cli.Context) (DiscoverConfig, err
 		cliConfig, err := hamiltonAuth.NewAzureCliConfig(hamiltonAuth.MsGraph, "")
 		if err != nil {
 			log.V(1).Info("Unable to create CliConfig", "error", err.Error())
-			return DiscoverConfig{}, customerrors.New(customerrors.ErrorTypeAuthentication, err)
+			return nil, customerrors.New(customerrors.ErrorTypeAuthentication, err)
 		}
 
 		tenantID = cliConfig.TenantID
 		if tenantID == "" {
 			err := fmt.Errorf("No tenantID could be extracted from Azure CLI authentication")
 			log.V(1).Info("No tenantID", "error", err.Error())
-			return DiscoverConfig{}, customerrors.New(customerrors.ErrorTypeAuthentication, err)
+			return nil, customerrors.New(customerrors.ErrorTypeAuthentication, err)
 		}
 	}
 
-	return DiscoverConfig{
+	return &DiscoverClient{
 		outputType:             output,
 		tenantID:               tenantID,
 		clientID:               c.String("client-id"),
@@ -145,16 +145,16 @@ func DiscoverFlags(ctx context.Context) []cli.Flag {
 }
 
 // Discover ...
-func Discover(ctx context.Context, cfg DiscoverConfig) (string, error) {
+func (client *DiscoverClient) Discover(ctx context.Context) (string, error) {
 	log := logr.FromContext(ctx)
 
-	apps, err := runDiscover(ctx, cfg)
+	apps, err := client.Run(ctx)
 	if err != nil {
 		return "", err
 	}
 
 	var output string
-	switch cfg.outputType {
+	switch client.outputType {
 	case tableOutputType:
 		output = getTable(apps)
 	case jsonOutputType:
@@ -164,23 +164,23 @@ func Discover(ctx context.Context, cfg DiscoverConfig) (string, error) {
 			return "", err
 		}
 	default:
-		return "", fmt.Errorf("Unknown output type: %s", cfg.outputType)
+		return "", fmt.Errorf("Unknown output type: %s", client.outputType)
 	}
 
 	return output, nil
 }
 
-func runDiscover(ctx context.Context, cfg DiscoverConfig) ([]discover, error) {
+func (client *DiscoverClient) Run(ctx context.Context) ([]discover, error) {
 	log := logr.FromContext(ctx)
 
 	authConfig := &hamiltonAuth.Config{
 		Environment:            hamiltonEnvironments.Global,
-		TenantID:               cfg.tenantID,
-		ClientID:               cfg.clientID,
-		ClientSecret:           cfg.clientSecret,
-		EnableClientSecretAuth: cfg.enableClientSecretAuth,
-		EnableAzureCliToken:    cfg.enableAzureCliToken,
-		EnableMsiAuth:          cfg.enableMsiAuth,
+		TenantID:               client.tenantID,
+		ClientID:               client.clientID,
+		ClientSecret:           client.clientSecret,
+		EnableClientSecretAuth: client.enableClientSecretAuth,
+		EnableAzureCliToken:    client.enableAzureCliToken,
+		EnableMsiAuth:          client.enableMsiAuth,
 	}
 
 	authorizer, err := authConfig.NewAuthorizer(ctx, hamiltonAuth.MsGraph)
@@ -189,7 +189,7 @@ func runDiscover(ctx context.Context, cfg DiscoverConfig) ([]discover, error) {
 		return []discover{}, customerrors.New(customerrors.ErrorTypeAuthentication, err)
 	}
 
-	appsClient := hamiltonMsgraph.NewApplicationsClient(cfg.tenantID)
+	appsClient := hamiltonMsgraph.NewApplicationsClient(client.tenantID)
 	appsClient.BaseClient.Authorizer = authorizer
 
 	graphFilter := fmt.Sprintf("tags/any(s: s eq '%s')", azureADAppTag)
