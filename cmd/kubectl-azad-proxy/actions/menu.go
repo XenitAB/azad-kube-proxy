@@ -90,7 +90,7 @@ func (client *MenuClient) Menu(ctx context.Context) error {
 			return customerrors.New(customerrors.ErrorTypeMenu, err)
 		}
 
-		// If user chose 'No' to overwrite, exit
+		// If user chose not to overwrite, exit
 		if !overwrite {
 			log.V(0).Info("User selected not to overwrite config")
 			return nil
@@ -223,5 +223,5 @@ func (client *promptClient) overwriteConfig() (bool, error) {
 		return false, nil
 	}
 
-	return false, nil
+	return true, nil
 }
