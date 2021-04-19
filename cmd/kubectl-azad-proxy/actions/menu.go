@@ -2,7 +2,6 @@ package actions
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 
 	"github.com/go-logr/logr"
@@ -91,9 +90,7 @@ func Menu(ctx context.Context, cfg MenuConfig) error {
 		overwrite:   false,
 	})
 
-	generateCfg := *cfg.generateConfig
-
-	err = Generate(ctx, generateCfg)
+	err = Generate(ctx, *cfg.generateConfig)
 
 	if customerrors.To(err).ErrorType == customerrors.ErrorTypeOverwriteConfig {
 		overwritePrompt := promptui.Select{
@@ -108,9 +105,8 @@ func Menu(ctx context.Context, cfg MenuConfig) error {
 		}
 
 		if result == "No" {
-			err := fmt.Errorf("User selected not to overwrite config")
-			log.V(1).Info("User selected not to overwrite config")
-			return customerrors.New(customerrors.ErrorTypeOverwriteConfig, err)
+			log.V(0).Info("User selected not to overwrite config")
+			return nil
 		}
 
 		cfg.generateConfig.Merge(GenerateConfig{
@@ -120,9 +116,7 @@ func Menu(ctx context.Context, cfg MenuConfig) error {
 			overwrite:   true,
 		})
 
-		generateCfg := *cfg.generateConfig
-
-		err = Generate(ctx, generateCfg)
+		err = Generate(ctx, *cfg.generateConfig)
 		if err != nil {
 			log.V(1).Info("Unable to generate config", "error", err.Error())
 			return err

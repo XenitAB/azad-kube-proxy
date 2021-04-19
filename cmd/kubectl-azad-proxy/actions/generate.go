@@ -265,6 +265,8 @@ func Generate(ctx context.Context, cfg GenerateConfig) error {
 		return customerrors.New(customerrors.ErrorTypeKubeConfig, err)
 	}
 
+	log.V(0).Info("Configuration written", "kubeConfig", cfg.kubeConfig, "clusterName", cfg.clusterName)
+
 	return nil
 }
 
