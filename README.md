@@ -70,6 +70,10 @@ You will need to configure an Azure AD App and Service Principal for the proxy a
 
 ### Plugin
 
+**MENU**
+
+You can run `kubectl azad-proxy menu` to get an interactive prompt to configure your proxy.
+
 **GENERATE / LOGIN**
 
 Setup the plugin (using Krew or manually). When that is done, run:
@@ -167,6 +171,10 @@ They will see an output like this:
 ```
 
 JSON output is also possible by adding `--output JSON` to the discover command.
+
+**DEBUGGING**
+
+To get more information when running the plugin, add `--debug`.
 
 **CONFIGURATION PARAMETERS**
 

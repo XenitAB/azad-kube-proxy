@@ -15,9 +15,9 @@ import (
 	k8sclientauth "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
 )
 
-func TestNewLoginConfig(t *testing.T) {
+func TestNewLoginClient(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
-	cfg := LoginConfig{}
+	client := &LoginClient{}
 
 	app := &cli.App{
 		Name:  "test",
@@ -29,11 +29,13 @@ func TestNewLoginConfig(t *testing.T) {
 				Usage:   "test",
 				Flags:   LoginFlags(ctx),
 				Action: func(c *cli.Context) error {
-					var err error
-					cfg, err = NewLoginConfig(ctx, c)
+					ci, err := NewLoginClient(ctx, c)
 					if err != nil {
 						return err
 					}
+
+					client = ci.(*LoginClient)
+
 					return nil
 				},
 			},
@@ -43,7 +45,7 @@ func TestNewLoginConfig(t *testing.T) {
 	cases := []struct {
 		cliApp              *cli.App
 		args                []string
-		expectedConfig      LoginConfig
+		expectedConfig      *LoginClient
 		expectedErrContains string
 		outBuffer           bytes.Buffer
 		errBuffer           bytes.Buffer
@@ -51,7 +53,7 @@ func TestNewLoginConfig(t *testing.T) {
 		{
 			cliApp:              app,
 			args:                []string{"fake-binary", "test"},
-			expectedConfig:      LoginConfig{},
+			expectedConfig:      &LoginClient{},
 			expectedErrContains: "cluster-name",
 			outBuffer:           bytes.Buffer{},
 			errBuffer:           bytes.Buffer{},
@@ -59,7 +61,7 @@ func TestNewLoginConfig(t *testing.T) {
 		{
 			cliApp:              app,
 			args:                []string{"fake-binary", "test", "--cluster-name=test"},
-			expectedConfig:      LoginConfig{},
+			expectedConfig:      &LoginClient{},
 			expectedErrContains: "resource",
 			outBuffer:           bytes.Buffer{},
 			errBuffer:           bytes.Buffer{},
@@ -67,7 +69,7 @@ func TestNewLoginConfig(t *testing.T) {
 		{
 			cliApp: app,
 			args:   []string{"fake-binary", "test", "--cluster-name=test", "--resource=https://fake"},
-			expectedConfig: LoginConfig{
+			expectedConfig: &LoginClient{
 				clusterName: "test",
 				resource:    "https://fake",
 			},
@@ -96,14 +98,14 @@ func TestNewLoginConfig(t *testing.T) {
 		}
 
 		if c.expectedErrContains == "" {
-			if cfg.clusterName != c.expectedConfig.clusterName {
-				t.Errorf("Expected cfg.clusterName to be '%s' but was: %s", c.expectedConfig.clusterName, cfg.clusterName)
+			if client.clusterName != c.expectedConfig.clusterName {
+				t.Errorf("Expected client.clusterName to be '%s' but was: %s", c.expectedConfig.clusterName, client.clusterName)
 			}
-			if cfg.resource != c.expectedConfig.resource {
-				t.Errorf("Expected cfg.resource to be '%s' but was: %s", c.expectedConfig.resource, cfg.resource)
+			if client.resource != c.expectedConfig.resource {
+				t.Errorf("Expected client.resource to be '%s' but was: %s", c.expectedConfig.resource, client.resource)
 			}
 		}
-		cfg = LoginConfig{}
+		client = &LoginClient{}
 	}
 }
 
@@ -130,7 +132,7 @@ func TestLogin(t *testing.T) {
 	defer deleteFile(t, tokenCacheFile)
 
 	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
-	cfg := LoginConfig{
+	client := &LoginClient{
 		clusterName: "test",
 		resource:    resource,
 		tokenCache:  tokenCacheFile,
@@ -142,7 +144,7 @@ func TestLogin(t *testing.T) {
 	}
 
 	tokenCacheFileErr := fmt.Sprintf("%s/../../../tmp/test-login-token-cache-err", curDir)
-	cfgErr := LoginConfig{
+	clientErr := &LoginClient{
 		clusterName: "test",
 		resource:    resource,
 		tokenCache:  tokenCacheFileErr,
@@ -154,21 +156,21 @@ func TestLogin(t *testing.T) {
 	}
 
 	cases := []struct {
-		loginConfig         LoginConfig
+		LoginClient         *LoginClient
 		expectedErrContains string
 	}{
 		{
-			loginConfig:         cfg,
+			LoginClient:         client,
 			expectedErrContains: "",
 		},
 		{
-			loginConfig:         cfgErr,
+			LoginClient:         clientErr,
 			expectedErrContains: "Authentication error:",
 		},
 	}
 
 	for _, c := range cases {
-		rawRes, err := Login(ctx, c.loginConfig)
+		rawRes, err := c.LoginClient.Login(ctx)
 		if err != nil && c.expectedErrContains == "" {
 			t.Errorf("Expected err to be nil: %q", err)
 		}

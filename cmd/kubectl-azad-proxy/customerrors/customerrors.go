@@ -10,6 +10,7 @@ const (
 	ErrorTypeTokenCache      ErrorType = "TokenCache"
 	ErrorTypeCACertificate   ErrorType = "CACertificate"
 	ErrorTypeOverwriteConfig ErrorType = "OverwriteConfig"
+	ErrorTypeMenu            ErrorType = "Menu"
 )
 
 type CustomError struct {
@@ -35,6 +36,8 @@ func (ce *CustomError) Error() string {
 		return "CA certificate error: Unable to get CA certificate from server - validate that you have access to the proxy"
 	case ErrorTypeOverwriteConfig:
 		return "Overwrite config error: Overwrite config (--overwrite) is not enabled"
+	case ErrorTypeMenu:
+		return "Menu error: Unable to run the menu"
 	}
 }
 
