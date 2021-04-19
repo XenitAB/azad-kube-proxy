@@ -18,8 +18,13 @@ type LoginClient struct {
 	defaultAzureCredentialOptions *azidentity.DefaultAzureCredentialOptions
 }
 
+// LoginInterface ...
+type LoginInterface interface {
+	Login(ctx context.Context) (string, error)
+}
+
 // NewLoginClient ...
-func NewLoginClient(ctx context.Context, c *cli.Context) (*LoginClient, error) {
+func NewLoginClient(ctx context.Context, c *cli.Context) (LoginInterface, error) {
 	return &LoginClient{
 		clusterName: c.String("cluster-name"),
 		resource:    c.String("resource"),

@@ -31,8 +31,14 @@ type GenerateClient struct {
 	defaultAzureCredentialOptions *azidentity.DefaultAzureCredentialOptions
 }
 
+// GenerateInterface ...
+type GenerateInterface interface {
+	Generate(ctx context.Context) error
+	Merge(new GenerateClient)
+}
+
 // NewGenerateClient ...
-func NewGenerateClient(ctx context.Context, c *cli.Context) (*GenerateClient, error) {
+func NewGenerateClient(ctx context.Context, c *cli.Context) (GenerateInterface, error) {
 	log := logr.FromContext(ctx)
 
 	proxyURL, err := url.Parse(c.String("proxy-url"))

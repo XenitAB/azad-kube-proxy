@@ -3,11 +3,12 @@ package actions
 import (
 	"bytes"
 	"context"
-	"strings"
+	"fmt"
 	"testing"
 
 	"github.com/go-logr/logr"
 	"github.com/urfave/cli/v2"
+	"github.com/xenitab/azad-kube-proxy/cmd/kubectl-azad-proxy/customerrors"
 )
 
 func TestNewMenuClient(t *testing.T) {
@@ -45,79 +46,85 @@ func TestNewMenuClient(t *testing.T) {
 }
 
 func TestMenu(t *testing.T) {
-	tenantID := getEnvOrSkip(t, "TENANT_ID")
-	clientID := getEnvOrSkip(t, "CLIENT_ID")
-	clientSecret := getEnvOrSkip(t, "CLIENT_SECRET")
-	resource := getEnvOrSkip(t, "TEST_USER_SP_RESOURCE")
-
 	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
 
 	cases := []struct {
-		DiscoverClient         *DiscoverClient
-		expectedOutputContains string
-		expectedErrContains    string
+		menuClient  *MenuClient
+		expectedErr bool
 	}{
 		{
-			DiscoverClient: &DiscoverClient{
-				outputType:             tableOutputType,
-				tenantID:               tenantID,
-				clientID:               clientID,
-				clientSecret:           clientSecret,
-				enableClientSecretAuth: true,
-				enableAzureCliToken:    false,
-				enableMsiAuth:          false,
+			menuClient: &MenuClient{
+				discoverClient: newFakeDiscoverClient(nil),
+				generateClient: newFakeGenerateClient(nil),
+				promptClient:   newFakePromptClient(true, nil, nil),
 			},
-			expectedOutputContains: resource,
-			expectedErrContains:    "",
+			expectedErr: false,
 		},
 		{
-			DiscoverClient: &DiscoverClient{
-				outputType:             jsonOutputType,
-				tenantID:               tenantID,
-				clientID:               clientID,
-				clientSecret:           clientSecret,
-				enableClientSecretAuth: true,
-				enableAzureCliToken:    false,
-				enableMsiAuth:          false,
+			menuClient: &MenuClient{
+				discoverClient: newFakeDiscoverClient(nil),
+				generateClient: newFakeGenerateClient(customerrors.New(customerrors.ErrorTypeOverwriteConfig, fmt.Errorf("Fake error"))),
+				promptClient:   newFakePromptClient(true, nil, nil),
 			},
-			expectedOutputContains: resource,
-			expectedErrContains:    "",
+			expectedErr: false,
 		},
 		{
-			DiscoverClient: &DiscoverClient{
-				outputType:             jsonOutputType,
-				tenantID:               tenantID,
-				clientID:               clientID,
-				clientSecret:           clientSecret,
-				enableClientSecretAuth: false,
-				enableAzureCliToken:    false,
-				enableMsiAuth:          false,
+			menuClient: &MenuClient{
+				discoverClient: newFakeDiscoverClient(nil),
+				generateClient: newFakeGenerateClient(customerrors.New(customerrors.ErrorTypeUnknown, fmt.Errorf("Fake error"))),
+				promptClient:   newFakePromptClient(true, nil, nil),
 			},
-			expectedOutputContains: "",
-			expectedErrContains:    "Authentication error: Please validate that you are logged on using the correct credentials",
+			expectedErr: true,
+		},
+		{
+			menuClient: &MenuClient{
+				discoverClient: newFakeDiscoverClient(fmt.Errorf("Fake error")),
+				generateClient: newFakeGenerateClient(nil),
+				promptClient:   newFakePromptClient(true, nil, nil),
+			},
+			expectedErr: true,
+		},
+		{
+			menuClient: &MenuClient{
+				discoverClient: newFakeDiscoverClient(nil),
+				generateClient: newFakeGenerateClient(nil),
+				promptClient:   newFakePromptClient(true, fmt.Errorf("Fake error"), nil),
+			},
+			expectedErr: true,
+		},
+		{
+			menuClient: &MenuClient{
+				discoverClient: newFakeDiscoverClient(nil),
+				generateClient: newFakeGenerateClient(nil),
+				promptClient:   newFakePromptClient(true, nil, fmt.Errorf("Fake error")),
+			},
+			expectedErr: false,
+		},
+		{
+			menuClient: &MenuClient{
+				discoverClient: newFakeDiscoverClient(nil),
+				generateClient: newFakeGenerateClient(customerrors.New(customerrors.ErrorTypeOverwriteConfig, fmt.Errorf("Fake error"))),
+				promptClient:   newFakePromptClient(true, nil, fmt.Errorf("Fake error")),
+			},
+			expectedErr: true,
+		},
+		{
+			menuClient: &MenuClient{
+				discoverClient: newFakeDiscoverClient(nil),
+				generateClient: newFakeGenerateClient(customerrors.New(customerrors.ErrorTypeOverwriteConfig, fmt.Errorf("Fake error"))),
+				promptClient:   newFakePromptClient(false, nil, nil),
+			},
+			expectedErr: false,
 		},
 	}
 
-	for _, c := range cases {
-		rawRes, err := c.DiscoverClient.Discover(ctx)
-		if err != nil && c.expectedErrContains == "" {
-			t.Errorf("Expected err to be nil: %q", err)
+	for idx, c := range cases {
+		err := c.menuClient.Menu(ctx)
+		if err != nil && !c.expectedErr {
+			t.Errorf("Expected err (%d) to be nil: %q", idx, err)
 		}
-
-		if err == nil && c.expectedErrContains != "" {
-			t.Errorf("Expected err to contain '%s' but was nil", c.expectedErrContains)
-		}
-
-		if err != nil && c.expectedErrContains != "" {
-			if !strings.Contains(err.Error(), c.expectedErrContains) {
-				t.Errorf("Expected err to contain '%s' but was: %q", c.expectedErrContains, err)
-			}
-		}
-
-		if c.expectedErrContains == "" {
-			if !strings.Contains(rawRes, c.expectedOutputContains) {
-				t.Errorf("Expected output to contain '%s' but was: %s", c.expectedErrContains, rawRes)
-			}
+		if err == nil && c.expectedErr {
+			t.Errorf("Expected err (%d) not to be nil", idx)
 		}
 	}
 }
@@ -297,4 +304,93 @@ func TestUnrequireFlags(t *testing.T) {
 			}
 		}
 	}
+}
+
+type fakeDiscoverClient struct {
+	fakeError error
+}
+
+func newFakeDiscoverClient(fakeError error) DiscoverInterface {
+	return &fakeDiscoverClient{
+		fakeError: fakeError,
+	}
+}
+
+func (client *fakeDiscoverClient) Discover(ctx context.Context) (string, error) {
+	return "", nil
+}
+func (client *fakeDiscoverClient) Run(ctx context.Context) ([]discover, error) {
+	fakseClusters := []discover{
+		{
+			ClusterName: "dev",
+			Resource:    "https://dev.example.com",
+			ProxyURL:    "https://dev.example.com",
+		},
+		{
+			ClusterName: "qa",
+			Resource:    "https://qa.example.com",
+			ProxyURL:    "https://qa.example.com",
+		},
+		{
+			ClusterName: "prod",
+			Resource:    "https://prod.example.com",
+			ProxyURL:    "https://prod.example.com",
+		},
+	}
+
+	return fakseClusters, client.fakeError
+}
+
+type fakeGenerateClient struct {
+	fakeError error
+	overwrite bool
+}
+
+func newFakeGenerateClient(fakeError error) GenerateInterface {
+	return &fakeGenerateClient{
+		fakeError: fakeError,
+		overwrite: false,
+	}
+}
+
+func (client *fakeGenerateClient) Generate(ctx context.Context) error {
+	if customerrors.To(client.fakeError).ErrorType == customerrors.ErrorTypeOverwriteConfig {
+		if !client.overwrite {
+			return client.fakeError
+		}
+		return nil
+	}
+
+	return client.fakeError
+}
+
+func (client *fakeGenerateClient) Merge(new GenerateClient) {
+	if new.overwrite != client.overwrite {
+		client.overwrite = new.overwrite
+	}
+}
+
+type fakePromptClient struct {
+	userSelectedOverwrite bool
+	selectClusterError    error
+	overwriteConfigError  error
+}
+
+func newFakePromptClient(userSelectedOverwrite bool, selectClusterError error, overwriteConfigError error) promptInterface {
+	return &fakePromptClient{
+		userSelectedOverwrite: userSelectedOverwrite,
+		selectClusterError:    selectClusterError,
+		overwriteConfigError:  overwriteConfigError,
+	}
+}
+
+func (client *fakePromptClient) selectCluster(apps []discover) (discover, error) {
+	if len(apps) == 0 {
+		return discover{}, fmt.Errorf("Empty array")
+	}
+	return apps[0], client.selectClusterError
+}
+
+func (client *fakePromptClient) overwriteConfig() (bool, error) {
+	return client.userSelectedOverwrite, client.overwriteConfigError
 }

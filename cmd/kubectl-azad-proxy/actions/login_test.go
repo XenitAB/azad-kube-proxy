@@ -29,11 +29,13 @@ func TestNewLoginClient(t *testing.T) {
 				Usage:   "test",
 				Flags:   LoginFlags(ctx),
 				Action: func(c *cli.Context) error {
-					var err error
-					client, err = NewLoginClient(ctx, c)
+					ci, err := NewLoginClient(ctx, c)
 					if err != nil {
 						return err
 					}
+
+					client = ci.(*LoginClient)
+
 					return nil
 				},
 			},

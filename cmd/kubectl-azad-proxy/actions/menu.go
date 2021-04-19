@@ -11,25 +11,33 @@ import (
 )
 
 type MenuClient struct {
-	DiscoverClient *DiscoverClient
-	GenerateClient *GenerateClient
+	discoverClient DiscoverInterface
+	generateClient GenerateInterface
+	promptClient   promptInterface
+}
+
+type MenuInterface interface {
+	Menu(ctx context.Context) error
 }
 
 // NewMenuClient ...
-func NewMenuClient(ctx context.Context, c *cli.Context) (*MenuClient, error) {
-	DiscoverClient, err := NewDiscoverClient(ctx, c)
+func NewMenuClient(ctx context.Context, c *cli.Context) (MenuInterface, error) {
+	discoverClient, err := NewDiscoverClient(ctx, c)
 	if err != nil {
 		return nil, err
 	}
 
-	GenerateClient, err := NewGenerateClient(ctx, c)
+	generateClient, err := NewGenerateClient(ctx, c)
 	if err != nil {
 		return nil, err
 	}
+
+	promptClient := newPromptClient()
 
 	return &MenuClient{
-		DiscoverClient,
-		GenerateClient,
+		discoverClient,
+		generateClient,
+		promptClient,
 	}, nil
 }
 
@@ -46,81 +54,54 @@ func (client *MenuClient) Menu(ctx context.Context) error {
 	log := logr.FromContext(ctx)
 
 	// Run discovery of Azure AD applications
-	apps, err := client.DiscoverClient.Run(ctx)
+	apps, err := client.discoverClient.Run(ctx)
 	if err != nil {
 		log.V(1).Info("Unable to run discovery", "error", err.Error())
 		return err
 	}
 
-	templates := &promptui.SelectTemplates{
-		Label:    "{{ . }}?",
-		Active:   "\U00002714 {{ .ClusterName | green }}",
-		Inactive: "  {{ .ClusterName }}",
-		Selected: "\U00002714 {{ .ClusterName | green }}",
-		Details: `
---------- Cluster ----------
-{{ "Cluster name:" | faint }}	{{ .ClusterName }}
-{{ "Proxy URL:" | faint }}	{{ .ProxyURL }}
-{{ "Resource URL:" | faint }}	{{ .Resource }}`,
-	}
-
-	clusterPrompt := promptui.Select{
-		Label:     "Choose what cluster to configure",
-		Items:     apps,
-		Templates: templates,
-	}
-
-	idx, _, err := clusterPrompt.Run()
+	cluster, err := client.promptClient.selectCluster(apps)
 	if err != nil {
 		log.V(1).Info("Unable to menu prompt", "error", err.Error())
 		return customerrors.New(customerrors.ErrorTypeMenu, err)
 	}
 
-	// apps[idx] is the selected cluster
-	cluster := apps[idx]
 	proxyURL, err := url.Parse(cluster.ProxyURL)
 	if err != nil {
 		log.V(1).Info("Unable to parse Proxy URL", "error", err.Error())
 		return customerrors.New(customerrors.ErrorTypeMenu, err)
 	}
 
-	log.V(1).Info("Proxy URL", "proxyURL", proxyURL.String())
-
 	// Update the GenerateClient based on the selected cluster (overwrite = false)
-	client.GenerateClient.Merge(GenerateClient{
+	client.generateClient.Merge(GenerateClient{
 		clusterName: cluster.ClusterName,
 		resource:    cluster.Resource,
 		proxyURL:    *proxyURL,
 		overwrite:   false,
 	})
 
-	err = client.GenerateClient.Generate(ctx)
+	err = client.generateClient.Generate(ctx)
 
 	// If the config already exists inside of KubeConfig, ask user if it should be overwritten
 	if customerrors.To(err).ErrorType == customerrors.ErrorTypeOverwriteConfig {
-		overwritePrompt := promptui.Select{
-			Label: "Do you want to overwrite the config",
-			Items: []string{"No", "Yes"},
-		}
-
-		_, result, err := overwritePrompt.Run()
+		overwrite, err := client.promptClient.overwriteConfig()
 		if err != nil {
 			log.V(1).Info("Unable to menu prompt", "error", err.Error())
 			return customerrors.New(customerrors.ErrorTypeMenu, err)
 		}
 
 		// If user chose 'No' to overwrite, exit
-		if result == "No" {
+		if !overwrite {
 			log.V(0).Info("User selected not to overwrite config")
 			return nil
 		}
 
 		// If user chose 'Yes', update config to allow overwrite and run again
-		client.GenerateClient.Merge(GenerateClient{
+		client.generateClient.Merge(GenerateClient{
 			overwrite: true,
 		})
 
-		err = client.GenerateClient.Generate(ctx)
+		err = client.generateClient.Generate(ctx)
 		if err != nil {
 			log.V(1).Info("Unable to generate config", "error", err.Error())
 			return err
@@ -145,8 +126,6 @@ func unrequireFlags(f []cli.Flag) []cli.Flag {
 		case *cli.StringFlag:
 			flag.Required = false
 		case *cli.BoolFlag:
-			flag.Required = false
-		case *cli.IntFlag:
 			flag.Required = false
 		}
 	}
@@ -189,4 +168,60 @@ func duplicateFlag(a []cli.Flag, b cli.Flag) bool {
 	}
 
 	return duplicate
+}
+
+type promptClient struct{}
+type promptInterface interface {
+	selectCluster(apps []discover) (discover, error)
+	overwriteConfig() (bool, error)
+}
+
+func newPromptClient() promptInterface {
+	return &promptClient{}
+}
+
+func (client *promptClient) selectCluster(apps []discover) (discover, error) {
+	templates := &promptui.SelectTemplates{
+		Label:    "{{ . }}?",
+		Active:   "\U00002714 {{ .ClusterName | green }}",
+		Inactive: "  {{ .ClusterName }}",
+		Selected: "\U00002714 {{ .ClusterName | green }}",
+		Details: `
+--------- Cluster ----------
+{{ "Cluster name:" | faint }}	{{ .ClusterName }}
+{{ "Proxy URL:" | faint }}	{{ .ProxyURL }}
+{{ "Resource URL:" | faint }}	{{ .Resource }}`,
+	}
+
+	clusterPrompt := promptui.Select{
+		Label:     "Choose what cluster to configure",
+		Items:     apps,
+		Templates: templates,
+	}
+
+	idx, _, err := clusterPrompt.Run()
+	if err != nil {
+		return discover{}, err
+	}
+
+	return apps[idx], nil
+}
+
+func (client *promptClient) overwriteConfig() (bool, error) {
+	overwritePrompt := promptui.Select{
+		Label: "Do you want to overwrite the config",
+		Items: []string{"No", "Yes"},
+	}
+
+	_, result, err := overwritePrompt.Run()
+	if err != nil {
+		return false, err
+	}
+
+	// If user chose 'No' to overwrite, exit
+	if result == "No" {
+		return false, nil
+	}
+
+	return false, nil
 }

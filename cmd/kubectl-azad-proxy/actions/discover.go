@@ -41,8 +41,14 @@ type DiscoverClient struct {
 	enableMsiAuth          bool
 }
 
+// DiscoverInterface ...
+type DiscoverInterface interface {
+	Discover(ctx context.Context) (string, error)
+	Run(ctx context.Context) ([]discover, error)
+}
+
 // NewDiscoverClient ...
-func NewDiscoverClient(ctx context.Context, c *cli.Context) (*DiscoverClient, error) {
+func NewDiscoverClient(ctx context.Context, c *cli.Context) (DiscoverInterface, error) {
 	log := logr.FromContext(ctx)
 
 	var output outputType

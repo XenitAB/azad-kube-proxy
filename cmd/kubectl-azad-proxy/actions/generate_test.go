@@ -29,11 +29,13 @@ func TestNewGenerateClient(t *testing.T) {
 				Usage:   "test",
 				Flags:   GenerateFlags(ctx),
 				Action: func(c *cli.Context) error {
-					var err error
-					client, err = NewGenerateClient(ctx, c)
+					ci, err := NewGenerateClient(ctx, c)
 					if err != nil {
 						return err
 					}
+
+					client = ci.(*GenerateClient)
+
 					return nil
 				},
 			},
