@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"os/user"
 
 	"github.com/go-logr/logr"
 	"github.com/manifoldco/promptui"
@@ -37,62 +36,10 @@ func NewMenuConfig(ctx context.Context, c *cli.Context) (MenuConfig, error) {
 
 // MenuFlags ...
 func MenuFlags(ctx context.Context) []cli.Flag {
-	usr, _ := user.Current()
-	return []cli.Flag{
-		&cli.StringFlag{
-			Name:     "kubeconfig",
-			Usage:    "The path of the Kubernetes Config",
-			EnvVars:  []string{"KUBECONFIG"},
-			Value:    fmt.Sprintf("%s/.kube/config", usr.HomeDir),
-			Required: false,
-		},
-		&cli.StringFlag{
-			Name:     "token-cache",
-			Usage:    "The token cache path to cache tokens",
-			EnvVars:  []string{"TOKEN_CACHE"},
-			Value:    "~/.kube/azad-proxy.json",
-			Required: false,
-		},
-		&cli.StringFlag{
-			Name:     "tenant-id",
-			Usage:    "Azure Tenant ID used with ENV auth",
-			EnvVars:  []string{"AZURE_TENANT_ID"},
-			Value:    "",
-			Required: false,
-		},
-		&cli.StringFlag{
-			Name:     "client-id",
-			Usage:    "Azure Client ID used with ENV auth",
-			EnvVars:  []string{"AZURE_CLIENT_ID"},
-			Value:    "",
-			Required: false,
-		},
-		&cli.StringFlag{
-			Name:     "client-secret",
-			Usage:    "Azure Client Secret used with ENV auth",
-			EnvVars:  []string{"AZURE_CLIENT_SECRET"},
-			Value:    "",
-			Required: false,
-		},
-		&cli.BoolFlag{
-			Name:    "exclude-azure-cli-auth",
-			Usage:   "Should Azure CLI be excluded from the authentication?",
-			EnvVars: []string{"EXCLUDE_AZURE_CLI_AUTH"},
-			Value:   false,
-		},
-		&cli.BoolFlag{
-			Name:    "exclude-environment-auth",
-			Usage:   "Should environment be excluded from the authentication?",
-			EnvVars: []string{"EXCLUDE_ENVIRONMENT_AUTH"},
-			Value:   true,
-		},
-		&cli.BoolFlag{
-			Name:    "exclude-msi-auth",
-			Usage:   "Should MSI be excluded from the authentication?",
-			EnvVars: []string{"EXCLUDE_MSI_AUTH"},
-			Value:   true,
-		},
-	}
+	flags := mergeFlags(DiscoverFlags(ctx), GenerateFlags(ctx))
+	flags = unrequireFlags(flags)
+
+	return flags
 }
 
 // Menu ...
@@ -190,4 +137,55 @@ func Menu(ctx context.Context, cfg MenuConfig) error {
 	}
 
 	return nil
+}
+
+func unrequireFlags(f []cli.Flag) []cli.Flag {
+	flags := f
+	for _, flag := range flags {
+		switch flag.(type) {
+		case *cli.StringFlag:
+			flag.(*cli.StringFlag).Required = false
+		case *cli.BoolFlag:
+			flag.(*cli.BoolFlag).Required = false
+		case *cli.IntFlag:
+			flag.(*cli.IntFlag).Required = false
+		}
+	}
+
+	return flags
+}
+
+func mergeFlags(a []cli.Flag, b []cli.Flag) []cli.Flag {
+	flags := a
+
+	for _, bFlag := range b {
+		if !duplicateFlag(flags, bFlag) {
+			flags = append(flags, bFlag)
+		}
+	}
+
+	return flags
+}
+
+func duplicateFlag(a []cli.Flag, b cli.Flag) bool {
+	duplicate := false
+
+	for _, aFlag := range a {
+		for _, aFlagName := range aFlag.Names() {
+			for _, bFlagName := range b.Names() {
+				if aFlagName == bFlagName {
+					duplicate = true
+					break
+				}
+			}
+			if duplicate {
+				break
+			}
+		}
+		if duplicate {
+			break
+		}
+	}
+
+	return duplicate
 }
