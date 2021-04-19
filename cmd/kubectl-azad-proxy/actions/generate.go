@@ -59,8 +59,6 @@ func (c *GenerateConfig) Merge(cfg GenerateConfig) {
 	if cfg.insecureSkipVerify != c.insecureSkipVerify {
 		c.insecureSkipVerify = cfg.insecureSkipVerify
 	}
-
-	return
 }
 
 // NewGenerateConfig ...

@@ -136,13 +136,13 @@ func Menu(ctx context.Context, cfg MenuConfig) error {
 func unrequireFlags(f []cli.Flag) []cli.Flag {
 	flags := f
 	for _, flag := range flags {
-		switch flag.(type) {
+		switch flag := flag.(type) {
 		case *cli.StringFlag:
-			flag.(*cli.StringFlag).Required = false
+			flag.Required = false
 		case *cli.BoolFlag:
-			flag.(*cli.BoolFlag).Required = false
+			flag.Required = false
 		case *cli.IntFlag:
-			flag.(*cli.IntFlag).Required = false
+			flag.Required = false
 		}
 	}
 
