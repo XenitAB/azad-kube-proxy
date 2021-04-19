@@ -52,7 +52,9 @@ func NewDiscoverConfig(ctx context.Context, c *cli.Context) (DiscoverConfig, err
 	case "JSON":
 		output = jsonOutputType
 	default:
-		output = tableOutputType
+		err := fmt.Errorf("Supported outputs are TABLE and JSON. The following was used: %s", c.String("output"))
+		log.V(1).Info("Unsupported output", "error", err.Error())
+		return DiscoverConfig{}, err
 	}
 
 	enableAzureCliToken := !c.Bool("exclude-azure-cli-auth")
