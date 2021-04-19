@@ -2,7 +2,9 @@ package actions
 
 import (
 	"context"
+	"fmt"
 	"net/url"
+	"os/user"
 
 	"github.com/go-logr/logr"
 	"github.com/manifoldco/promptui"
@@ -11,8 +13,8 @@ import (
 )
 
 type MenuConfig struct {
-	discoverConfig DiscoverConfig
-	generateConfig GenerateConfig
+	discoverConfig *DiscoverConfig
+	generateConfig *GenerateConfig
 }
 
 // NewMenuConfig ...
@@ -28,19 +30,20 @@ func NewMenuConfig(ctx context.Context, c *cli.Context) (MenuConfig, error) {
 	}
 
 	return MenuConfig{
-		discoverConfig,
-		generateConfig,
+		&discoverConfig,
+		&generateConfig,
 	}, nil
 }
 
 // MenuFlags ...
 func MenuFlags(ctx context.Context) []cli.Flag {
+	usr, _ := user.Current()
 	return []cli.Flag{
 		&cli.StringFlag{
-			Name:     "auth-method",
-			Usage:    "Authentication method to use.",
-			EnvVars:  []string{"AUTH_METHOD"},
-			Value:    "CLI",
+			Name:     "kubeconfig",
+			Usage:    "The path of the Kubernetes Config",
+			EnvVars:  []string{"KUBECONFIG"},
+			Value:    fmt.Sprintf("%s/.kube/config", usr.HomeDir),
 			Required: false,
 		},
 		&cli.StringFlag{
@@ -89,7 +92,7 @@ func MenuFlags(ctx context.Context) []cli.Flag {
 func Menu(ctx context.Context, cfg MenuConfig) error {
 	log := logr.FromContext(ctx)
 
-	apps, err := runDiscover(ctx, cfg.discoverConfig)
+	apps, err := runDiscover(ctx, *cfg.discoverConfig)
 	if err != nil {
 		log.V(1).Info("Unable to run discovery", "error", err.Error())
 		return err
@@ -107,13 +110,13 @@ func Menu(ctx context.Context, cfg MenuConfig) error {
 {{ "Resource URL:" | faint }}	{{ .Resource }}`,
 	}
 
-	prompt := promptui.Select{
+	clusterPrompt := promptui.Select{
 		Label:     "Choose what cluster to configure",
 		Items:     apps,
 		Templates: templates,
 	}
 
-	idx, _, err := prompt.Run()
+	idx, _, err := clusterPrompt.Run()
 
 	if err != nil {
 		log.V(1).Info("Unable to menu prompt", "error", err.Error())
@@ -127,12 +130,53 @@ func Menu(ctx context.Context, cfg MenuConfig) error {
 		return customerrors.New(customerrors.ErrorTypeMenu, err)
 	}
 
-	generateCfg := cfg.generateConfig
-	generateCfg.clusterName = cluster.ClusterName
-	generateCfg.resource = cluster.Resource
-	generateCfg.proxyURL = *proxyURL
+	cfg.generateConfig.Merge(GenerateConfig{
+		clusterName: cluster.ClusterName,
+		resource:    cluster.Resource,
+		proxyURL:    *proxyURL,
+		overwrite:   false,
+	})
+
+	generateCfg := *cfg.generateConfig
 
 	err = Generate(ctx, generateCfg)
+
+	if customerrors.To(err).ErrorType == customerrors.ErrorTypeOverwriteConfig {
+		overwritePrompt := promptui.Select{
+			Label: "Do you want to overwrite the config",
+			Items: []string{"No", "Yes"},
+		}
+
+		_, result, err := overwritePrompt.Run()
+		if err != nil {
+			log.V(1).Info("Unable to menu prompt", "error", err.Error())
+			return customerrors.New(customerrors.ErrorTypeMenu, err)
+		}
+
+		if result == "No" {
+			err := fmt.Errorf("User selected not to overwrite config")
+			log.V(1).Info("User selected not to overwrite config")
+			return customerrors.New(customerrors.ErrorTypeOverwriteConfig, err)
+		}
+
+		cfg.generateConfig.Merge(GenerateConfig{
+			clusterName: cluster.ClusterName,
+			resource:    cluster.Resource,
+			proxyURL:    *proxyURL,
+			overwrite:   true,
+		})
+
+		generateCfg := *cfg.generateConfig
+
+		err = Generate(ctx, generateCfg)
+		if err != nil {
+			log.V(1).Info("Unable to generate config", "error", err.Error())
+			return err
+		}
+
+		return nil
+	}
+
 	if err != nil {
 		log.V(1).Info("Unable to generate config", "error", err.Error())
 		return err

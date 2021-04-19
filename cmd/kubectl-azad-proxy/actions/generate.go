@@ -31,6 +31,38 @@ type GenerateConfig struct {
 	defaultAzureCredentialOptions *azidentity.DefaultAzureCredentialOptions
 }
 
+func (c *GenerateConfig) Merge(cfg GenerateConfig) {
+	if cfg.clusterName != "" {
+		c.clusterName = cfg.clusterName
+	}
+
+	if cfg.proxyURL.String() != "" {
+		c.proxyURL = cfg.proxyURL
+	}
+
+	if cfg.resource != "" {
+		c.resource = cfg.resource
+	}
+
+	if cfg.kubeConfig != "" {
+		c.kubeConfig = cfg.kubeConfig
+	}
+
+	if cfg.tokenCache != "" {
+		c.tokenCache = cfg.tokenCache
+	}
+
+	if cfg.overwrite != c.overwrite {
+		c.overwrite = cfg.overwrite
+	}
+
+	if cfg.insecureSkipVerify != c.insecureSkipVerify {
+		c.insecureSkipVerify = cfg.insecureSkipVerify
+	}
+
+	return
+}
+
 // NewGenerateConfig ...
 func NewGenerateConfig(ctx context.Context, c *cli.Context) (GenerateConfig, error) {
 	log := logr.FromContext(ctx)
@@ -80,16 +112,18 @@ func GenerateFlags(ctx context.Context) []cli.Flag {
 			Required: true,
 		},
 		&cli.StringFlag{
-			Name:    "kubeconfig",
-			Usage:   "The path of the Kubernetes Config",
-			EnvVars: []string{"KUBECONFIG"},
-			Value:   fmt.Sprintf("%s/.kube/config", usr.HomeDir),
+			Name:     "kubeconfig",
+			Usage:    "The path of the Kubernetes Config",
+			EnvVars:  []string{"KUBECONFIG"},
+			Value:    fmt.Sprintf("%s/.kube/config", usr.HomeDir),
+			Required: false,
 		},
 		&cli.StringFlag{
-			Name:    "token-cache",
-			Usage:   "The token cache path to cache tokens",
-			EnvVars: []string{"TOKEN_CACHE"},
-			Value:   "~/.kube/azad-proxy.json",
+			Name:     "token-cache",
+			Usage:    "The token cache path to cache tokens",
+			EnvVars:  []string{"TOKEN_CACHE"},
+			Value:    "~/.kube/azad-proxy.json",
+			Required: false,
 		},
 		&cli.BoolFlag{
 			Name:    "overwrite",
