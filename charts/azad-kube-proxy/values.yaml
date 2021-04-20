@@ -37,7 +37,7 @@ secret:
   CLIENT_SECRET: ""
   TENANT_ID: ""
 
-replicaCount: 1
+replicaCount: 2
 
 image:
   repository: ghcr.io/xenitab/azad-kube-proxy
