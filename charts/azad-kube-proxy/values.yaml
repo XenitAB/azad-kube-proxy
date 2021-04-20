@@ -109,8 +109,6 @@ nodeSelector: {}
 
 tolerations: []
 
-affinity: {}
-
 podVolumes: []
   # - name: foo
   #   secret:
