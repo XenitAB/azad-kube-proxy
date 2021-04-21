@@ -118,3 +118,7 @@ podVolumeMounts: []
   # - name: foo
   #   mountPath: "/etc/foo"
   #   readOnly: true
+
+pdb:
+  enabled: true
+  minAvailable: 1

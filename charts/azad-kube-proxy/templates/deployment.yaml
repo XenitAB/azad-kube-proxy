@@ -68,7 +68,6 @@ spec:
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -90,8 +89,6 @@ spec:
                         - azad-kube-proxy
                 topologyKey: topology.kubernetes.io/zone
               weight: 100
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
       {{- with .Values.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
