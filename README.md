@@ -72,6 +72,8 @@ You will need to configure an Azure AD App and Service Principal for the proxy a
 
 **MENU**
 
+![kubectl azad-proxy menu](assets/menu-demo.gif)
+
 You can run `kubectl azad-proxy menu` to get an interactive prompt to configure your proxy.
 
 **GENERATE / LOGIN**
