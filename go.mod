@@ -3,7 +3,7 @@ module github.com/xenitab/azad-kube-proxy
 go 1.16
 
 require (
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v0.14.4
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v0.14.5
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v0.8.0
 	github.com/alicebob/miniredis/v2 v2.14.3
 	github.com/bombsimon/logrusr v1.0.0
@@ -15,7 +15,7 @@ require (
 	github.com/google/go-cmp v0.5.5
 	github.com/gorilla/mux v1.8.0
 	github.com/imdario/mergo v0.3.11 // indirect
-	github.com/manicminer/hamilton v0.11.0
+	github.com/manicminer/hamilton v0.12.0
 	github.com/manifoldco/promptui v0.8.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/patrickmn/go-cache v2.1.0+incompatible
