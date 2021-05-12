@@ -40,7 +40,7 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1.1.0
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v1.3.0
       - name: Set up KinD
         uses: engineerd/setup-kind@v0.5.0
       - name: Set up helm
