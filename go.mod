@@ -29,7 +29,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	gopkg.in/square/go-jose.v2 v2.2.2 // indirect
 	k8s.io/api v0.21.0
-	k8s.io/apimachinery v0.21.0
+	k8s.io/apimachinery v0.21.1
 	k8s.io/client-go v0.21.0
 	k8s.io/utils v0.0.0-20210111153108-fddb29f9d009 // indirect
 )
