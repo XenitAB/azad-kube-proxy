@@ -3,30 +3,16 @@ module github.com/xenitab/azad-kube-proxy
 go 1.16
 
 require (
-<<<<<<< HEAD
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v0.16.2
-	github.com/Azure/azure-sdk-for-go/sdk/azidentity v0.8.0
-<<<<<<< HEAD
-=======
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v0.16.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v0.9.1
->>>>>>> dependabot/go_modules/github.com/Azure/azure-sdk-for-go/sdk/azidentity-0.9.1
-	github.com/alicebob/miniredis/v2 v2.14.3
-=======
 	github.com/alicebob/miniredis/v2 v2.14.5
->>>>>>> dependabot/go_modules/github.com/alicebob/miniredis/v2-2.14.5
 	github.com/bombsimon/logrusr v1.1.0
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/go-logr/logr v0.4.0
 	github.com/go-logr/zapr v0.4.0
 	github.com/go-playground/validator/v10 v10.6.1
-<<<<<<< HEAD
 	github.com/go-redis/redis/v8 v8.9.0
-	github.com/google/go-cmp v0.5.5
-=======
-	github.com/go-redis/redis/v8 v8.8.2
 	github.com/google/go-cmp v0.5.6
->>>>>>> dependabot/go_modules/github.com/google/go-cmp-0.5.6
 	github.com/gorilla/mux v1.8.0
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/manicminer/hamilton v0.14.1
@@ -43,10 +29,6 @@ require (
 	gopkg.in/square/go-jose.v2 v2.2.2 // indirect
 	k8s.io/api v0.21.1
 	k8s.io/apimachinery v0.21.1
-<<<<<<< HEAD
 	k8s.io/client-go v0.21.0
-=======
-	k8s.io/client-go v0.21.1
->>>>>>> dependabot/go_modules/k8s.io/client-go-0.21.1
 	k8s.io/utils v0.0.0-20210111153108-fddb29f9d009 // indirect
 )
