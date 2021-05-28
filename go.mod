@@ -20,8 +20,13 @@ require (
 	github.com/go-logr/logr v0.4.0
 	github.com/go-logr/zapr v0.4.0
 	github.com/go-playground/validator/v10 v10.6.1
+<<<<<<< HEAD
 	github.com/go-redis/redis/v8 v8.9.0
 	github.com/google/go-cmp v0.5.5
+=======
+	github.com/go-redis/redis/v8 v8.8.2
+	github.com/google/go-cmp v0.5.6
+>>>>>>> dependabot/go_modules/github.com/google/go-cmp-0.5.6
 	github.com/gorilla/mux v1.8.0
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/manicminer/hamilton v0.12.0
