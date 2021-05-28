@@ -29,7 +29,7 @@ jobs:
           mkdir -p tmp
           make cover
       - name: Send coverage to coverall
-        uses: shogo82148/actions-goveralls@v1.4.4
+        uses: shogo82148/actions-goveralls@v1.4.5
         with:
           path-to-profile: tmp/coverage.out
           ignore: cmd/azad-kube-proxy/main.go,pkg/proxy/proxy.go,cmd/kubectl-azad-proxy/main.go
