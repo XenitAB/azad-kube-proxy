@@ -75,7 +75,7 @@ jobs:
           TEST_USER_SP_OBJECT_ID: ${{ secrets.TEST_USER_SP_OBJECT_ID }}
           TEST_USER_OBJECT_ID: ${{ secrets.TEST_USER_OBJECT_ID }}
         run: |
-          make go-test
+          make test
 
   gosec:
     runs-on: ubuntu-latest
