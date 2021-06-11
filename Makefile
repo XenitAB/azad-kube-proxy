@@ -33,8 +33,9 @@ tidy:
 vet:
 	go vet ./...
 
-.SILENT:
-go-test:
+.PHONY: test 
+.SILENT: test
+test:
 	mkdir -p tmp
 	go test -timeout 1m ./... -cover
 
