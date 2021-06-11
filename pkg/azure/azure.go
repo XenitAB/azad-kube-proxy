@@ -55,12 +55,15 @@ func NewAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graph
 
 	usersClient := hamiltonMsgraph.NewUsersClient(tenantID)
 	usersClient.BaseClient.Authorizer = authorizer
+	usersClient.BaseClient.DisableRetries = true
 
 	servicePrincipalsClient := hamiltonMsgraph.NewServicePrincipalsClient(tenantID)
 	servicePrincipalsClient.BaseClient.Authorizer = authorizer
+	servicePrincipalsClient.BaseClient.DisableRetries = true
 
 	groupsClient := hamiltonMsgraph.NewGroupsClient(tenantID)
 	groupsClient.BaseClient.Authorizer = authorizer
+	groupsClient.BaseClient.DisableRetries = true
 
 	if graphFilter != "" {
 		graphFilter = fmt.Sprintf("startswith(displayName,'%s')", graphFilter)
