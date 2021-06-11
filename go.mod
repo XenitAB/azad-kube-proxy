@@ -15,7 +15,7 @@ require (
 	github.com/google/go-cmp v0.5.6
 	github.com/gorilla/mux v1.8.0
 	github.com/imdario/mergo v0.3.11 // indirect
-	github.com/manicminer/hamilton v0.15.0
+	github.com/manicminer/hamilton v0.16.0
 	github.com/manifoldco/promptui v0.8.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/patrickmn/go-cache v2.1.0+incompatible
@@ -25,7 +25,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/urfave/cli/v2 v2.3.0
 	go.uber.org/zap v1.17.0
-	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	golang.org/x/oauth2 v0.0.0-20210514164344-f6687ab2804c
 	gopkg.in/square/go-jose.v2 v2.2.2 // indirect
 	k8s.io/api v0.21.1
 	k8s.io/apimachinery v0.21.1
