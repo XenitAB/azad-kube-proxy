@@ -10,6 +10,7 @@ import (
 	hamiltonAuth "github.com/manicminer/hamilton/auth"
 	hamiltonEnvironments "github.com/manicminer/hamilton/environments"
 	hamiltonMsgraph "github.com/manicminer/hamilton/msgraph"
+	hamiltonOdata "github.com/manicminer/hamilton/odata"
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli/v2"
 	"github.com/xenitab/azad-kube-proxy/cmd/kubectl-azad-proxy/customerrors"
@@ -200,7 +201,11 @@ func (client *DiscoverClient) Run(ctx context.Context) ([]discover, error) {
 
 	graphFilter := fmt.Sprintf("tags/any(s: s eq '%s')", azureADAppTag)
 
-	clusterApps, resCode, err := appsClient.List(ctx, graphFilter)
+	odataQuery := hamiltonOdata.Query{
+		Filter: graphFilter,
+	}
+
+	clusterApps, resCode, err := appsClient.List(ctx, odataQuery)
 	if err != nil {
 		log.V(1).Info("Unable to to list Azure AD applications", "error", err.Error(), "responseCode", resCode)
 		return []discover{}, customerrors.New(customerrors.ErrorTypeAuthorization, err)
