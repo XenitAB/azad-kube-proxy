@@ -19,7 +19,7 @@ COPY Makefile Makefile
 COPY cmd/ cmd/
 COPY pkg/ pkg/
 
-RUN apk add --no-cache make=4.3-r0 bash=5.1.0-r0
+RUN apk add --no-cache make=4.3-r0 bash=5.1.4-r0
 RUN make build
 
 #RUNTIME
