@@ -24,7 +24,7 @@ require (
 	github.com/rs/cors v1.8.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/urfave/cli/v2 v2.3.0
-	go.uber.org/zap v1.17.0
+	go.uber.org/zap v1.18.1
 	golang.org/x/oauth2 v0.0.0-20210514164344-f6687ab2804c
 	gopkg.in/square/go-jose.v2 v2.2.2 // indirect
 	k8s.io/api v0.21.1
