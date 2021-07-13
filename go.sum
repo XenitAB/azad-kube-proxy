@@ -249,8 +249,8 @@ github.com/lunixbochs/vtclean v0.0.0-20180621232353-2d01aacdc34a h1:weJVJJRzAJBF
 github.com/lunixbochs/vtclean v0.0.0-20180621232353-2d01aacdc34a/go.mod h1:pHhQNgMf3btfWnGBVipUOjRYhoOsdGqdm/+2c2E2WMI=
 github.com/mailru/easyjson v0.0.0-20190614124828-94de47d64c63/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
 github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
-github.com/manicminer/hamilton v0.21.0 h1:TsvOK9GkUQVVostAuWA6b67kI7TW7TdGVDDFCe2baac=
-github.com/manicminer/hamilton v0.21.0/go.mod h1:y0lB5Ey1UesBkFa9NAtybwWPoN4v1SbY1Chp3OqGtN4=
+github.com/manicminer/hamilton v0.22.0 h1:qsoUquW//kQoxZtq8zTnHCVO7jzp9+iYoDsBfkQ3G50=
+github.com/manicminer/hamilton v0.22.0/go.mod h1:y0lB5Ey1UesBkFa9NAtybwWPoN4v1SbY1Chp3OqGtN4=
 github.com/manifoldco/promptui v0.8.0 h1:R95mMF+McvXZQ7j1g8ucVZE1gLP3Sv6j9vlF9kyRqQo=
 github.com/manifoldco/promptui v0.8.0/go.mod h1:n4zTdgP0vr0S3w7/O/g98U+e0gwLScEXGwov2nIKuGQ=
 github.com/mattn/go-colorable v0.0.9 h1:UVL0vNpWh04HeJXV0KLcaT7r06gOH2l4OW6ddYRUIY4=
