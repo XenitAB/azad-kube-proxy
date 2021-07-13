@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-logr/logr"
 	hamiltonMsgraph "github.com/manicminer/hamilton/msgraph"
+	hamiltonOdata "github.com/manicminer/hamilton/odata"
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
@@ -24,7 +25,9 @@ func newUser(ctx context.Context, cacheClient cache.ClientInterface, usersClient
 func (user *user) getGroups(ctx context.Context, objectID string) ([]models.Group, error) {
 	log := logr.FromContext(ctx)
 
-	groupsResponse, responseCode, err := user.usersClient.ListGroupMemberships(ctx, objectID, "")
+	odataQuery := hamiltonOdata.Query{}
+
+	groupsResponse, responseCode, err := user.usersClient.ListGroupMemberships(ctx, objectID, odataQuery)
 	if err != nil {
 		log.Error(err, "Unable to get Azure AD groups for user", "objectID", objectID, "responseCode", responseCode)
 		return nil, err

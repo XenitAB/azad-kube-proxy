@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-logr/logr"
 	hamiltonMsgraph "github.com/manicminer/hamilton/msgraph"
+	hamiltonOdata "github.com/manicminer/hamilton/odata"
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
@@ -26,7 +27,11 @@ func newGroups(ctx context.Context, cacheClient cache.ClientInterface, groupsCli
 func (groups *groups) getAllGroups(ctx context.Context) (*[]hamiltonMsgraph.Group, error) {
 	log := logr.FromContext(ctx)
 
-	groupsResponse, responseCode, err := groups.groupsClient.List(ctx, groups.graphFilter)
+	odataQuery := hamiltonOdata.Query{
+		Filter: groups.graphFilter,
+	}
+
+	groupsResponse, responseCode, err := groups.groupsClient.List(ctx, odataQuery)
 	if err != nil {
 		log.Error(err, "Unable to get groups", "responseCode", responseCode)
 		return nil, err
