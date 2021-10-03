@@ -38,7 +38,7 @@ type k8dashClient struct {
 }
 
 func newK8dashClient(ctx context.Context, config config.Config) (k8dashClient, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 	log.Info("Using dashboard: k8dash")
 
 	issuerURL := fmt.Sprintf("https://login.microsoftonline.com/%s/v2.0", config.TenantID)
@@ -60,7 +60,7 @@ func newK8dashClient(ctx context.Context, config config.Config) (k8dashClient, e
 
 // DashboardHandler ...
 func (client *k8dashClient) DashboardHandler(ctx context.Context, router *mux.Router) (*mux.Router, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	assetManifest, err := fs.ReadFile(k8dashFS{assets}, "asset-manifest.json")
 	if err != nil {
@@ -127,7 +127,7 @@ func (client *k8dashClient) preAuth(next http.Handler) http.Handler {
 }
 
 func (client *k8dashClient) getOIDC(ctx context.Context) func(http.ResponseWriter, *http.Request) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	clientID := client.config.K8dashConfig.ClientID
 	scope := client.config.K8dashConfig.Scope
@@ -175,7 +175,7 @@ func (client *k8dashClient) getOIDC(ctx context.Context) func(http.ResponseWrite
 }
 
 func (client *k8dashClient) postOIDC(ctx context.Context) func(http.ResponseWriter, *http.Request) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		var reqBody struct {

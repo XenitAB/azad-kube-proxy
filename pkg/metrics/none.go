@@ -10,7 +10,7 @@ import (
 type noneClient struct{}
 
 func newNoneClient(ctx context.Context) noneClient {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 	log.Info("Using metrics: none")
 
 	return noneClient{}

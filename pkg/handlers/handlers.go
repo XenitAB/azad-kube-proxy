@@ -65,7 +65,7 @@ func NewHandlersClient(ctx context.Context, config config.Config, cacheClient ca
 
 // ReadinessHandler ...
 func (client *Client) ReadinessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		ready, err := client.HealthClient.Ready(ctx)
@@ -89,7 +89,7 @@ func (client *Client) ReadinessHandler(ctx context.Context) func(http.ResponseWr
 
 // LivenessHandler ...
 func (client *Client) LivenessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		live, err := client.HealthClient.Live(ctx)
@@ -113,7 +113,7 @@ func (client *Client) LivenessHandler(ctx context.Context) func(http.ResponseWri
 
 // AzadKubeProxyHandler ...
 func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract token from Authorization header
@@ -218,7 +218,7 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 
 // ErrorHandler ...
 func (client *Client) ErrorHandler(ctx context.Context) func(w http.ResponseWriter, r *http.Request, err error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request, err error) {
 		if err == nil {

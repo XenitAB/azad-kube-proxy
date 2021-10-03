@@ -18,7 +18,7 @@ import (
 
 func TestNewK8sdashClient(t *testing.T) {
 	tenantID := getEnvOrSkip(t, "TENANT_ID")
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	cfg := config.Config{
 		TenantID: tenantID,
 	}
@@ -31,7 +31,7 @@ func TestNewK8sdashClient(t *testing.T) {
 
 func TestK8dashDashboardHandler(t *testing.T) {
 	tenantID := getEnvOrSkip(t, "TENANT_ID")
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	req, err := http.NewRequest("GET", "/", nil)
 	if err != nil {
@@ -70,7 +70,7 @@ func TestK8dashDashboardHandler(t *testing.T) {
 
 func TestK8dashPreAuth(t *testing.T) {
 	tenantID := getEnvOrSkip(t, "TENANT_ID")
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	config := config.Config{
 		TenantID: tenantID,
@@ -228,7 +228,7 @@ func TestK8dashPreAuth(t *testing.T) {
 
 func TestK8dashGetOIDC(t *testing.T) {
 	tenantID := getEnvOrSkip(t, "TENANT_ID")
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	cases := []struct {
 		requestFunc            func() (*http.Request, error)
@@ -322,7 +322,7 @@ func TestK8dashGetOIDC(t *testing.T) {
 
 func TestK8dashPostOIDC(t *testing.T) {
 	tenantID := getEnvOrSkip(t, "TENANT_ID")
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	cases := []struct {
 		requestFunc            func() (*http.Request, error)

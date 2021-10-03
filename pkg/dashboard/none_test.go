@@ -14,7 +14,7 @@ import (
 )
 
 func TestNoneDashboardHandler(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	req, err := http.NewRequest("GET", "/", nil)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)

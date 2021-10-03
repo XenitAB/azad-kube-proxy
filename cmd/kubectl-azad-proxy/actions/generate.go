@@ -39,7 +39,7 @@ type GenerateInterface interface {
 
 // NewGenerateClient ...
 func NewGenerateClient(ctx context.Context, c *cli.Context) (GenerateInterface, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	proxyURL, err := url.Parse(c.String("proxy-url"))
 	if err != nil {
@@ -134,7 +134,7 @@ func GenerateFlags(ctx context.Context) []cli.Flag {
 
 // Generate ...
 func (client *GenerateClient) Generate(ctx context.Context) error {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	kubeCfg, err := k8sclientcmd.LoadFromFile(client.kubeConfig)
 	if err != nil && !strings.Contains(err.Error(), "no such file or directory") {

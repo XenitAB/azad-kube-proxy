@@ -23,7 +23,7 @@ func newUser(ctx context.Context, cacheClient cache.ClientInterface, usersClient
 }
 
 func (user *user) getGroups(ctx context.Context, objectID string) ([]models.Group, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	odataQuery := hamiltonOdata.Query{}
 

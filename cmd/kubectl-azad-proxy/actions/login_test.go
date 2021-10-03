@@ -16,7 +16,7 @@ import (
 )
 
 func TestNewLoginClient(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	client := &LoginClient{}
 
 	app := &cli.App{
@@ -131,7 +131,7 @@ func TestLogin(t *testing.T) {
 	tokenCacheFile := fmt.Sprintf("%s/../../../tmp/test-login-token-cache", curDir)
 	defer deleteFile(t, tokenCacheFile)
 
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	client := &LoginClient{
 		clusterName: "test",
 		resource:    resource,

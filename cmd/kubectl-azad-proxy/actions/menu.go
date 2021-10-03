@@ -51,7 +51,7 @@ func MenuFlags(ctx context.Context) []cli.Flag {
 
 // Menu ...
 func (client *MenuClient) Menu(ctx context.Context) error {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	// Run discovery of Azure AD applications
 	apps, err := client.discoverClient.Run(ctx)

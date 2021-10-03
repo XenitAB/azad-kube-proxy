@@ -23,7 +23,7 @@ func newServicePrincipalUser(ctx context.Context, cacheClient cache.ClientInterf
 }
 
 func (user *servicePrincipalUser) getGroups(ctx context.Context, objectID string) ([]models.Group, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	odataQuery := hamiltonOdata.Query{}
 

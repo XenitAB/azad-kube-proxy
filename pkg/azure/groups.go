@@ -25,7 +25,7 @@ func newGroups(ctx context.Context, cacheClient cache.ClientInterface, groupsCli
 }
 
 func (groups *groups) getAllGroups(ctx context.Context) (*[]hamiltonMsgraph.Group, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	odataQuery := hamiltonOdata.Query{
 		Filter: groups.graphFilter,
@@ -41,7 +41,7 @@ func (groups *groups) getAllGroups(ctx context.Context) (*[]hamiltonMsgraph.Grou
 }
 
 func (groups *groups) syncAzureADGroupsCache(ctx context.Context, syncReason string) error {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	groupsResponse, err := groups.getAllGroups(ctx)
 	if err != nil {

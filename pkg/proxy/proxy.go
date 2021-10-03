@@ -96,7 +96,7 @@ func NewProxyClient(ctx context.Context, config config.Config) (ClientInterface,
 
 // Start launches the reverse proxy
 func (client *Client) Start(ctx context.Context) error {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	// Signal handler
 	done := make(chan os.Signal, 1)

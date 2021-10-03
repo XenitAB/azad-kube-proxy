@@ -11,7 +11,7 @@ import (
 )
 
 func TestNewMetricsClient(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	cases := []struct {
 		config              config.Config
 		expectedErrContains string

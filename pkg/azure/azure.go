@@ -83,7 +83,7 @@ func NewAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graph
 }
 
 func (client *Client) Valid(ctx context.Context) bool {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 	token, err := client.authorizer.Token()
 
 	if err != nil {
@@ -122,7 +122,7 @@ func (client *Client) GetUserGroups(ctx context.Context, objectID string, userTy
 
 // StartSyncGroups initiates a ticker that will sync Azure AD Groups
 func (client *Client) StartSyncGroups(ctx context.Context, syncInterval time.Duration) (*time.Ticker, chan bool, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	ticker := time.NewTicker(syncInterval)
 	syncChan := make(chan bool)

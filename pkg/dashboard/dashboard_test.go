@@ -13,7 +13,7 @@ import (
 
 func TestNewDashboardClient(t *testing.T) {
 	tenantID := getEnvOrSkip(t, "TENANT_ID")
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	cases := []struct {
 		config              config.Config
 		expectedErrContains string

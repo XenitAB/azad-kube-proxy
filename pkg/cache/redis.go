@@ -17,7 +17,7 @@ type RedisCache struct {
 
 // NewRedisCache ...
 func NewRedisCache(ctx context.Context, redisURL string, expiration time.Duration) (*RedisCache, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	opt, err := redis.ParseURL(redisURL)
 	if err != nil {
@@ -39,7 +39,7 @@ func NewRedisCache(ctx context.Context, redisURL string, expiration time.Duratio
 
 // GetUser ...
 func (c *RedisCache) GetUser(ctx context.Context, s string) (models.User, bool, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	res := c.CacheClient.Get(ctx, s)
 	err := res.Err()
@@ -64,7 +64,7 @@ func (c *RedisCache) GetUser(ctx context.Context, s string) (models.User, bool, 
 
 // SetUser ...
 func (c *RedisCache) SetUser(ctx context.Context, s string, u models.User) error {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	err := c.CacheClient.SetNX(ctx, s, u, c.Expiration).Err()
 	if err != nil {
@@ -77,7 +77,7 @@ func (c *RedisCache) SetUser(ctx context.Context, s string, u models.User) error
 
 // GetGroup ...
 func (c *RedisCache) GetGroup(ctx context.Context, s string) (models.Group, bool, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	res := c.CacheClient.Get(ctx, s)
 	err := res.Err()
@@ -103,7 +103,7 @@ func (c *RedisCache) GetGroup(ctx context.Context, s string) (models.Group, bool
 
 // SetGroup ...
 func (c *RedisCache) SetGroup(ctx context.Context, s string, g models.Group) error {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	err := c.CacheClient.SetNX(ctx, s, g, c.Expiration).Err()
 	if err != nil {

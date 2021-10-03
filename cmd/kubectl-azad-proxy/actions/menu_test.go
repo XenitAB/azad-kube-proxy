@@ -12,7 +12,7 @@ import (
 )
 
 func TestNewMenuClient(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	restoreAzureCLIAuth := tempChangeEnv("EXCLUDE_AZURE_CLI_AUTH", "true")
 	defer restoreAzureCLIAuth()
@@ -46,7 +46,7 @@ func TestNewMenuClient(t *testing.T) {
 }
 
 func TestMenu(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	cases := []struct {
 		menuClient  *MenuClient

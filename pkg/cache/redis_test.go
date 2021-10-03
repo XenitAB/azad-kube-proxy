@@ -36,7 +36,7 @@ func (i fakeErrorGroup) MarshalBinary() ([]byte, error) {
 }
 
 func TestNewRedisCache(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	redisServer, err := miniredis.Run()
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
@@ -63,7 +63,7 @@ func TestNewRedisCache(t *testing.T) {
 }
 
 func TestRedisGetUser(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	redisServer, err := miniredis.Run()
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
@@ -129,7 +129,7 @@ func TestRedisGetUser(t *testing.T) {
 }
 
 func TestRedisSetUser(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	redisServer, err := miniredis.Run()
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
@@ -192,7 +192,7 @@ func TestRedisSetUser(t *testing.T) {
 }
 
 func TestRedisGetGroup(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	redisServer, err := miniredis.Run()
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
@@ -258,7 +258,7 @@ func TestRedisGetGroup(t *testing.T) {
 }
 
 func TestRedisSetGroup(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	redisServer, err := miniredis.Run()
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)

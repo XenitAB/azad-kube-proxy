@@ -50,7 +50,7 @@ type DiscoverInterface interface {
 
 // NewDiscoverClient ...
 func NewDiscoverClient(ctx context.Context, c *cli.Context) (DiscoverInterface, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	var output outputType
 	switch strings.ToUpper(c.String("output")) {
@@ -153,7 +153,7 @@ func DiscoverFlags(ctx context.Context) []cli.Flag {
 
 // Discover ...
 func (client *DiscoverClient) Discover(ctx context.Context) (string, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	apps, err := client.Run(ctx)
 	if err != nil {
@@ -178,7 +178,7 @@ func (client *DiscoverClient) Discover(ctx context.Context) (string, error) {
 }
 
 func (client *DiscoverClient) Run(ctx context.Context) ([]discover, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	authConfig := &hamiltonAuth.Config{
 		Environment:            hamiltonEnvironments.Global,

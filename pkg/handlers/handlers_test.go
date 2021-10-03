@@ -35,7 +35,7 @@ var (
 
 func TestNewHandlersClient(t *testing.T) {
 	tenantID := getEnvOrSkip(t, "TENANT_ID")
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	fakeClaimsClient := newFakeClaimsClient(nil, nil, claims.AzureClaims{}, &oidc.IDTokenVerifier{})
 	fakeCacheClient := newFakeCacheClient("", "", nil, false, nil)
 	fakeUserClient := newFakeUserClient("", "", nil, nil)
@@ -66,7 +66,7 @@ func TestNewHandlersClient(t *testing.T) {
 
 func TestReadinessHandler(t *testing.T) {
 	tenantID := getEnvOrSkip(t, "TENANT_ID")
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	req, err := http.NewRequest("GET", "/readyz", nil)
 	if err != nil {
@@ -132,7 +132,7 @@ func TestReadinessHandler(t *testing.T) {
 
 func TestLivenessHandler(t *testing.T) {
 	tenantID := getEnvOrSkip(t, "TENANT_ID")
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	req, err := http.NewRequest("GET", "/healthz", nil)
 	if err != nil {
@@ -204,7 +204,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 	spClientSecret := getEnvOrSkip(t, "TEST_USER_SP_CLIENT_SECRET")
 	spResource := getEnvOrSkip(t, "TEST_USER_SP_RESOURCE")
 
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	token, err := getAccessToken(ctx, tenantID, spClientID, spClientSecret, fmt.Sprintf("%s/.default", spResource))
 	if err != nil {
@@ -725,7 +725,7 @@ func (client *fakeClaimsClient) GetOIDCVerifier(ctx context.Context, tenantID, c
 		return nil, client.getOIDCVerifierFakeError
 	}
 
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 	issuerURL := fmt.Sprintf("https://login.microsoftonline.com/%s/v2.0", tenantID)
 	provider, err := oidc.NewProvider(ctx, issuerURL)
 	if err != nil {

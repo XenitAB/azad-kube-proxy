@@ -12,7 +12,7 @@ import (
 )
 
 func TestNewDiscoverClient(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	client := &DiscoverClient{}
 
 	restoreAzureCLIAuth := tempChangeEnv("EXCLUDE_AZURE_CLI_AUTH", "true")
@@ -125,7 +125,7 @@ func TestDiscover(t *testing.T) {
 	clientSecret := getEnvOrSkip(t, "CLIENT_SECRET")
 	resource := getEnvOrSkip(t, "TEST_USER_SP_RESOURCE")
 
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	cases := []struct {
 		DiscoverClient         *DiscoverClient

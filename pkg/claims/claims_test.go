@@ -23,7 +23,7 @@ func TestNewClaims(t *testing.T) {
 	spClientID := getEnvOrSkip(t, "TEST_USER_SP_CLIENT_ID")
 	spClientSecret := getEnvOrSkip(t, "TEST_USER_SP_CLIENT_SECRET")
 	spResource := getEnvOrSkip(t, "TEST_USER_SP_RESOURCE")
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	claimsClient := NewClaimsClient()
 
 	verifier, err := claimsClient.GetOIDCVerifier(ctx, tenantID, clientID)
@@ -64,7 +64,7 @@ func TestNewClaims(t *testing.T) {
 func TestGetOIDCVerifier(t *testing.T) {
 	clientID := getEnvOrSkip(t, "CLIENT_ID")
 	tenantID := getEnvOrSkip(t, "TENANT_ID")
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	claimsClient := NewClaimsClient()
 
 	cases := []struct {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bombsimon/logrusr"
+	"github.com/bombsimon/logrusr/v2"
 	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -31,7 +31,7 @@ func main() {
 	if util.SliceContains(os.Args, "--debug") || util.SliceContains(os.Args, "-debug") {
 		logrusLog.Level = 10
 	}
-	log := logrusr.NewLogger(logrusLog)
+	log := logrusr.New(logrusLog)
 	ctx := logr.NewContext(context.Background(), log)
 
 	cli.VersionPrinter = func(c *cli.Context) {
