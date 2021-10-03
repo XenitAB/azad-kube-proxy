@@ -17,7 +17,7 @@ func TestNewAzureClient(t *testing.T) {
 	clientID := getEnvOrSkip(t, "CLIENT_ID")
 	clientSecret := getEnvOrSkip(t, "CLIENT_SECRET")
 	tenantID := getEnvOrSkip(t, "TENANT_ID")
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	memCache, err := cache.NewCache(ctx, models.MemoryCacheEngine, config.Config{})
 	if err != nil {
@@ -85,7 +85,7 @@ func TestValid(t *testing.T) {
 	clientSecret := getEnvOrSkip(t, "CLIENT_SECRET")
 	tenantID := getEnvOrSkip(t, "TENANT_ID")
 	graphFilter := ""
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	memCache, err := cache.NewCache(ctx, models.MemoryCacheEngine, config.Config{})
 	if err != nil {
@@ -122,7 +122,7 @@ func TestGetUserGroups(t *testing.T) {
 	userObjectID := getEnvOrSkip(t, "TEST_USER_OBJECT_ID")
 	spObjectID := getEnvOrSkip(t, "TEST_USER_SP_OBJECT_ID")
 	graphFilter := ""
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	memCache, err := cache.NewCache(ctx, models.MemoryCacheEngine, config.Config{})
 	if err != nil {
@@ -186,7 +186,7 @@ func TestStartSyncGroups(t *testing.T) {
 	clientSecret := getEnvOrSkip(t, "CLIENT_SECRET")
 	tenantID := getEnvOrSkip(t, "TENANT_ID")
 	graphFilter := ""
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	memCache, err := cache.NewCache(ctx, models.MemoryCacheEngine, config.Config{})
 	if err != nil {

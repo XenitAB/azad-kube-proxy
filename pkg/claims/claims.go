@@ -76,7 +76,7 @@ func (client *Client) NewClaims(t *oidc.IDToken) (AzureClaims, error) {
 
 // GetOIDCVerifier returns an ID Token Verifier or an error
 func (client *Client) GetOIDCVerifier(ctx context.Context, tenantID, clientID string) (*oidc.IDTokenVerifier, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 	issuerURL := fmt.Sprintf("https://login.microsoftonline.com/%s/v2.0", tenantID)
 	provider, err := oidc.NewProvider(ctx, issuerURL)
 	if err != nil {

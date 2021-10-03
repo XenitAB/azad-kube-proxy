@@ -56,7 +56,7 @@ type Tokens struct {
 
 // NewTokens returns a TokensInterface or error
 func NewTokens(ctx context.Context, path string, defaultAzureCredentialOptions *azidentity.DefaultAzureCredentialOptions) (TokensInterface, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	if strings.HasPrefix(path, "~/") {
 		homeDir, err := os.UserHomeDir()
@@ -99,7 +99,7 @@ func (t Tokens) GetPath() string {
 
 // GetToken ...
 func (t Tokens) GetToken(ctx context.Context, name string, resource string) (Token, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	token, found := t.cachedTokens[name]
 
@@ -141,7 +141,7 @@ func (t Tokens) GetToken(ctx context.Context, name string, resource string) (Tok
 
 // SetToken ...
 func (t Tokens) SetToken(ctx context.Context, name string, token Token) error {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	t.cachedTokens[name] = token
 

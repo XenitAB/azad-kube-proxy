@@ -11,7 +11,7 @@ import (
 type prometheusClient struct{}
 
 func newPrometheusClient(ctx context.Context) prometheusClient {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 	log.Info("Using metrics: prometheus")
 
 	return prometheusClient{}

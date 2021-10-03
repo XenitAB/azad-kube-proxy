@@ -22,7 +22,7 @@ import (
 )
 
 func TestNewConfig(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	cfg := Config{}
 
 	envVarsToClear := []string{

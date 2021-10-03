@@ -16,7 +16,7 @@ import (
 )
 
 func TestNewGenerateClient(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	client := &GenerateClient{}
 
 	app := &cli.App{
@@ -174,7 +174,7 @@ func TestMergeGenerateClient(t *testing.T) {
 }
 
 func TestGenerate(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	curDir, err := os.Getwd()
 	if err != nil {
 		t.Errorf("Expected err to be nil: %q", err)

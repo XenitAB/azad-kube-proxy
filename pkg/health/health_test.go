@@ -15,7 +15,7 @@ import (
 )
 
 func TestNewHealthClient(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	cases := []struct {
 		config              config.Config
@@ -30,7 +30,7 @@ func TestNewHealthClient(t *testing.T) {
 					RootCAString:        "fake-ca-string",
 				},
 			},
-			expectedErrContains: "",
+			expectedErrContains: "unable to load root certificates: unable to parse bytes as PEM block",
 		},
 		{
 			config: config.Config{
@@ -64,7 +64,7 @@ func TestNewHealthClient(t *testing.T) {
 }
 
 func TestReady(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	fakeClient := &Client{
 		k8sClient: k8sfake.NewSimpleClientset(),
@@ -132,12 +132,12 @@ func TestReady(t *testing.T) {
 }
 
 func TestLive(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	validator := &fakeValidator{}
 	fakeConfig := config.Config{
 		KubernetesConfig: config.KubernetesConfig{
-			ValidateCertificate: true,
+			ValidateCertificate: false,
 			URL:                 &url.URL{Scheme: "https", Host: "fake-url"},
 			Token:               "fake-token",
 			RootCAString:        "fake-ca-string",

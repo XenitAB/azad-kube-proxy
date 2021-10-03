@@ -22,7 +22,7 @@ import (
 )
 
 func TestGetCertificate(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	certPath, err := generateCertificateFile()
 	if err != nil {
@@ -51,7 +51,7 @@ func TestGetCertificate(t *testing.T) {
 }
 
 func TestGetStringFromFile(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	filePath, expectedFileString, err := generateRandomFile()
 	if err != nil {
 		t.Errorf("Unable to generate temporary file for test: %q", err)

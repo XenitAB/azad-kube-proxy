@@ -31,7 +31,7 @@ func (client *fakeAzureClient) Valid(ctx context.Context) bool {
 }
 
 func TestGetUser(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	config := config.Config{}
 	azureClient := &fakeAzureClient{
 		fakeError: nil,

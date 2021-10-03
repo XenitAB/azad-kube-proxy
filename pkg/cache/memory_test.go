@@ -18,7 +18,7 @@ func TestNewMemoryCache(t *testing.T) {
 }
 
 func TestMemoryGetUser(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	cache, err := NewMemoryCache(5*time.Minute, 10*time.Minute)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
@@ -47,7 +47,7 @@ func TestMemoryGetUser(t *testing.T) {
 }
 
 func TestMemorySetUser(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	cache, err := NewMemoryCache(5*time.Minute, 10*time.Minute)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
@@ -75,7 +75,7 @@ func TestMemorySetUser(t *testing.T) {
 }
 
 func TestMemoryGetGroup(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	cache, err := NewMemoryCache(5*time.Minute, 10*time.Minute)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
@@ -104,7 +104,7 @@ func TestMemoryGetGroup(t *testing.T) {
 }
 
 func TestMemorySetGroup(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	cache, err := NewMemoryCache(5*time.Minute, 10*time.Minute)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)

@@ -14,7 +14,7 @@ import (
 )
 
 func TestNewTokens(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	fakeHomeDir := "/home/test-user"
 	restoreHomeDir := tempChangeEnv("HOME", fakeHomeDir)
@@ -129,7 +129,7 @@ func TestGetToken(t *testing.T) {
 	restoreClientSecret := tempChangeEnv("AZURE_CLIENT_SECRET", clientSecret)
 	defer restoreClientSecret()
 
-	ctx := logr.NewContext(context.Background(), logr.DiscardLogger{})
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	fakeHomeDir := "/home/test-user"
 	restoreHomeDir := tempChangeEnv("HOME", fakeHomeDir)

@@ -17,7 +17,7 @@ import (
 
 // GetCertificate returns a *x509.CertPool or error
 func GetCertificate(ctx context.Context, path string) (*x509.CertPool, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	cert, err := os.ReadFile(path) // #nosec
 	if err != nil {
@@ -33,7 +33,7 @@ func GetCertificate(ctx context.Context, path string) (*x509.CertPool, error) {
 
 // GetStringFromFile returns a string or error
 func GetStringFromFile(ctx context.Context, path string) (string, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	byteContent, err := os.ReadFile(path) // #nosec
 	if err != nil {
