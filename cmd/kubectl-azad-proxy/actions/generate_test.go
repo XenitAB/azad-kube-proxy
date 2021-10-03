@@ -253,8 +253,8 @@ func TestGenerate(t *testing.T) {
 				t.Errorf("Expected kubeCfg.Clusters[c.GenerateClient.clusterName].Server to be '%s' but was: %s", fmt.Sprintf("%s://%s", c.GenerateClient.proxyURL.Scheme, c.GenerateClient.proxyURL.Host), kubeCfg.Clusters[c.GenerateClient.clusterName].Server)
 			}
 
-			if len(kubeCfg.Clusters[c.GenerateClient.clusterName].CertificateAuthorityData) < 0 {
-				t.Errorf("Expected length of kubeCfg.Clusters[c.GenerateClient.clusterName].CertificateAuthorityData to be lager than 0 but was: %d", len(kubeCfg.Clusters[c.GenerateClient.clusterName].CertificateAuthorityData))
+			if len(kubeCfg.Clusters[c.GenerateClient.clusterName].CertificateAuthorityData) == 0 {
+				t.Errorf("Expected length of kubeCfg.Clusters[c.GenerateClient.clusterName].CertificateAuthorityData to be lager than 0")
 			}
 		}
 	}
