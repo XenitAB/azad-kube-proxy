@@ -30,7 +30,7 @@ func TestNewHealthClient(t *testing.T) {
 					RootCAString:        "fake-ca-string",
 				},
 			},
-			expectedErrContains: "",
+			expectedErrContains: "unable to load root certificates: unable to parse bytes as PEM block",
 		},
 		{
 			config: config.Config{
@@ -137,7 +137,7 @@ func TestLive(t *testing.T) {
 	validator := &fakeValidator{}
 	fakeConfig := config.Config{
 		KubernetesConfig: config.KubernetesConfig{
-			ValidateCertificate: true,
+			ValidateCertificate: false,
 			URL:                 &url.URL{Scheme: "https", Host: "fake-url"},
 			Token:               "fake-token",
 			RootCAString:        "fake-ca-string",
