@@ -233,8 +233,8 @@ func TestGetToken(t *testing.T) {
 			if token.Resource != c.resource {
 				t.Errorf("Expected token.Resource to be '%s' but was: %s", c.resource, token.Resource)
 			}
-			if len(token.Token) < 0 {
-				t.Errorf("Expected token.Token to be larger than 0 but was: %d", len(token.Token))
+			if len(token.Token) == 0 {
+				t.Errorf("Expected token.Token to be larger than 0")
 			}
 		}
 	}

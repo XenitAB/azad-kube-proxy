@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	azpolicy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/go-logr/logr"
 	"github.com/xenitab/azad-kube-proxy/cmd/kubectl-azad-proxy/customerrors"
@@ -166,7 +167,7 @@ func getAccessToken(ctx context.Context, resource string, defaultAzureCredential
 		return nil, err
 	}
 
-	token, err := cred.GetToken(ctx, azcore.TokenRequestOptions{Scopes: []string{scope}})
+	token, err := cred.GetToken(ctx, azpolicy.TokenRequestOptions{Scopes: []string{scope}})
 	if err != nil {
 		return nil, err
 	}

@@ -1,5 +1,5 @@
 # BUILDER
-FROM golang:1.16-alpine as builder
+FROM golang:1.17.1-alpine as builder
 
 ARG VERSION
 ARG REVISION
@@ -23,7 +23,7 @@ RUN apk add --no-cache make=4.3-r0 bash=5.1.4-r0
 RUN make build
 
 #RUNTIME
-FROM alpine:3.14.0 as runtime
+FROM alpine:3.14.2 as runtime
 LABEL org.opencontainers.image.source="https://github.com/XenitAB/azad-kube-proxy"
 
 # hadolint ignore=DL3018

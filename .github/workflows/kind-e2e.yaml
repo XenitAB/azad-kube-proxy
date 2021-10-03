@@ -2,11 +2,11 @@ name: KinD End-to-End
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [main]
   push:
-    branches: [ main ]
+    branches: [main]
   schedule:
-    - cron: '0 4 * * *'
+    - cron: "0 4 * * *"
 
 env:
   NAME: "azad-kube-proxy"
@@ -20,7 +20,7 @@ jobs:
       - name: Setup go
         uses: actions/setup-go@v2
         with:
-          go-version: "^1.16.2"
+          go-version: "^1.17"
       - name: Prepare
         id: prep
         run: |
@@ -40,7 +40,7 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1.2.0
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1.5.1
+        uses: docker/setup-buildx-action@v1.6.0
       - name: Set up KinD
         uses: engineerd/setup-kind@v0.5.0
         with:
@@ -71,12 +71,12 @@ jobs:
           IP.1 = ${NODE_IP}
           DNS.1 = ${NODE_IP}
           EOF
-          
+
           openssl req -newkey rsa:4096 -x509 -sha256 -days 3650 -nodes -out tmp/cert.crt -keyout tmp/cert.key -subj "/C=SE/ST=LOCALHOST/L=LOCALHOST/O=LOCALHOST/OU=LOCALHOST/CN=${NODE_IP}" -extensions san -config tmp/csr-config
           kubectl create namespace ${{ env.NAME }}
           kubectl --namespace ${{ env.NAME }} create secret tls test-cert --cert=tmp/cert.crt --key=tmp/cert.key
           helm upgrade --wait --timeout 120s --namespace ${{ env.NAME }} --install ${{ env.NAME }} --values test/test-values.yaml --set secret.CLIENT_ID=${CLIENT_ID} --set secret.CLIENT_SECRET=${CLIENT_SECRET} --set secret.TENANT_ID=${TENANT_ID} --set image.repository=${{ env.NAME }} --set image.tag=${{ steps.prep.outputs.VERSION }} ./charts/azad-kube-proxy
-          
+
           cat <<EOF | kubectl apply -f -
           apiVersion: rbac.authorization.k8s.io/v1
           kind: ClusterRoleBinding

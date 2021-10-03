@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	azpolicy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/coreos/go-oidc"
 	"github.com/go-logr/logr"
@@ -778,7 +779,7 @@ func getAccessToken(ctx context.Context, tenantID, clientID, clientSecret, scope
 			return nil, err
 		}
 
-		token, err := cred.GetToken(ctx, azcore.TokenRequestOptions{Scopes: []string{scope}})
+		token, err := cred.GetToken(ctx, azpolicy.TokenRequestOptions{Scopes: []string{scope}})
 		if err != nil {
 			return nil, err
 		}
