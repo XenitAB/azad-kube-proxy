@@ -16,22 +16,23 @@ import (
 
 // Config contains the configuration that is used for the application
 type Config struct {
-	ClientID             string `validate:"required,uuid"`
-	ClientSecret         string `validate:"required,min=1"`
-	TenantID             string `validate:"required,uuid"`
-	ListenerAddress      string `validate:"hostname_port"`
-	ListenerTLSConfig    ListenerTLSConfig
-	CacheEngine          models.CacheEngine
-	RedisURI             string `validate:"uri"`
-	AzureADGroupPrefix   string
-	AzureADMaxGroupCount int `validate:"min=1,max=1000"`
-	GroupSyncInterval    time.Duration
-	GroupIdentifier      models.GroupIdentifier
-	KubernetesConfig     KubernetesConfig
-	Dashboard            models.Dashboard
-	Metrics              models.Metrics
-	K8dashConfig         K8dashConfig
-	CORSConfig           CORSConfig
+	ClientID               string `validate:"required,uuid"`
+	ClientSecret           string `validate:"required,min=1"`
+	TenantID               string `validate:"required,uuid"`
+	ListenerAddress        string `validate:"hostname_port"`
+	MetricsListenerAddress string `validate:"hostname_port"`
+	ListenerTLSConfig      ListenerTLSConfig
+	CacheEngine            models.CacheEngine
+	RedisURI               string `validate:"uri"`
+	AzureADGroupPrefix     string
+	AzureADMaxGroupCount   int `validate:"min=1,max=1000"`
+	GroupSyncInterval      time.Duration
+	GroupIdentifier        models.GroupIdentifier
+	KubernetesConfig       KubernetesConfig
+	Dashboard              models.Dashboard
+	Metrics                models.Metrics
+	K8dashConfig           K8dashConfig
+	CORSConfig             CORSConfig
 }
 
 // KubernetesConfig contains the Kubernetes specific configuration
@@ -100,6 +101,13 @@ func Flags(ctx context.Context) []cli.Flag {
 			Required: false,
 			EnvVars:  []string{"PORT"},
 			Value:    8080,
+		},
+		&cli.IntFlag{
+			Name:     "metrics-port",
+			Usage:    "Port number for metrics and health checks to listen on",
+			Required: false,
+			EnvVars:  []string{"METRICS_PORT"},
+			Value:    8081,
 		},
 		&cli.StringFlag{
 			Name:     "tls-certificate-path",
@@ -326,10 +334,11 @@ func NewConfig(ctx context.Context, cli *cli.Context) (Config, error) {
 	}
 
 	config := Config{
-		ClientID:        cli.String("client-id"),
-		ClientSecret:    cli.String("client-secret"),
-		TenantID:        cli.String("tenant-id"),
-		ListenerAddress: fmt.Sprintf("%s:%d", cli.String("address"), cli.Int("port")),
+		ClientID:               cli.String("client-id"),
+		ClientSecret:           cli.String("client-secret"),
+		TenantID:               cli.String("tenant-id"),
+		ListenerAddress:        fmt.Sprintf("%s:%d", cli.String("address"), cli.Int("port")),
+		MetricsListenerAddress: fmt.Sprintf("%s:%d", cli.String("address"), cli.Int("metrics-port")),
 		ListenerTLSConfig: ListenerTLSConfig{
 			Enabled:         cli.Bool("tls-enabled"),
 			CertificatePath: cli.String("tls-certificate-path"),
