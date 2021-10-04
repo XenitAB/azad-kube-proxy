@@ -1,5 +1,6 @@
 application:
   port: 8080
+  metricsPort: 8081
   scheme: HTTP # HTTP or HTTPS
 
 # Using environment variables by default
@@ -64,7 +65,7 @@ podSecurityContext:
 securityContext:
   capabilities:
     drop:
-    - ALL
+      - ALL
   readOnlyRootFilesystem: true
   runAsNonRoot: true
   runAsUser: 1000
@@ -75,7 +76,8 @@ service:
 
 ingress:
   enabled: false
-  annotations: {}
+  annotations:
+    {}
     # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
   hosts:
@@ -86,7 +88,8 @@ ingress:
   #    hosts:
   #      - chart-example.local
 
-resources: {}
+resources:
+  {}
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -109,12 +112,14 @@ nodeSelector: {}
 
 tolerations: []
 
-podVolumes: []
+podVolumes:
+  []
   # - name: foo
   #   secret:
   #     secretName: mysecret
 
-podVolumeMounts: []
+podVolumeMounts:
+  []
   # - name: foo
   #   mountPath: "/etc/foo"
   #   readOnly: true
