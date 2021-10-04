@@ -32,11 +32,14 @@ spec:
           env:
             - name: PORT
               value: {{ .Values.application.port | quote }}
+            - name: METRICS_PORT
+              value: {{ .Values.application.metricsPort | quote }}
             {{- if .Values.podEnv }}
 {{ toYaml .Values.podEnv | indent 12 }}
             {{- end }}
           args:
             - --port=$(PORT)
+            - --metrics-port=$(METRICS_PORT)
             {{- if .Values.podArgs }}
 {{ toYaml .Values.podArgs | indent 12 }}
             {{- end }}
@@ -48,15 +51,18 @@ spec:
             - name: http
               containerPort: {{ .Values.application.port }}
               protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.application.metricsPort }}
+              protocol: TCP
           livenessProbe:
             httpGet:
               path: /healthz
-              port: http
+              port: metrics
               scheme: {{ .Values.application.scheme }}
           readinessProbe:
             httpGet:
               path: /readyz
-              port: http
+              port: metrics
               scheme: {{ .Values.application.scheme }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

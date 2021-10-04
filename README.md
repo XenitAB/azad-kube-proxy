@@ -280,23 +280,21 @@ K8S_PORT=$(echo ${HOST_PORT} | awk -F':' '{print $2}')
 mkdir -p tmp 
 kubectl config set-context kind-azad-kube-proxy
 kubectl apply -f test/test-manifest.yaml
-cat <<EOF | kubectl apply -f -
+
+kubectl apply -f - <<EOF
 apiVersion: v1
-kind: Pod
+kind: Secret
 metadata:
-  name: temp
+  name: azad-kube-proxy-test-secret
   namespace: azad-kube-proxy-test
-spec:
-  serviceAccountName: azad-kube-proxy-test
-  containers:
-  - image: busybox
-    name: test
-    command: ["sleep"]
-    args: ["3000"]
+  annotations:
+    kubernetes.io/service-account.name: azad-kube-proxy-test
+type: kubernetes.io/service-account-token
 EOF
-kubectl exec -n azad-kube-proxy-test temp -- cat "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt" > tmp/ca.crt
-kubectl exec -n azad-kube-proxy-test temp -- cat "/var/run/secrets/kubernetes.io/serviceaccount/token" > tmp/token
-kubectl delete -n azad-kube-proxy-test pod temp
+
+kubectl get secret azad-kube-proxy-test-secret --output=jsonpath={.data.ca\\.crt} | base64 -d > tmp/ca.crt
+kubectl get secret azad-kube-proxy-test-secret --output=jsonpath={.data.token} | base64 -d > tmp/token
+
 KUBE_CA_PATH="${PWD}/tmp/ca.crt"
 KUBE_TOKEN_PATH="${PWD}/tmp/token"
 ```

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"os"
@@ -23,6 +24,7 @@ import (
 	"github.com/xenitab/azad-kube-proxy/pkg/health"
 	"github.com/xenitab/azad-kube-proxy/pkg/metrics"
 	"github.com/xenitab/azad-kube-proxy/pkg/user"
+	"golang.org/x/sync/errgroup"
 )
 
 // ClientInterface ...
@@ -99,8 +101,13 @@ func (client *Client) Start(ctx context.Context) error {
 	log := logr.FromContextOrDiscard(ctx)
 
 	// Signal handler
-	done := make(chan os.Signal, 1)
-	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	stopChan := make(chan os.Signal, 2)
+	signal.Notify(stopChan, os.Interrupt, syscall.SIGINT, syscall.SIGTERM, syscall.SIGPIPE)
+
+	// Error group
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	g, ctx := errgroup.WithContext(ctx)
 
 	// Initiate group sync
 	log.Info("Starting group sync")
@@ -119,18 +126,35 @@ func (client *Client) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	log.Info("Initializing reverse proxy", "ListenerAddress", client.Config.ListenerAddress)
+	log.Info("Initializing reverse proxy", "ListenerAddress", client.Config.ListenerAddress, "MetricsListenerAddress", client.Config.MetricsListenerAddress, "ListenerTLSConfig.Enabled", client.Config.ListenerTLSConfig.Enabled)
 	proxy := client.getReverseProxy(ctx)
 	proxy.ErrorHandler = proxyHandlers.ErrorHandler(ctx)
 
-	router := mux.NewRouter()
-	router.HandleFunc("/readyz", proxyHandlers.ReadinessHandler(ctx)).Methods("GET")
-	router.HandleFunc("/healthz", proxyHandlers.LivenessHandler(ctx)).Methods("GET")
+	// Setup metrics router
+	metricsRouter := mux.NewRouter()
 
-	router, err = client.MetricsClient.MetricsHandler(ctx, router)
+	metricsRouter.HandleFunc("/readyz", proxyHandlers.ReadinessHandler(ctx)).Methods("GET")
+	metricsRouter.HandleFunc("/healthz", proxyHandlers.LivenessHandler(ctx)).Methods("GET")
+
+	metricsRouter, err = client.MetricsClient.MetricsHandler(ctx, metricsRouter)
 	if err != nil {
 		return err
 	}
+
+	metricsHttpServer := client.getHTTPMetricsServer(metricsRouter)
+
+	// Start metrics server
+	g.Go(func() error {
+		err := client.listenAndServe(metricsHttpServer)
+		if err != nil && err != http.ErrServerClosed {
+			return err
+		}
+
+		return nil
+	})
+
+	// Setup http router
+	router := mux.NewRouter()
 
 	router, err = client.DashboardClient.DashboardHandler(ctx, router)
 	if err != nil {
@@ -143,30 +167,56 @@ func (client *Client) Start(ctx context.Context) error {
 	httpServer := client.getHTTPServer(router)
 
 	// Start HTTP server
-	go func() {
+	g.Go(func() error {
 		err := client.listenAndServe(httpServer)
 		if err != nil && err != http.ErrServerClosed {
-			log.Error(err, "Server error")
+			return err
 		}
-	}()
+
+		return nil
+	})
 
 	log.Info("Server started")
 
 	// Blocks until signal is sent
-	<-done
+	var doneMsg string
+	select {
+	case sig := <-stopChan:
+		doneMsg = fmt.Sprintf("os.Signal (%s)", sig)
+	case <-ctx.Done():
+		doneMsg = "context"
+	}
 
-	log.Info("Server shutdown initiated")
+	log.Info("Server shutdown initiated", "reason", doneMsg)
 
 	// Shutdown http server
 	shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer func() {
-		cancel()
-	}()
+	defer cancel()
 
-	err = httpServer.Shutdown(shutdownCtx)
+	g.Go(func() error {
+		err = httpServer.Shutdown(shutdownCtx)
+		if err != nil {
+			log.Error(err, "http server shutdown failed")
+			return err
+		}
+
+		return nil
+	})
+
+	// Shutdown metrics server
+	g.Go(func() error {
+		err = metricsHttpServer.Shutdown(shutdownCtx)
+		if err != nil {
+			log.Error(err, "metrics server shutdown failed")
+			return err
+		}
+
+		return nil
+	})
+
+	err = g.Wait()
 	if err != nil {
-		log.Error(err, "Server shutdown failed")
-		return err
+		return fmt.Errorf("error groups error: %w", err)
 	}
 
 	log.Info("Server exited properly")
@@ -184,6 +234,10 @@ func (client *Client) listenAndServe(httpServer *http.Server) error {
 
 func (client *Client) getHTTPServer(handler http.Handler) *http.Server {
 	return &http.Server{Addr: client.Config.ListenerAddress, Handler: handler}
+}
+
+func (client *Client) getHTTPMetricsServer(handler http.Handler) *http.Server {
+	return &http.Server{Addr: client.Config.MetricsListenerAddress, Handler: handler}
 }
 
 func (client *Client) getReverseProxy(ctx context.Context) *httputil.ReverseProxy {
