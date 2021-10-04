@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"time"
@@ -337,8 +338,8 @@ func NewConfig(ctx context.Context, cli *cli.Context) (Config, error) {
 		ClientID:               cli.String("client-id"),
 		ClientSecret:           cli.String("client-secret"),
 		TenantID:               cli.String("tenant-id"),
-		ListenerAddress:        fmt.Sprintf("%s:%d", cli.String("address"), cli.Int("port")),
-		MetricsListenerAddress: fmt.Sprintf("%s:%d", cli.String("address"), cli.Int("metrics-port")),
+		ListenerAddress:        net.JoinHostPort(cli.String("address"), fmt.Sprintf("%d", cli.Int("port"))),
+		MetricsListenerAddress: net.JoinHostPort(cli.String("address"), fmt.Sprintf("%d", cli.Int("metrics-port"))),
 		ListenerTLSConfig: ListenerTLSConfig{
 			Enabled:         cli.Bool("tls-enabled"),
 			CertificatePath: cli.String("tls-certificate-path"),
