@@ -38,8 +38,8 @@ spec:
 {{ toYaml .Values.podEnv | indent 12 }}
             {{- end }}
           args:
-            - --port=$(PORT)
-            - --metrics-port=$(METRICS_PORT)
+            - --port={{ .Values.application.port | quote }}
+            - --metrics-port={{ .Values.application.metricsPort | quote }}
             {{- if .Values.podArgs }}
 {{ toYaml .Values.podArgs | indent 12 }}
             {{- end }}
