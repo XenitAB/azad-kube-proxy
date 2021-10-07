@@ -23,8 +23,6 @@ import (
 	"github.com/xenitab/azad-kube-proxy/pkg/health"
 	"github.com/xenitab/azad-kube-proxy/pkg/metrics"
 	"github.com/xenitab/azad-kube-proxy/pkg/user"
-	"github.com/xenitab/go-oidc-middleware/oidchttp"
-	"github.com/xenitab/go-oidc-middleware/options"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -159,15 +157,7 @@ func (client *Client) Start(ctx context.Context) error {
 		return err
 	}
 
-	oidcHandler := oidchttp.New(http.HandlerFunc(proxyHandlers.AzadKubeProxyHandler(ctx, proxy)),
-		options.WithIssuer(fmt.Sprintf("https://login.microsoftonline.com/%s/v2.0", client.Config.TenantID)),
-		options.WithRequiredTokenType("JWT"),
-		options.WithRequiredAudience(client.Config.TenantID),
-		options.WithFallbackSignatureAlgorithm("RS256"),
-		options.WithRequiredClaims(map[string]interface{}{
-			"tid": client.Config.TenantID,
-		}),
-	)
+	oidcHandler := handlers.NewOIDCHandler(proxyHandlers.AzadKubeProxyHandler(ctx, proxy), client.Config.TenantID, client.Config.ClientID)
 
 	router.PathPrefix("/").Handler(oidcHandler)
 

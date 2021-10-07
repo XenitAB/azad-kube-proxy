@@ -101,66 +101,6 @@ func (client *Client) LivenessHandler(ctx context.Context) func(http.ResponseWri
 	}
 }
 
-type azureClaims struct {
-	sub      string
-	username string
-	objectID string
-	groups   []string
-}
-
-func toAzureClaims(rawClaims map[string]interface{}) (azureClaims, error) {
-	rawSub, ok := rawClaims["sub"]
-	if !ok {
-		return azureClaims{}, fmt.Errorf("unable to find sub claim")
-	}
-
-	sub, ok := rawSub.(string)
-	if !ok {
-		return azureClaims{}, fmt.Errorf("unable to typecast sub to string: %v", rawSub)
-	}
-
-	isServicePrincipal := false
-	rawUsername, ok := rawClaims["preferred_username"]
-	if !ok {
-		isServicePrincipal = true
-	}
-
-	username := ""
-	if !isServicePrincipal {
-		username, ok = rawUsername.(string)
-		if !ok {
-			return azureClaims{}, fmt.Errorf("unable to typecast preferred_username to string: %v", rawUsername)
-		}
-	}
-
-	rawObjectID, ok := rawClaims["oid"]
-	if !ok {
-		return azureClaims{}, fmt.Errorf("unable to find oid claim")
-	}
-
-	objectID, ok := rawObjectID.(string)
-	if !ok {
-		return azureClaims{}, fmt.Errorf("unable to typecast oid to string: %v", rawObjectID)
-	}
-
-	rawGroups, ok := rawClaims["groups"]
-	if !ok {
-		return azureClaims{}, fmt.Errorf("unable to find groups claim")
-	}
-
-	groups, ok := rawGroups.([]string)
-	if !ok {
-		return azureClaims{}, fmt.Errorf("unable to typecast groups to []string: %v", rawGroups)
-	}
-
-	return azureClaims{
-		sub:      sub,
-		username: username,
-		objectID: objectID,
-		groups:   groups,
-	}, nil
-}
-
 // AzadKubeProxyHandler ...
 func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContextOrDiscard(ctx)
@@ -209,7 +149,7 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 
 			// Check if number of groups more than the configured limit
 			if len(user.Groups) > client.Config.AzureADMaxGroupCount-1 {
-				log.Error(errors.New("Max groups reached"), "The user is member of more groups than allowed to be passed to the Kubernetes API", "groupCount", len(user.Groups), "username", user.Username, "config.AzureADMaxGroupCount", client.Config.AzureADMaxGroupCount)
+				log.Error(errors.New("max groups reached"), "the user is member of more groups than allowed to be passed to the Kubernetes API", "groupCount", len(user.Groups), "username", user.Username, "config.AzureADMaxGroupCount", client.Config.AzureADMaxGroupCount)
 				http.Error(w, "Too many groups", http.StatusForbidden)
 				return
 			}
@@ -243,7 +183,7 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 			case models.ObjectIDGroupIdentifier:
 				r.Header.Add(impersonateGroupHeader, group.ObjectID)
 			default:
-				log.Error(errors.New("Unknown groups identifier"), "Unknown groups identifier", "GroupIdentifier", client.Config.GroupIdentifier)
+				log.Error(errors.New("unknown groups identifier"), "unknown groups identifier", "GroupIdentifier", client.Config.GroupIdentifier)
 				http.Error(w, "Unexpected error", http.StatusInternalServerError)
 				return
 			}
