@@ -8,15 +8,14 @@ import (
 	"net/http/httputil"
 	"strings"
 
-	"github.com/coreos/go-oidc"
 	"github.com/go-logr/logr"
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
-	"github.com/xenitab/azad-kube-proxy/pkg/claims"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"github.com/xenitab/azad-kube-proxy/pkg/health"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 	"github.com/xenitab/azad-kube-proxy/pkg/user"
 	"github.com/xenitab/azad-kube-proxy/pkg/util"
+	"github.com/xenitab/go-oidc-middleware/options"
 )
 
 const (
@@ -38,25 +37,16 @@ type ClientInterface interface {
 type Client struct {
 	Config       config.Config
 	CacheClient  cache.ClientInterface
-	OIDCVerifier *oidc.IDTokenVerifier
 	UserClient   user.ClientInterface
-	ClaimsClient claims.ClientInterface
 	HealthClient health.ClientInterface
 }
 
 // NewHandlersClient ...
-func NewHandlersClient(ctx context.Context, config config.Config, cacheClient cache.ClientInterface, userClient user.ClientInterface, claimsClient claims.ClientInterface, healthClient health.ClientInterface) (ClientInterface, error) {
-	oidcVerifier, err := claimsClient.GetOIDCVerifier(ctx, config.TenantID, config.ClientID)
-	if err != nil {
-		return nil, err
-	}
-
+func NewHandlersClient(ctx context.Context, config config.Config, cacheClient cache.ClientInterface, userClient user.ClientInterface, healthClient health.ClientInterface) (ClientInterface, error) {
 	handlersClient := &Client{
 		Config:       config,
 		CacheClient:  cacheClient,
-		OIDCVerifier: oidcVerifier,
 		UserClient:   userClient,
-		ClaimsClient: claimsClient,
 		HealthClient: healthClient,
 	}
 
@@ -116,26 +106,22 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 	log := logr.FromContextOrDiscard(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Extract token from Authorization header
-		token, err := util.GetBearerToken(r)
-		if err != nil {
-			log.Error(err, "Unable to extract Bearer token")
-			http.Error(w, "Unable to extract Bearer token", http.StatusForbidden)
+		rawClaims, ok := r.Context().Value(options.DefaultClaimsContextKeyName).(map[string]interface{})
+		if !ok {
+			log.Error(fmt.Errorf("unable to typecast claims"), "not able to typecast claims to map[string]interface{}")
+			http.Error(w, "Unexpected error", http.StatusInternalServerError)
 			return
 		}
 
-		tokenHash := util.GetEncodedHash(token)
-
-		// Verify user token
-		verifiedToken, err := client.OIDCVerifier.Verify(ctx, token)
+		claims, err := toAzureClaims(rawClaims)
 		if err != nil {
-			log.Error(err, "Unable to verify token")
-			http.Error(w, "Unable to verify token", http.StatusUnauthorized)
+			log.Error(err, "not able to convert rawClaims to azureClaims")
+			http.Error(w, "Unexpected error", http.StatusInternalServerError)
 			return
 		}
 
 		// Use the token hash to get the user object from cache
-		user, found, err := client.CacheClient.GetUser(ctx, tokenHash)
+		user, found, err := client.CacheClient.GetUser(ctx, claims.sub)
 		if err != nil {
 			log.Error(err, "Unable to get cached user object")
 			http.Error(w, "Unexpected error", http.StatusInternalServerError)
@@ -153,15 +139,8 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 
 		// Get the user from the token if no cache was found
 		if !found {
-			claims, err := client.ClaimsClient.NewClaims(verifiedToken)
-			if err != nil {
-				log.Error(err, "Unable to get claims")
-				http.Error(w, "Unable to get claims", http.StatusForbidden)
-				return
-			}
-
 			// Get the user object
-			user, err = client.UserClient.GetUser(ctx, claims.Username, claims.ObjectID)
+			user, err = client.UserClient.GetUser(ctx, claims.username, claims.objectID)
 			if err != nil {
 				log.Error(err, "Unable to get user")
 				http.Error(w, "Unable to get user", http.StatusForbidden)
@@ -170,12 +149,12 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 
 			// Check if number of groups more than the configured limit
 			if len(user.Groups) > client.Config.AzureADMaxGroupCount-1 {
-				log.Error(errors.New("Max groups reached"), "The user is member of more groups than allowed to be passed to the Kubernetes API", "groupCount", len(user.Groups), "username", user.Username, "config.AzureADMaxGroupCount", client.Config.AzureADMaxGroupCount)
+				log.Error(errors.New("max groups reached"), "the user is member of more groups than allowed to be passed to the Kubernetes API", "groupCount", len(user.Groups), "username", user.Username, "config.AzureADMaxGroupCount", client.Config.AzureADMaxGroupCount)
 				http.Error(w, "Too many groups", http.StatusForbidden)
 				return
 			}
 
-			err = client.CacheClient.SetUser(ctx, tokenHash, user)
+			err = client.CacheClient.SetUser(ctx, claims.sub, user)
 			if err != nil {
 				log.Error(err, "Unable to set cache for user object")
 				http.Error(w, "Unexpected error", http.StatusInternalServerError)
@@ -204,7 +183,7 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 			case models.ObjectIDGroupIdentifier:
 				r.Header.Add(impersonateGroupHeader, group.ObjectID)
 			default:
-				log.Error(errors.New("Unknown groups identifier"), "Unknown groups identifier", "GroupIdentifier", client.Config.GroupIdentifier)
+				log.Error(errors.New("unknown groups identifier"), "unknown groups identifier", "GroupIdentifier", client.Config.GroupIdentifier)
 				http.Error(w, "Unexpected error", http.StatusInternalServerError)
 				return
 			}

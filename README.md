@@ -292,8 +292,8 @@ metadata:
 type: kubernetes.io/service-account-token
 EOF
 
-kubectl get secret azad-kube-proxy-test-secret --output=jsonpath={.data.ca\\.crt} | base64 -d > tmp/ca.crt
-kubectl get secret azad-kube-proxy-test-secret --output=jsonpath={.data.token} | base64 -d > tmp/token
+kubectl --namespace azad-kube-proxy-test get secret azad-kube-proxy-test-secret --output=jsonpath={.data.ca\\.crt} | base64 -d > tmp/ca.crt
+kubectl --namespace azad-kube-proxy-test get secret azad-kube-proxy-test-secret --output=jsonpath={.data.token} | base64 -d > tmp/token
 
 KUBE_CA_PATH="${PWD}/tmp/ca.crt"
 KUBE_TOKEN_PATH="${PWD}/tmp/token"

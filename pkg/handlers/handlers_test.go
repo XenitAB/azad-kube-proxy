@@ -18,11 +18,9 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	azpolicy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/coreos/go-oidc"
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
-	"github.com/xenitab/azad-kube-proxy/pkg/claims"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"github.com/xenitab/azad-kube-proxy/pkg/health"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
@@ -36,7 +34,6 @@ var (
 func TestNewHandlersClient(t *testing.T) {
 	tenantID := getEnvOrSkip(t, "TENANT_ID")
 	ctx := logr.NewContext(context.Background(), logr.Discard())
-	fakeClaimsClient := newFakeClaimsClient(nil, nil, claims.AzureClaims{}, &oidc.IDTokenVerifier{})
 	fakeCacheClient := newFakeCacheClient("", "", nil, false, nil)
 	fakeUserClient := newFakeUserClient("", "", nil, nil)
 	fakeHealthClient := newFakeHealthClient(true, nil, true, nil)
@@ -52,15 +49,9 @@ func TestNewHandlersClient(t *testing.T) {
 		},
 	}
 
-	_, err = NewHandlersClient(ctx, cfg, fakeCacheClient, fakeUserClient, fakeClaimsClient, fakeHealthClient)
+	_, err = NewHandlersClient(ctx, cfg, fakeCacheClient, fakeUserClient, fakeHealthClient)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
-	}
-
-	fakeClaimsClient = newFakeClaimsClient(nil, errors.New("fake error"), claims.AzureClaims{}, &oidc.IDTokenVerifier{})
-	_, err = NewHandlersClient(ctx, cfg, fakeCacheClient, fakeUserClient, fakeClaimsClient, fakeHealthClient)
-	if !strings.Contains(err.Error(), "fake error") {
-		t.Errorf("Expected err to contain 'fake error' but it was %q", err)
 	}
 }
 
@@ -87,7 +78,6 @@ func TestReadinessHandler(t *testing.T) {
 
 	fakeCacheClient := newFakeCacheClient("", "", nil, true, nil)
 	fakeUserClient := newFakeUserClient("", "", nil, nil)
-	claimsClient := claims.NewClaimsClient()
 
 	cases := []struct {
 		healthClient    health.ClientInterface
@@ -107,7 +97,7 @@ func TestReadinessHandler(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		proxyHandlers, err := NewHandlersClient(ctx, cfg, fakeCacheClient, fakeUserClient, claimsClient, c.healthClient)
+		proxyHandlers, err := NewHandlersClient(ctx, cfg, fakeCacheClient, fakeUserClient, c.healthClient)
 		if err != nil {
 			t.Errorf("Expected err to be nil but it was %q", err)
 		}
@@ -153,7 +143,6 @@ func TestLivenessHandler(t *testing.T) {
 
 	fakeCacheClient := newFakeCacheClient("", "", nil, true, nil)
 	fakeUserClient := newFakeUserClient("", "", nil, nil)
-	claimsClient := claims.NewClaimsClient()
 
 	cases := []struct {
 		healthClient    health.ClientInterface
@@ -173,7 +162,7 @@ func TestLivenessHandler(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		proxyHandlers, err := NewHandlersClient(ctx, cfg, fakeCacheClient, fakeUserClient, claimsClient, c.healthClient)
+		proxyHandlers, err := NewHandlersClient(ctx, cfg, fakeCacheClient, fakeUserClient, c.healthClient)
 		if err != nil {
 			t.Errorf("Expected err to be nil but it was %q", err)
 		}
@@ -215,7 +204,6 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
-	claimsClient := claims.NewClaimsClient()
 	fakeCacheClient := newFakeCacheClient("", "", nil, false, nil)
 	fakeUserClient := newFakeUserClient("", "", nil, nil)
 	fakeHealthClient := newFakeHealthClient(true, nil, true, nil)
@@ -243,19 +231,20 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 	}
 
 	cases := []struct {
+		testDescription     string
 		request             *http.Request
 		config              config.Config
 		configFunction      func(oldConfig config.Config) config.Config
 		cacheClient         cache.ClientInterface
 		cacheFunction       func(oldCacheClient cache.ClientInterface) cache.ClientInterface
-		claimsClient        claims.ClientInterface
-		claimsFunction      func(oldClaimsClient claims.ClientInterface) claims.ClientInterface
 		userClient          user.ClientInterface
 		userFunction        func(oldUserClient user.ClientInterface) user.ClientInterface
 		expectedResCode     int
+		expectedResBody     string
 		expectedErrContains string
 	}{
 		{
+			testDescription: "working token, fake user client",
 			request: &http.Request{
 				Method: "GET",
 				URL: &url.URL{
@@ -265,14 +254,14 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 					"Authorization": {fmt.Sprintf("Bearer %s", token.Token)},
 				},
 			},
-			config:              cfg,
-			cacheClient:         memCacheClient,
-			claimsClient:        claimsClient,
-			userClient:          fakeUserClient,
-			expectedResCode:     http.StatusOK,
-			expectedErrContains: "",
+			config:          cfg,
+			cacheClient:     memCacheClient,
+			userClient:      fakeUserClient,
+			expectedResCode: http.StatusOK,
+			expectedResBody: `{"fake": true}`,
 		},
 		{
+			testDescription: "no token",
 			request: &http.Request{
 				Method: "GET",
 				URL: &url.URL{
@@ -282,13 +271,13 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 					"Authorization": {"Bearer"},
 				},
 			},
-			config:              cfg,
-			cacheClient:         memCacheClient,
-			claimsClient:        claimsClient,
-			expectedResCode:     http.StatusForbidden,
-			expectedErrContains: "Unable to extract Bearer token",
+			config:          cfg,
+			cacheClient:     memCacheClient,
+			expectedResCode: http.StatusBadRequest,
+			expectedResBody: "",
 		},
 		{
+			testDescription: "fake token",
 			request: &http.Request{
 				Method: "GET",
 				URL: &url.URL{
@@ -298,14 +287,14 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 					"Authorization": {"Bearer fake-token"},
 				},
 			},
-			config:              cfg,
-			cacheClient:         memCacheClient,
-			claimsClient:        claimsClient,
-			userClient:          fakeUserClient,
-			expectedResCode:     http.StatusUnauthorized,
-			expectedErrContains: "Unable to verify token",
+			config:          cfg,
+			cacheClient:     memCacheClient,
+			userClient:      fakeUserClient,
+			expectedResCode: http.StatusUnauthorized,
+			expectedResBody: "",
 		},
 		{
+			testDescription: "working token, fake user client and cache",
 			request: &http.Request{
 				Method: "GET",
 				URL: &url.URL{
@@ -315,14 +304,14 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 					"Authorization": {fmt.Sprintf("Bearer %s", token.Token)},
 				},
 			},
-			config:              cfg,
-			cacheClient:         fakeCacheClient,
-			claimsClient:        claimsClient,
-			userClient:          fakeUserClient,
-			expectedResCode:     http.StatusOK,
-			expectedErrContains: "",
+			config:          cfg,
+			cacheClient:     fakeCacheClient,
+			userClient:      fakeUserClient,
+			expectedResCode: http.StatusOK,
+			expectedResBody: `{"fake": true}`,
 		},
 		{
+			testDescription: "fake token",
 			request: &http.Request{
 				Method: "GET",
 				URL: &url.URL{
@@ -332,14 +321,14 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 					"Authorization": {"Bearer fake-token"},
 				},
 			},
-			config:              cfg,
-			cacheClient:         fakeCacheClient,
-			claimsClient:        claimsClient,
-			userClient:          fakeUserClient,
-			expectedResCode:     http.StatusUnauthorized,
-			expectedErrContains: "Unable to verify token",
+			config:          cfg,
+			cacheClient:     fakeCacheClient,
+			userClient:      fakeUserClient,
+			expectedResCode: http.StatusUnauthorized,
+			expectedResBody: "",
 		},
 		{
+			testDescription: "working token, error from cache",
 			request: &http.Request{
 				Method: "GET",
 				URL: &url.URL{
@@ -351,12 +340,12 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 			},
 			config:              cfg,
 			cacheClient:         newFakeCacheClient("", "", nil, true, errors.New("Fake error")),
-			claimsClient:        claimsClient,
 			userClient:          fakeUserClient,
 			expectedResCode:     http.StatusInternalServerError,
 			expectedErrContains: "Unexpected error",
 		},
 		{
+			testDescription: "working token, with imperonate-user header first",
 			request: &http.Request{
 				Method: "GET",
 				URL: &url.URL{
@@ -369,12 +358,12 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 			},
 			config:              cfg,
 			cacheClient:         fakeCacheClient,
-			claimsClient:        claimsClient,
 			userClient:          fakeUserClient,
 			expectedResCode:     http.StatusForbidden,
 			expectedErrContains: "User unauthorized",
 		},
 		{
+			testDescription: "working token, with imperonate-user header last",
 			request: &http.Request{
 				Method: "GET",
 				URL: &url.URL{
@@ -387,12 +376,12 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 			},
 			config:              cfg,
 			cacheClient:         fakeCacheClient,
-			claimsClient:        claimsClient,
 			userClient:          fakeUserClient,
 			expectedResCode:     http.StatusForbidden,
 			expectedErrContains: "User unauthorized",
 		},
 		{
+			testDescription: "working token, with imperonate-user header and fake-header",
 			request: &http.Request{
 				Method: "GET",
 				URL: &url.URL{
@@ -406,12 +395,12 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 			},
 			config:              cfg,
 			cacheClient:         fakeCacheClient,
-			claimsClient:        claimsClient,
 			userClient:          fakeUserClient,
 			expectedResCode:     http.StatusForbidden,
 			expectedErrContains: "User unauthorized",
 		},
 		{
+			testDescription: "working token, with imperonate-group header and fake-header",
 			request: &http.Request{
 				Method: "GET",
 				URL: &url.URL{
@@ -425,12 +414,12 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 			},
 			config:              cfg,
 			cacheClient:         fakeCacheClient,
-			claimsClient:        claimsClient,
 			userClient:          fakeUserClient,
 			expectedResCode:     http.StatusForbidden,
 			expectedErrContains: "User unauthorized",
 		},
 		{
+			testDescription: "working token, userClient error",
 			request: &http.Request{
 				Method: "GET",
 				URL: &url.URL{
@@ -442,29 +431,12 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 			},
 			config:              cfg,
 			cacheClient:         fakeCacheClient,
-			claimsClient:        newFakeClaimsClient(errors.New("fake error"), nil, claims.AzureClaims{}, nil),
-			userClient:          fakeUserClient,
-			expectedResCode:     http.StatusForbidden,
-			expectedErrContains: "Unable to get claims",
-		},
-		{
-			request: &http.Request{
-				Method: "GET",
-				URL: &url.URL{
-					Path: "/",
-				},
-				Header: map[string][]string{
-					"Authorization": {fmt.Sprintf("Bearer %s", token.Token)},
-				},
-			},
-			config:              cfg,
-			cacheClient:         fakeCacheClient,
-			claimsClient:        claimsClient,
 			userClient:          newFakeUserClient("", "", nil, errors.New("fake error")),
 			expectedResCode:     http.StatusForbidden,
 			expectedErrContains: "Unable to get user",
 		},
 		{
+			testDescription: "working token, with multiple fake groups",
 			request: &http.Request{
 				Method: "GET",
 				URL: &url.URL{
@@ -474,10 +446,9 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 					"Authorization": {fmt.Sprintf("Bearer %s", token.Token)},
 				},
 			},
-			config:       cfg,
-			cacheClient:  fakeCacheClient,
-			claimsClient: claimsClient,
-			userClient:   fakeUserClient,
+			config:      cfg,
+			cacheClient: fakeCacheClient,
+			userClient:  fakeUserClient,
 			userFunction: func(oldUserClient user.ClientInterface) user.ClientInterface {
 				i := 1
 				groups := []models.Group{}
@@ -494,6 +465,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 			expectedErrContains: "Too many groups",
 		},
 		{
+			testDescription: "working token, using ObjectIDGroupIdentifier",
 			request: &http.Request{
 				Method: "GET",
 				URL: &url.URL{
@@ -508,13 +480,13 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 				oldConfig.GroupIdentifier = models.ObjectIDGroupIdentifier
 				return oldConfig
 			},
-			cacheClient:         memCacheClient,
-			claimsClient:        claimsClient,
-			userClient:          fakeUserClient,
-			expectedResCode:     http.StatusOK,
-			expectedErrContains: "",
+			cacheClient:     memCacheClient,
+			userClient:      fakeUserClient,
+			expectedResCode: http.StatusOK,
+			expectedResBody: `{"fake": true}`,
 		},
 		{
+			testDescription: "working token, with wrong GroupIdentifier",
 			request: &http.Request{
 				Method: "GET",
 				URL: &url.URL{
@@ -530,14 +502,14 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 				return oldConfig
 			},
 			cacheClient:         memCacheClient,
-			claimsClient:        claimsClient,
 			userClient:          fakeUserClient,
 			expectedResCode:     http.StatusInternalServerError,
 			expectedErrContains: "Unexpected error",
 		},
 	}
 
-	for _, c := range cases {
+	for i, c := range cases {
+		t.Logf("Test #%d: %s", i, c.testDescription)
 		if c.configFunction != nil {
 			c.config = c.configFunction(c.config)
 		}
@@ -546,15 +518,11 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 			c.cacheClient = c.cacheFunction(c.cacheClient)
 		}
 
-		if c.claimsFunction != nil {
-			c.claimsClient = c.claimsFunction(c.claimsClient)
-		}
-
 		if c.userFunction != nil {
 			c.userClient = c.userFunction(c.userClient)
 		}
 
-		proxyHandlers, err := NewHandlersClient(ctx, c.config, c.cacheClient, c.userClient, c.claimsClient, fakeHealthClient)
+		proxyHandlers, err := NewHandlersClient(ctx, c.config, c.cacheClient, c.userClient, fakeHealthClient)
 		if err != nil {
 			t.Errorf("Expected err to be nil but it was %q", err)
 		}
@@ -563,16 +531,18 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 		proxy.ErrorHandler = proxyHandlers.ErrorHandler(ctx)
 		rr := httptest.NewRecorder()
 		router := mux.NewRouter()
-		router.PathPrefix("/").HandlerFunc(proxyHandlers.AzadKubeProxyHandler(ctx, proxy))
+
+		oidcHandler := NewOIDCHandler(proxyHandlers.AzadKubeProxyHandler(ctx, proxy), tenantID, clientID)
+		router.PathPrefix("/").Handler(oidcHandler)
+
 		router.ServeHTTP(rr, c.request)
 
 		if rr.Code != c.expectedResCode {
 			t.Errorf("Handler returned unexpected status code.\nExpected: %d\nActual:   %d", c.expectedResCode, rr.Code)
 		}
 
-		expected := `{"fake": true}`
-		if rr.Body.String() != expected && c.expectedErrContains == "" {
-			t.Errorf("Handler returned unexpected body.\nExpected: %s\nActual:   %s", expected, rr.Body.String())
+		if rr.Body.String() != c.expectedResBody && c.expectedErrContains == "" {
+			t.Errorf("Handler returned unexpected body.\nExpected: %s\nActual:   %s", c.expectedResBody, rr.Body.String())
 		}
 
 		if c.expectedErrContains != "" {
@@ -664,38 +634,6 @@ func (c *fakeCacheClient) SetGroup(ctx context.Context, s string, g models.Group
 	return c.fakeError
 }
 
-type fakeClaimsClient struct {
-	fakeAzureClaims          claims.AzureClaims
-	fakeOIDCVerifier         *oidc.IDTokenVerifier
-	newClaimsFakeError       error
-	getOIDCVerifierFakeError error
-}
-
-func newFakeClaimsClient(newClaimsFakeError error, getOIDCVerifierFakeError error, fakeAzureClaims claims.AzureClaims, fakeOIDCVerifier *oidc.IDTokenVerifier) *fakeClaimsClient {
-	return &fakeClaimsClient{
-		fakeAzureClaims:          fakeAzureClaims,
-		fakeOIDCVerifier:         fakeOIDCVerifier,
-		newClaimsFakeError:       newClaimsFakeError,
-		getOIDCVerifierFakeError: getOIDCVerifierFakeError,
-	}
-}
-
-func (client *fakeClaimsClient) NewClaims(t *oidc.IDToken) (claims.AzureClaims, error) {
-	if client.newClaimsFakeError != nil {
-		return claims.AzureClaims{}, client.newClaimsFakeError
-	}
-	if client.fakeAzureClaims.Issuer == "" {
-		realClaimsClient := claims.NewClaimsClient()
-		realClaims, err := realClaimsClient.NewClaims(t)
-		if err != nil {
-			return claims.AzureClaims{}, err
-		}
-		return realClaims, nil
-	}
-
-	return client.fakeAzureClaims, client.newClaimsFakeError
-}
-
 type fakeHealthClient struct {
 	ready      bool
 	readyError error
@@ -718,28 +656,6 @@ func (client *fakeHealthClient) Ready(ctx context.Context) (bool, error) {
 
 func (client *fakeHealthClient) Live(ctx context.Context) (bool, error) {
 	return client.live, client.liveError
-}
-
-func (client *fakeClaimsClient) GetOIDCVerifier(ctx context.Context, tenantID, clientID string) (*oidc.IDTokenVerifier, error) {
-	if client.getOIDCVerifierFakeError != nil {
-		return nil, client.getOIDCVerifierFakeError
-	}
-
-	log := logr.FromContextOrDiscard(ctx)
-	issuerURL := fmt.Sprintf("https://login.microsoftonline.com/%s/v2.0", tenantID)
-	provider, err := oidc.NewProvider(ctx, issuerURL)
-	if err != nil {
-		log.Error(err, "Unable to initiate OIDC provider")
-		return nil, err
-	}
-
-	oidcConfig := &oidc.Config{
-		ClientID: clientID,
-	}
-
-	verifier := provider.Verifier(oidcConfig)
-
-	return verifier, nil
 }
 
 func getEnvOrSkip(t *testing.T, envVar string) string {
