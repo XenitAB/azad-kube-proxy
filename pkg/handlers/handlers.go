@@ -15,6 +15,7 @@ import (
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 	"github.com/xenitab/azad-kube-proxy/pkg/user"
 	"github.com/xenitab/azad-kube-proxy/pkg/util"
+	"github.com/xenitab/go-oidc-middleware/options"
 )
 
 const (
@@ -100,31 +101,87 @@ func (client *Client) LivenessHandler(ctx context.Context) func(http.ResponseWri
 	}
 }
 
+type azureClaims struct {
+	sub      string
+	username string
+	objectID string
+	groups   []string
+}
+
+func toAzureClaims(rawClaims map[string]interface{}) (azureClaims, error) {
+	rawSub, ok := rawClaims["sub"]
+	if !ok {
+		return azureClaims{}, fmt.Errorf("unable to find sub claim")
+	}
+
+	sub, ok := rawSub.(string)
+	if !ok {
+		return azureClaims{}, fmt.Errorf("unable to typecast sub to string", "sub", rawSub)
+	}
+
+	isServicePrincipal := false
+	rawUsername, ok := rawClaims["preferred_username"]
+	if !ok {
+		isServicePrincipal = true
+	}
+
+	username := ""
+	if !isServicePrincipal {
+		username, ok = rawUsername.(string)
+		if !ok {
+			return azureClaims{}, fmt.Errorf("unable to typecast preferred_username to string", "preferred_username", rawUsername)
+		}
+	}
+
+	rawObjectID, ok := rawClaims["oid"]
+	if !ok {
+		return azureClaims{}, fmt.Errorf("unable to find oid claim")
+	}
+
+	objectID, ok := rawObjectID.(string)
+	if !ok {
+		return azureClaims{}, fmt.Errorf("unable to typecast oid to string", "oid", rawObjectID)
+	}
+
+	rawGroups, ok := rawClaims["groups"]
+	if !ok {
+		return azureClaims{}, fmt.Errorf("unable to find groups claim")
+	}
+
+	groups, ok := rawGroups.([]string)
+	if !ok {
+		return azureClaims{}, fmt.Errorf("unable to typecast groups to []string", "groups", rawGroups)
+	}
+
+	return azureClaims{
+		sub:      sub,
+		username: username,
+		objectID: objectID,
+		groups:   groups,
+	}, nil
+}
+
 // AzadKubeProxyHandler ...
 func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Extract token from Authorization header
-		token, err := util.GetBearerToken(r)
-		if err != nil {
-			log.Error(err, "Unable to extract Bearer token")
-			http.Error(w, "Unable to extract Bearer token", http.StatusForbidden)
+		rawClaims, ok := r.Context().Value(options.DefaultClaimsContextKeyName).(map[string]interface{})
+		if !ok {
+			log.Error(fmt.Errorf("unable to typecast claims"), "not able to typecast claims to map[string]interface{}")
+			http.Error(w, "Unexpected error", http.StatusInternalServerError)
 			return
 		}
 
-		tokenHash := util.GetEncodedHash(token)
-
-		// Verify user token
-		verifiedToken, err := client.OIDCVerifier.Verify(ctx, token)
+		claims, err := toAzureClaims(rawClaims)
 		if err != nil {
-			log.Error(err, "Unable to verify token")
-			http.Error(w, "Unable to verify token", http.StatusUnauthorized)
+			log.Error(err, "not able to convert rawClaims to azureClaims")
+			http.Error(w, "Unexpected error", http.StatusInternalServerError)
 			return
 		}
 
 		// Use the token hash to get the user object from cache
-		user, found, err := client.CacheClient.GetUser(ctx, tokenHash)
+		user, found, err := client.CacheClient.GetUser(ctx, claims.sub)
 		if err != nil {
 			log.Error(err, "Unable to get cached user object")
 			http.Error(w, "Unexpected error", http.StatusInternalServerError)
@@ -142,15 +199,8 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 
 		// Get the user from the token if no cache was found
 		if !found {
-			claims, err := client.ClaimsClient.NewClaims(verifiedToken)
-			if err != nil {
-				log.Error(err, "Unable to get claims")
-				http.Error(w, "Unable to get claims", http.StatusForbidden)
-				return
-			}
-
 			// Get the user object
-			user, err = client.UserClient.GetUser(ctx, claims.Username, claims.ObjectID)
+			user, err = client.UserClient.GetUser(ctx, claims.username, claims.objectID)
 			if err != nil {
 				log.Error(err, "Unable to get user")
 				http.Error(w, "Unable to get user", http.StatusForbidden)
@@ -164,7 +214,7 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 				return
 			}
 
-			err = client.CacheClient.SetUser(ctx, tokenHash, user)
+			err = client.CacheClient.SetUser(ctx, claims.sub, user)
 			if err != nil {
 				log.Error(err, "Unable to set cache for user object")
 				http.Error(w, "Unexpected error", http.StatusInternalServerError)
