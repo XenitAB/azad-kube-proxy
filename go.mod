@@ -11,7 +11,7 @@ require (
 	github.com/go-logr/logr v1.1.0
 	github.com/go-logr/zapr v1.1.0
 	github.com/go-playground/validator/v10 v10.9.0
-	github.com/go-redis/redis/v8 v8.11.3
+	github.com/go-redis/redis/v8 v8.11.4
 	github.com/google/go-cmp v0.5.6
 	github.com/gorilla/mux v1.8.0
 	github.com/imdario/mergo v0.3.12 // indirect
