@@ -116,7 +116,7 @@ func toAzureClaims(rawClaims map[string]interface{}) (azureClaims, error) {
 
 	sub, ok := rawSub.(string)
 	if !ok {
-		return azureClaims{}, fmt.Errorf("unable to typecast sub to string", "sub", rawSub)
+		return azureClaims{}, fmt.Errorf("unable to typecast sub to string: %v", rawSub)
 	}
 
 	isServicePrincipal := false
@@ -129,7 +129,7 @@ func toAzureClaims(rawClaims map[string]interface{}) (azureClaims, error) {
 	if !isServicePrincipal {
 		username, ok = rawUsername.(string)
 		if !ok {
-			return azureClaims{}, fmt.Errorf("unable to typecast preferred_username to string", "preferred_username", rawUsername)
+			return azureClaims{}, fmt.Errorf("unable to typecast preferred_username to string: %v", rawUsername)
 		}
 	}
 
@@ -140,7 +140,7 @@ func toAzureClaims(rawClaims map[string]interface{}) (azureClaims, error) {
 
 	objectID, ok := rawObjectID.(string)
 	if !ok {
-		return azureClaims{}, fmt.Errorf("unable to typecast oid to string", "oid", rawObjectID)
+		return azureClaims{}, fmt.Errorf("unable to typecast oid to string: %v", rawObjectID)
 	}
 
 	rawGroups, ok := rawClaims["groups"]
@@ -150,7 +150,7 @@ func toAzureClaims(rawClaims map[string]interface{}) (azureClaims, error) {
 
 	groups, ok := rawGroups.([]string)
 	if !ok {
-		return azureClaims{}, fmt.Errorf("unable to typecast groups to []string", "groups", rawGroups)
+		return azureClaims{}, fmt.Errorf("unable to typecast groups to []string: %v", rawGroups)
 	}
 
 	return azureClaims{
