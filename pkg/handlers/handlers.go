@@ -8,10 +8,8 @@ import (
 	"net/http/httputil"
 	"strings"
 
-	"github.com/coreos/go-oidc"
 	"github.com/go-logr/logr"
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
-	"github.com/xenitab/azad-kube-proxy/pkg/claims"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"github.com/xenitab/azad-kube-proxy/pkg/health"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
@@ -38,25 +36,16 @@ type ClientInterface interface {
 type Client struct {
 	Config       config.Config
 	CacheClient  cache.ClientInterface
-	OIDCVerifier *oidc.IDTokenVerifier
 	UserClient   user.ClientInterface
-	ClaimsClient claims.ClientInterface
 	HealthClient health.ClientInterface
 }
 
 // NewHandlersClient ...
-func NewHandlersClient(ctx context.Context, config config.Config, cacheClient cache.ClientInterface, userClient user.ClientInterface, claimsClient claims.ClientInterface, healthClient health.ClientInterface) (ClientInterface, error) {
-	oidcVerifier, err := claimsClient.GetOIDCVerifier(ctx, config.TenantID, config.ClientID)
-	if err != nil {
-		return nil, err
-	}
-
+func NewHandlersClient(ctx context.Context, config config.Config, cacheClient cache.ClientInterface, userClient user.ClientInterface, healthClient health.ClientInterface) (ClientInterface, error) {
 	handlersClient := &Client{
 		Config:       config,
 		CacheClient:  cacheClient,
-		OIDCVerifier: oidcVerifier,
 		UserClient:   userClient,
-		ClaimsClient: claimsClient,
 		HealthClient: healthClient,
 	}
 
