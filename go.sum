@@ -525,8 +525,8 @@ github.com/xenitab/dispans v0.0.3/go.mod h1:Nz+rsexK3w3Af7SmkVB0oKt6jJ6eFHL01F8w
 github.com/xenitab/dispans v0.0.5 h1:9uMDcVFMfMVREs78pNSly6OFICwycBZjU3jkFtJtXd8=
 github.com/xenitab/dispans v0.0.5/go.mod h1:UP+PXOz4lpAqko4XGeBlSoRYkj8ohc/j9TsmGujEUAg=
 github.com/xenitab/go-oidc-middleware v0.0.2/go.mod h1:SvzP3YAkptnbYFJDvJZ4HoA6zHIRhZCYltW+PCk0O/8=
-github.com/xenitab/go-oidc-middleware v0.0.15 h1:v0dvZnhgU7Ny1SBg4RfGtbOvls5oTo1CwzT1Et/jTpg=
-github.com/xenitab/go-oidc-middleware v0.0.15/go.mod h1:Y29p+d/iKy75YYSgb4EEqrGDpveOHPrTM4xkHi1EbuY=
+github.com/xenitab/go-oidc-middleware v0.0.16 h1:/iRsaBoIpmsgE9SCOt/0JaVRyGBXBUpbxCWxEZjjO28=
+github.com/xenitab/go-oidc-middleware v0.0.16/go.mod h1:Y29p+d/iKy75YYSgb4EEqrGDpveOHPrTM4xkHi1EbuY=
 github.com/xenitab/pkg v0.0.2/go.mod h1:Y8WrydjgisWoExwdlN8hs6SK9seZ3lgV5Tpub3pOw6o=
 github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0/go.mod h1:/LWChgwKmvncFJFHJ7Gvn9wZArjbV5/FppcK2fKk/tI=
 github.com/yudai/gojsondiff v1.0.0/go.mod h1:AY32+k2cwILAkW1fbgxQ5mUmMiZFgLIV+FBNExI05xg=
