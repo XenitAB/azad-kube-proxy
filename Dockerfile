@@ -1,5 +1,5 @@
 # BUILDER
-FROM golang:1.17.1-alpine as builder
+FROM golang:1.17.3-alpine as builder
 
 ARG VERSION
 ARG REVISION
