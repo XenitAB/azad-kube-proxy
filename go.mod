@@ -30,8 +30,8 @@ require (
 	golang.org/x/oauth2 v0.0.0-20211005180243-6b3c2da341f1
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
-	k8s.io/api v0.22.2
-	k8s.io/apimachinery v0.22.2
+	k8s.io/api v0.22.4
+	k8s.io/apimachinery v0.22.4
 	k8s.io/client-go v0.22.2
 	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b // indirect
 )
@@ -101,7 +101,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	k8s.io/klog/v2 v2.20.0 // indirect
-	k8s.io/kube-openapi v0.0.0-20210929172449-94abcedd1aa4 // indirect
+	k8s.io/kube-openapi v0.0.0-20211109043538-20434351676c // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
