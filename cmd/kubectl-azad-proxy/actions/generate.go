@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/go-logr/logr"
 	"github.com/urfave/cli/v2"
 	"github.com/xenitab/azad-kube-proxy/cmd/kubectl-azad-proxy/customerrors"
@@ -28,7 +27,7 @@ type GenerateClient struct {
 	tokenCache                    string
 	overwrite                     bool
 	insecureSkipVerify            bool
-	defaultAzureCredentialOptions *azidentity.DefaultAzureCredentialOptions
+	defaultAzureCredentialOptions defaultAzureCredentialOptions
 }
 
 // GenerateInterface ...
@@ -55,10 +54,10 @@ func NewGenerateClient(ctx context.Context, c *cli.Context) (GenerateInterface, 
 		tokenCache:         c.String("token-cache"),
 		overwrite:          c.Bool("overwrite"),
 		insecureSkipVerify: c.Bool("tls-insecure-skip-verify"),
-		defaultAzureCredentialOptions: &azidentity.DefaultAzureCredentialOptions{
-			ExcludeAzureCLICredential:    c.Bool("exclude-azure-cli-auth"),
-			ExcludeEnvironmentCredential: c.Bool("exclude-environment-auth"),
-			ExcludeMSICredential:         c.Bool("exclude-msi-auth"),
+		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
+			excludeAzureCLICredential:    c.Bool("exclude-azure-cli-auth"),
+			excludeEnvironmentCredential: c.Bool("exclude-environment-auth"),
+			excludeMSICredential:         c.Bool("exclude-msi-auth"),
 		},
 	}, nil
 }
@@ -209,15 +208,15 @@ func (client *GenerateClient) Generate(ctx context.Context) error {
 				},
 				{
 					Name:  "EXCLUDE_AZURE_CLI_AUTH",
-					Value: fmt.Sprintf("%t", client.defaultAzureCredentialOptions.ExcludeAzureCLICredential),
+					Value: fmt.Sprintf("%t", client.defaultAzureCredentialOptions.excludeAzureCLICredential),
 				},
 				{
 					Name:  "EXCLUDE_ENVIRONMENT_AUTH",
-					Value: fmt.Sprintf("%t", client.defaultAzureCredentialOptions.ExcludeEnvironmentCredential),
+					Value: fmt.Sprintf("%t", client.defaultAzureCredentialOptions.excludeEnvironmentCredential),
 				},
 				{
 					Name:  "EXCLUDE_MSI_AUTH",
-					Value: fmt.Sprintf("%t", client.defaultAzureCredentialOptions.ExcludeMSICredential),
+					Value: fmt.Sprintf("%t", client.defaultAzureCredentialOptions.excludeMSICredential),
 				},
 			},
 		},

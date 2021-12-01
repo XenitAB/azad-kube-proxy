@@ -3,6 +3,7 @@ package actions
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -15,6 +16,12 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/xenitab/azad-kube-proxy/cmd/kubectl-azad-proxy/customerrors"
 )
+
+type defaultAzureCredentialOptions struct {
+	excludeAzureCLICredential    bool
+	excludeEnvironmentCredential bool
+	excludeMSICredential         bool
+}
 
 // Token contains the struct for a cached token
 type Token struct {
@@ -51,11 +58,11 @@ type TokensInterface interface {
 type Tokens struct {
 	cachedTokens                  map[string]Token
 	path                          string
-	defaultAzureCredentialOptions *azidentity.DefaultAzureCredentialOptions
+	defaultAzureCredentialOptions defaultAzureCredentialOptions
 }
 
 // NewTokens returns a TokensInterface or error
-func NewTokens(ctx context.Context, path string, defaultAzureCredentialOptions *azidentity.DefaultAzureCredentialOptions) (TokensInterface, error) {
+func NewTokens(ctx context.Context, path string, defaultAzureCredentialOptions defaultAzureCredentialOptions) (TokensInterface, error) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	if strings.HasPrefix(path, "~/") {
@@ -160,9 +167,9 @@ func (t Tokens) SetToken(ctx context.Context, name string, token Token) error {
 	return nil
 }
 
-func getAccessToken(ctx context.Context, resource string, defaultAzureCredentialOptions *azidentity.DefaultAzureCredentialOptions) (*azcore.AccessToken, error) {
+func getAccessToken(ctx context.Context, resource string, defaultAzureCredentialOptions defaultAzureCredentialOptions) (*azcore.AccessToken, error) {
 	scope := fmt.Sprintf("%s/.default", resource)
-	cred, err := azidentity.NewDefaultAzureCredential(defaultAzureCredentialOptions)
+	cred, err := newDefaultAzureCredential(defaultAzureCredentialOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -173,6 +180,54 @@ func getAccessToken(ctx context.Context, resource string, defaultAzureCredential
 	}
 
 	return token, nil
+}
+
+func newDefaultAzureCredential(options defaultAzureCredentialOptions) (*azidentity.ChainedTokenCredential, error) {
+	creds := []azcore.TokenCredential{}
+	opts := azidentity.DefaultAzureCredentialOptions{}
+
+	var errMsg string
+
+	if !options.excludeEnvironmentCredential {
+		envCred, err := azidentity.NewEnvironmentCredential(&azidentity.EnvironmentCredentialOptions{AuthorityHost: opts.AuthorityHost,
+			ClientOptions: opts.ClientOptions,
+		})
+		if err == nil {
+			creds = append(creds, envCred)
+		} else {
+			errMsg += err.Error()
+		}
+	}
+
+	if !options.excludeMSICredential {
+		msiCred, err := azidentity.NewManagedIdentityCredential(&azidentity.ManagedIdentityCredentialOptions{ClientOptions: opts.ClientOptions})
+		if err == nil {
+			creds = append(creds, msiCred)
+		} else {
+			errMsg += err.Error()
+		}
+	}
+
+	if !options.excludeAzureCLICredential {
+		cliCred, err := azidentity.NewAzureCLICredential(&azidentity.AzureCLICredentialOptions{TenantID: opts.TenantID})
+		if err == nil {
+			creds = append(creds, cliCred)
+		} else {
+			errMsg += err.Error()
+		}
+	}
+
+	if len(creds) == 0 {
+		err := errors.New(errMsg)
+		return nil, err
+	}
+
+	chain, err := azidentity.NewChainedTokenCredential(creds, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return chain, nil
 }
 
 func getFileContent(s string) ([]byte, error) {

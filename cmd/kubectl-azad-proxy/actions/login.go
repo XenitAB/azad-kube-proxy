@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/urfave/cli/v2"
 	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sclientauth "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
@@ -15,7 +14,7 @@ type LoginClient struct {
 	clusterName                   string
 	resource                      string
 	tokenCache                    string
-	defaultAzureCredentialOptions *azidentity.DefaultAzureCredentialOptions
+	defaultAzureCredentialOptions defaultAzureCredentialOptions
 }
 
 // LoginInterface ...
@@ -29,10 +28,10 @@ func NewLoginClient(ctx context.Context, c *cli.Context) (LoginInterface, error)
 		clusterName: c.String("cluster-name"),
 		resource:    c.String("resource"),
 		tokenCache:  c.String("token-cache"),
-		defaultAzureCredentialOptions: &azidentity.DefaultAzureCredentialOptions{
-			ExcludeAzureCLICredential:    c.Bool("exclude-azure-cli-auth"),
-			ExcludeEnvironmentCredential: c.Bool("exclude-environment-auth"),
-			ExcludeMSICredential:         c.Bool("exclude-msi-auth"),
+		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
+			excludeAzureCLICredential:    c.Bool("exclude-azure-cli-auth"),
+			excludeEnvironmentCredential: c.Bool("exclude-environment-auth"),
+			excludeMSICredential:         c.Bool("exclude-msi-auth"),
 		},
 	}, nil
 }

@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/go-logr/logr"
 	"github.com/urfave/cli/v2"
 	k8sclientcmd "k8s.io/client-go/tools/clientcmd"
@@ -133,10 +132,10 @@ func TestMergeGenerateClient(t *testing.T) {
 		tokenCache:         "/tmp/tokencache",
 		overwrite:          false,
 		insecureSkipVerify: false,
-		defaultAzureCredentialOptions: &azidentity.DefaultAzureCredentialOptions{
-			ExcludeAzureCLICredential:    false,
-			ExcludeEnvironmentCredential: false,
-			ExcludeMSICredential:         false,
+		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
+			excludeAzureCLICredential:    false,
+			excludeEnvironmentCredential: false,
+			excludeMSICredential:         false,
 		},
 	}
 
@@ -191,10 +190,10 @@ func TestGenerate(t *testing.T) {
 		tokenCache:         tokenCacheFile,
 		overwrite:          false,
 		insecureSkipVerify: false,
-		defaultAzureCredentialOptions: &azidentity.DefaultAzureCredentialOptions{
-			ExcludeAzureCLICredential:    false,
-			ExcludeEnvironmentCredential: false,
-			ExcludeMSICredential:         false,
+		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
+			excludeAzureCLICredential:    false,
+			excludeEnvironmentCredential: false,
+			excludeMSICredential:         false,
 		},
 	}
 
