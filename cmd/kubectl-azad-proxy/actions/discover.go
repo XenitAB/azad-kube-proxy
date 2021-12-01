@@ -67,7 +67,7 @@ func NewDiscoverClient(ctx context.Context, c *cli.Context) (DiscoverInterface, 
 	enableAzureCliToken := !c.Bool("exclude-azure-cli-auth")
 	tenantID := c.String("tenant-id")
 	if tenantID == "" && enableAzureCliToken {
-		cliConfig, err := hamiltonAuth.NewAzureCliConfig(hamiltonAuth.MsGraph, "")
+		cliConfig, err := hamiltonAuth.NewAzureCliConfig(hamiltonEnvironments.MsGraphGlobal, "")
 		if err != nil {
 			log.V(1).Info("Unable to create CliConfig", "error", err.Error())
 			return nil, customerrors.New(customerrors.ErrorTypeAuthentication, err)
@@ -190,7 +190,7 @@ func (client *DiscoverClient) Run(ctx context.Context) ([]discover, error) {
 		EnableMsiAuth:          client.enableMsiAuth,
 	}
 
-	authorizer, err := authConfig.NewAuthorizer(ctx, hamiltonAuth.MsGraph)
+	authorizer, err := authConfig.NewAuthorizer(ctx, hamiltonEnvironments.MsGraphGlobal)
 	if err != nil {
 		log.V(1).Info("Unable to create authorizer", "error", err.Error())
 		return []discover{}, customerrors.New(customerrors.ErrorTypeAuthentication, err)
