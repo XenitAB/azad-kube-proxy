@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/manicminer/hamilton/auth"
 	hamiltonAuth "github.com/manicminer/hamilton/auth"
 	hamiltonEnvironments "github.com/manicminer/hamilton/environments"
 	hamiltonMsgraph "github.com/manicminer/hamilton/msgraph"
@@ -40,7 +39,7 @@ type Client struct {
 
 // NewAzureClient returns an Azure client or error
 func NewAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graphFilter string, cacheClient cache.ClientInterface) (*Client, error) {
-	authConfig := &auth.Config{
+	authConfig := &hamiltonAuth.Config{
 		Environment:            hamiltonEnvironments.Global,
 		TenantID:               tenantID,
 		ClientID:               clientID,
@@ -48,7 +47,7 @@ func NewAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graph
 		EnableClientSecretAuth: true,
 	}
 
-	authorizer, err := authConfig.NewAuthorizer(ctx, hamiltonAuth.MsGraph)
+	authorizer, err := authConfig.NewAuthorizer(ctx, hamiltonEnvironments.MsGraphGlobal)
 	if err != nil {
 		return nil, err
 	}

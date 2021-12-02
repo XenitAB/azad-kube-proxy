@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/go-logr/logr"
 	"github.com/urfave/cli/v2"
 	k8sclientauth "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
@@ -136,10 +135,10 @@ func TestLogin(t *testing.T) {
 		clusterName: "test",
 		resource:    resource,
 		tokenCache:  tokenCacheFile,
-		defaultAzureCredentialOptions: &azidentity.DefaultAzureCredentialOptions{
-			ExcludeAzureCLICredential:    true,
-			ExcludeEnvironmentCredential: false,
-			ExcludeMSICredential:         true,
+		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
+			excludeAzureCLICredential:    true,
+			excludeEnvironmentCredential: false,
+			excludeMSICredential:         true,
 		},
 	}
 
@@ -148,10 +147,10 @@ func TestLogin(t *testing.T) {
 		clusterName: "test",
 		resource:    resource,
 		tokenCache:  tokenCacheFileErr,
-		defaultAzureCredentialOptions: &azidentity.DefaultAzureCredentialOptions{
-			ExcludeAzureCLICredential:    true,
-			ExcludeEnvironmentCredential: true,
-			ExcludeMSICredential:         true,
+		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
+			excludeAzureCLICredential:    true,
+			excludeEnvironmentCredential: true,
+			excludeMSICredential:         true,
 		},
 	}
 

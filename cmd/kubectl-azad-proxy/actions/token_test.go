@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/go-logr/logr"
 )
 
@@ -20,10 +19,10 @@ func TestNewTokens(t *testing.T) {
 	restoreHomeDir := tempChangeEnv("HOME", fakeHomeDir)
 	defer restoreHomeDir()
 
-	defaultAzureCredentialOptions := &azidentity.DefaultAzureCredentialOptions{
-		ExcludeAzureCLICredential:    false,
-		ExcludeEnvironmentCredential: false,
-		ExcludeMSICredential:         false,
+	defaultAzureCredentialOptions := defaultAzureCredentialOptions{
+		excludeAzureCLICredential:    false,
+		excludeEnvironmentCredential: false,
+		excludeMSICredential:         false,
 	}
 
 	cases := []struct {
@@ -135,16 +134,16 @@ func TestGetToken(t *testing.T) {
 	restoreHomeDir := tempChangeEnv("HOME", fakeHomeDir)
 	defer restoreHomeDir()
 
-	defaultAzureCredentialOptions := &azidentity.DefaultAzureCredentialOptions{
-		ExcludeAzureCLICredential:    true,
-		ExcludeEnvironmentCredential: false,
-		ExcludeMSICredential:         true,
+	creds := defaultAzureCredentialOptions{
+		excludeAzureCLICredential:    true,
+		excludeEnvironmentCredential: false,
+		excludeMSICredential:         true,
 	}
 
-	defaultAzureCredentialOptionsFalse := &azidentity.DefaultAzureCredentialOptions{
-		ExcludeAzureCLICredential:    true,
-		ExcludeEnvironmentCredential: true,
-		ExcludeMSICredential:         true,
+	credsFalse := defaultAzureCredentialOptions{
+		excludeAzureCLICredential:    true,
+		excludeEnvironmentCredential: true,
+		excludeMSICredential:         true,
 	}
 
 	curDir, err := os.Getwd()
@@ -166,20 +165,20 @@ func TestGetToken(t *testing.T) {
 	}
 	defer deleteFile(t, fakeFile)
 
-	fakeTokens, err := NewTokens(ctx, fakeFile, defaultAzureCredentialOptions)
+	fakeTokens, err := NewTokens(ctx, fakeFile, creds)
 	if err != nil {
 		t.Errorf("Expected err to be nil: %q", err)
 	}
 
 	realFile := fmt.Sprintf("%s/../../../tmp/test-cached-tokens-real", curDir)
-	realTokens, err := NewTokens(ctx, realFile, defaultAzureCredentialOptions)
+	realTokens, err := NewTokens(ctx, realFile, creds)
 	if err != nil {
 		t.Errorf("Expected err to be nil: %q", err)
 	}
 	defer deleteFile(t, realFile)
 
 	realFalseFile := fmt.Sprintf("%s/../../../tmp/test-cached-tokens-realfalse", curDir)
-	realFalseTokens, err := NewTokens(ctx, realFalseFile, defaultAzureCredentialOptionsFalse)
+	realFalseTokens, err := NewTokens(ctx, realFalseFile, credsFalse)
 	if err != nil {
 		t.Errorf("Expected err to be nil: %q", err)
 	}
