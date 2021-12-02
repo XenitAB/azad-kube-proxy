@@ -30,9 +30,7 @@ type Config struct {
 	GroupSyncInterval      time.Duration
 	GroupIdentifier        models.GroupIdentifier
 	KubernetesConfig       KubernetesConfig
-	Dashboard              models.Dashboard
 	Metrics                models.Metrics
-	K8dashConfig           K8dashConfig
 	CORSConfig             CORSConfig
 }
 
@@ -50,13 +48,6 @@ type ListenerTLSConfig struct {
 	Enabled         bool
 	CertificatePath string
 	KeyPath         string
-}
-
-// K8dashConfig contains the configuration for the Dashboard k8dash
-type K8dashConfig struct {
-	ClientID     string
-	ClientSecret string
-	Scope        string
 }
 
 // CORSConfig contains the CORS configuration for the proxy
@@ -223,39 +214,11 @@ func Flags(ctx context.Context) []cli.Flag {
 			Value:    "redis://127.0.0.1:6379/0",
 		},
 		&cli.StringFlag{
-			Name:     "dashboard",
-			Usage:    "What Kubernetes dashboard to use",
-			Required: false,
-			EnvVars:  []string{"DASHBOARD"},
-			Value:    "NONE",
-		},
-		&cli.StringFlag{
 			Name:     "metrics",
 			Usage:    "What metrics library to use",
 			Required: false,
 			EnvVars:  []string{"METRICS"},
 			Value:    "PROMETHEUS",
-		},
-		&cli.StringFlag{
-			Name:     "k8dash-client-id",
-			Usage:    "What Client ID to use with k8dash",
-			Required: false,
-			EnvVars:  []string{"K8DASH_CLIENT_ID"},
-			Value:    "",
-		},
-		&cli.StringFlag{
-			Name:     "k8dash-client-secret",
-			Usage:    "What Client Secret to use with k8dash",
-			Required: false,
-			EnvVars:  []string{"K8DASH_CLIENT_SECRET"},
-			Value:    "",
-		},
-		&cli.StringFlag{
-			Name:     "k8dash-scope",
-			Usage:    "What scope to use with k8dash",
-			Required: false,
-			EnvVars:  []string{"K8DASH_SCOPE"},
-			Value:    "",
 		},
 		&cli.BoolFlag{
 			Name:     "cors-enabled",
@@ -324,11 +287,6 @@ func NewConfig(ctx context.Context, cli *cli.Context) (Config, error) {
 		return Config{}, err
 	}
 
-	dashboard, err := models.GetDashboard(cli.String("dashboard"))
-	if err != nil {
-		return Config{}, err
-	}
-
 	metrics, err := models.GetMetrics(cli.String("metrics"))
 	if err != nil {
 		return Config{}, err
@@ -358,13 +316,7 @@ func NewConfig(ctx context.Context, cli *cli.Context) (Config, error) {
 			Token:               kubernetesToken,
 			ValidateCertificate: cli.Bool("kubernetes-api-validate-cert"),
 		},
-		Dashboard: dashboard,
-		Metrics:   metrics,
-		K8dashConfig: K8dashConfig{
-			ClientID:     cli.String("k8dash-client-id"),
-			ClientSecret: cli.String("k8dash-client-secret"),
-			Scope:        cli.String("k8dash-scope"),
-		},
+		Metrics: metrics,
 		CORSConfig: CORSConfig{
 			Enabled:                     cli.Bool("cors-enabled"),
 			AllowedOriginsDefaultScheme: cli.String("cors-allowed-origins-default-scheme"),
@@ -403,18 +355,6 @@ func (config Config) Validate() error {
 		}
 		if !fileExists(config.ListenerTLSConfig.KeyPath) {
 			return fmt.Errorf("config.ListenerTLSConfig.KeyPath is not a file: %s", config.ListenerTLSConfig.KeyPath)
-		}
-	}
-
-	if config.Dashboard == models.K8dashDashboard {
-		if len(config.K8dashConfig.ClientID) == 0 {
-			return fmt.Errorf("config.K8dashConfig.ClientID is not set")
-		}
-		if len(config.K8dashConfig.ClientSecret) == 0 {
-			return fmt.Errorf("config.K8dashConfig.ClientSecret is not set")
-		}
-		if len(config.K8dashConfig.Scope) == 0 {
-			return fmt.Errorf("config.K8dashConfig.Scope is not set")
 		}
 	}
 
