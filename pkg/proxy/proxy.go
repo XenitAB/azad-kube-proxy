@@ -18,7 +18,6 @@ import (
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"github.com/xenitab/azad-kube-proxy/pkg/cors"
-	"github.com/xenitab/azad-kube-proxy/pkg/dashboard"
 	"github.com/xenitab/azad-kube-proxy/pkg/handlers"
 	"github.com/xenitab/azad-kube-proxy/pkg/health"
 	"github.com/xenitab/azad-kube-proxy/pkg/metrics"
@@ -37,14 +36,13 @@ type ClientInterface interface {
 
 // Client ...
 type Client struct {
-	Config          config.Config
-	CacheClient     cache.ClientInterface
-	UserClient      user.ClientInterface
-	AzureClient     azure.ClientInterface
-	DashboardClient dashboard.ClientInterface
-	MetricsClient   metrics.ClientInterface
-	HealthClient    health.ClientInterface
-	CORSClient      cors.ClientInterface
+	Config        config.Config
+	CacheClient   cache.ClientInterface
+	UserClient    user.ClientInterface
+	AzureClient   azure.ClientInterface
+	MetricsClient metrics.ClientInterface
+	HealthClient  health.ClientInterface
+	CORSClient    cors.ClientInterface
 }
 
 // NewProxyClient ...
@@ -61,11 +59,6 @@ func NewProxyClient(ctx context.Context, config config.Config) (ClientInterface,
 
 	userClient := user.NewUserClient(config, azureClient)
 
-	dashboardClient, err := dashboard.NewDashboardClient(ctx, config)
-	if err != nil {
-		return nil, err
-	}
-
 	metricsClient, err := metrics.NewMetricsClient(ctx, config)
 	if err != nil {
 		return nil, err
@@ -79,14 +72,13 @@ func NewProxyClient(ctx context.Context, config config.Config) (ClientInterface,
 	corsClient := cors.NewCORSClient(config)
 
 	proxyClient := Client{
-		Config:          config,
-		CacheClient:     cacheClient,
-		UserClient:      userClient,
-		AzureClient:     azureClient,
-		DashboardClient: dashboardClient,
-		MetricsClient:   metricsClient,
-		HealthClient:    healthClient,
-		CORSClient:      corsClient,
+		Config:        config,
+		CacheClient:   cacheClient,
+		UserClient:    userClient,
+		AzureClient:   azureClient,
+		MetricsClient: metricsClient,
+		HealthClient:  healthClient,
+		CORSClient:    corsClient,
 	}
 
 	return &proxyClient, nil
@@ -151,11 +143,6 @@ func (client *Client) Start(ctx context.Context) error {
 
 	// Setup http router
 	router := mux.NewRouter()
-
-	router, err = client.DashboardClient.DashboardHandler(ctx, router)
-	if err != nil {
-		return err
-	}
 
 	oidcHandler := handlers.NewOIDCHandler(proxyHandlers.AzadKubeProxyHandler(ctx, proxy), client.Config.TenantID, client.Config.ClientID)
 

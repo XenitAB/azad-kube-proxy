@@ -6,8 +6,6 @@ TEST_ENV_FILE = tmp/test_env
 VERSION ?= "v0.0.0-dev"
 REVISION ?= ""
 CREATED ?= ""
-K8DASH_DIR ?= ${PWD}/pkg/dashboard/static/k8dash
-
 
 ifneq (,$(wildcard $(TEST_ENV_FILE)))
     include $(TEST_ENV_FILE)
@@ -84,16 +82,3 @@ build:
 .SILENT: build-plugin
 build-plugin:
 	go build -o bin/kubectl-azad_proxy cmd/kubectl-azad-proxy/main.go
-
-.PHONY: build-k8dash
-.SILENT: build-k8dash
-build-k8dash:
-	git submodule init
-	git submodule update
-	docker build gitmodules/k8dash -t k8dash:build-deps --target build-deps
-	rm -rf $(K8DASH_DIR)
-	mkdir -p $(K8DASH_DIR)
-	docker create --name k8dash-build-deps k8dash:build-deps
-	docker cp k8dash-build-deps:/usr/src/app/build/ $(K8DASH_DIR)
-	docker rm k8dash-build-deps
-	cp gitmodules/k8dash/LICENSE $(K8DASH_DIR)/

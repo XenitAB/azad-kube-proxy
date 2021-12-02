@@ -1,4 +1,5 @@
 # azad-kube-proxy
+
 Azure AD Kubernetes API Proxy
 
 ## Status
@@ -14,7 +15,7 @@ Azure AD Kubernetes API Proxy
 
 A turtle has a **shield** on the **back**, to protect it. A reverse proxy is a **shield** for the **back**end. Charles loves his **back**end and protects it with his **shield**.
 
-*Created by [@cimcake](https://www.instagram.com/cimcake)*
+_Created by [@cimcake](https://www.instagram.com/cimcake)_
 
 ## Description
 
@@ -60,13 +61,11 @@ Setup the proxy (using Helm Chart or other way). It is recommended to set it up 
 
 Using ingress-nginx, cert-manager and external-dns - you will be able to handle the blue/green deployments with ease.
 
-You can also enable an integrated dashboard, provided by [k8dash](https://github.com/indeedeng/k8dash).
-
 It is not tested with MSI / aad-pod-identity yet, but may work with some tweaks.
 
 Configuration can be found in [pkg/config/config.go](pkg/config/config.go).
 
-You will need to configure an Azure AD App and Service Principal for the proxy and another Azure AD App for the dashboard (if you want to use it). Right now, the documentation for creating these can be found in the [Local Development](#local-development) section.
+You will need to configure an Azure AD App and Service Principal for the proxy. Right now, the documentation for creating these can be found in the [Local Development](#local-development) section.
 
 ### Plugin
 
@@ -129,6 +128,7 @@ users:
 ```
 
 The token will by default be cached to `~/.kube/azad-proxy.json` (access token with usually an hours expiry). Azure CLI authentication is used by default and you need to be authenticated with Azure CLI to use the plugin. It is also possible to use the environment variables for Service Principal authentication without the Azure CLI:
+
 - `AZURE_TENANT_ID`
 - `AZURE_CLIENT_ID`
 - `AZURE_CLIENT_SECRET`
@@ -138,32 +138,37 @@ It's not tested, but MSI / aad-pod-identity may also work.
 **DISCOVER**
 
 If you want an easy way of discovering what proxies are published, tag them using the following:
+
 ```shell
 az rest --method PATCH --uri "https://graph.microsoft.com/beta/applications/${AZ_APP_OBJECT_ID}" --body '{"tags":["azad-kube-proxy"]}'
 ```
 
 The cluster name will by default be the displayName of the Azure AD application. This can be changed by:
+
 ```shell
 az rest --method PATCH --uri "https://graph.microsoft.com/beta/applications/${AZ_APP_OBJECT_ID}" --body '{"tags":["azad-kube-proxy","cluster_name:dev-cluster"]}'
 ```
 
 The proxy url will by default be the same as resource (first string in the identifierUris array). This can be changed by:
+
 ```shell
 az rest --method PATCH --uri "https://graph.microsoft.com/beta/applications/${AZ_APP_OBJECT_ID}" --body '{"tags":["azad-kube-proxy","proxy_url:https://dev.example.com"]}'
 ```
 
 All three together would look like this:
+
 ```shell
 az rest --method PATCH --uri "https://graph.microsoft.com/beta/applications/${AZ_APP_OBJECT_ID}" --body '{"tags":["azad-kube-proxy","cluster_name:dev-cluster","proxy_url:https://dev.example.com"]}'
 ```
 
-
 Then the end users can use the following to discover the proxies:
+
 ```shell
 kubectl azad-proxy discover
 ```
 
 They will see an output like this:
+
 ```shell
 +--------------+-------------------------+-------------------------+
 | CLUSTER NAME |        RESOURCE         |        PROXY URL        |
@@ -183,7 +188,6 @@ To get more information when running the plugin, add `--debug`.
 - `kubectl azad-proxy generate`: [cmd/kubectl-azad-proxy/actions/generate.go](cmd/kubectl-azad-proxy/actions/generate.go)
 - `kubectl azad-proxy login`: [cmd/kubectl-azad-proxy/actions/login.go](cmd/kubectl-azad-proxy/actions/login.go)
 - `kubectl azad-proxy discover`: [cmd/kubectl-azad-proxy/actions/discover.go](cmd/kubectl-azad-proxy/actions/discover.go)
-
 
 ## Why was this built?
 
@@ -252,18 +256,6 @@ az ad app permission add --id ${AZ_APP_ID} --api 00000003-0000-0000-c000-0000000
 az ad app permission admin-consent --id ${AZ_APP_ID}
 ```
 
-### Dashboard - Creating the Azure AD Application
-
-```shell
-AZ_APP_DASH_NAME="k8dash"
-AZ_APP_DASH_REPLY_URL="https://localhost:8443/"
-AZ_APP_DASH_ID=$(az ad app create --display-name ${AZ_APP_DASH_NAME} --reply-urls ${AZ_APP_DASH_REPLY_URL} --query appId -o tsv)
-AZ_APP_DASH_OBJECT_ID=$(az ad app show --id ${AZ_APP_DASH_ID} --output tsv --query objectId)
-# This adds permission for the dashboard to the k8s-api app added above. Note that the variables from above are needed.
-az rest --method PATCH --uri "https://graph.microsoft.com/beta/applications/${AZ_APP_OBJECT_ID}" --body "{\"api\":{\"preAuthorizedApplications\":[{\"appId\":\"04b07795-8ddb-461a-bbee-02f9e1bf7b46\",\"permissionIds\":[\"${AZ_APP_PERMISSION_ID}\"]},{\"appId\":\"${AZ_APP_DASH_ID}\",\"permissionIds\":[\"${AZ_APP_PERMISSION_ID}\"]}]}}"
-az rest --method PATCH --uri "https://graph.microsoft.com/beta/applications/${AZ_APP_DASH_OBJECT_ID}" --body '{"api":{"requestedAccessTokenVersion": 2}}'
-AZ_APP_DASH_SECRET=$(az ad sp credential reset --name ${AZ_APP_DASH_ID} --credential-description "azad-kube-proxy" --output tsv --query password)
-```
 ### Setting up Kind cluster
 
 ```shell
@@ -277,7 +269,7 @@ K8S_PORT=$(echo ${HOST_PORT} | awk -F':' '{print $2}')
 ### Configuring service account
 
 ```shell
-mkdir -p tmp 
+mkdir -p tmp
 kubectl config set-context kind-azad-kube-proxy
 kubectl apply -f test/test-manifest.yaml
 
@@ -301,7 +293,7 @@ KUBE_TOKEN_PATH="${PWD}/tmp/token"
 
 ### Generating self signed certificate for development
 
-*NOTE*: You need to run the application using certificates since `kubectl` won't send Authorization header when not using TLS.
+_NOTE_: You need to run the application using certificates since `kubectl` won't send Authorization header when not using TLS.
 
 ```shell
 NODE_IP=$(kubectl get node -o json | jq -r '.items[0].status.addresses[] | select(.type=="InternalIP").address')
@@ -327,13 +319,11 @@ CERT_PATH="${PWD}/tmp/tls.crt"
 KEY_PATH="${PWD}/tmp/tls.key"
 ```
 
-Note: You may have to trust the certificate locally to be able to test it with websockets (at least with Chrome). This is only needed when testing the dashboard. Use the following with Arch Linux: `sudo trust anchor tmp/tls.crt`
-
 ### Creating env for tests
 
 #### Creating test user / service principal
 
-*PLEASE OBSERVE*: The below is an Azure AD tenant created for testing this proxy and nothing else. Don't use a production tenant for testing purposes.
+_PLEASE OBSERVE_: The below is an Azure AD tenant created for testing this proxy and nothing else. Don't use a production tenant for testing purposes.
 
 ```shell
 USER_PASSWORD=$(base64 < /dev/urandom | tr -d 'O0Il1+/' | head -c 44; printf '\n')
@@ -343,7 +333,7 @@ USER_OBJECT_ID=$(az ad user create --display-name ${USER_NAME} --user-principal-
 SP_NAME="test-sp"
 SP_CLIENT_ID=$(az ad app create --display-name ${SP_NAME} --output tsv --query appId)
 SP_OBJECT_ID=$(az ad sp create --id ${SP_CLIENT_ID} --output tsv --query objectId)
-SP_CLIENT_SECRET=$(az ad sp credential reset --name ${SP_CLIENT_ID} --credential-description ${SP_NAME} --years 10 --output tsv --query password) 
+SP_CLIENT_SECRET=$(az ad sp credential reset --name ${SP_CLIENT_ID} --credential-description ${SP_NAME} --years 10 --output tsv --query password)
 
 for i in `seq 1 10`; do
     echo "Run #${i}"
@@ -380,10 +370,6 @@ echo "TLS_CERTIFICATE_PATH=${CERT_PATH}" >> ${PWD}/tmp/test_env
 echo "TLS_KEY_PATH=${KEY_PATH}" >> ${PWD}/tmp/test_env
 echo "PORT=8443" >> ${PWD}/tmp/test_env
 echo "NODE_IP=${NODE_IP}" >> ${PWD}/tmp/test_env
-echo "DASHBOARD=K8DASH" >> ${PWD}/tmp/test_env
-echo "K8DASH_CLIENT_ID=${AZ_APP_DASH_ID}" >> ${PWD}/tmp/test_env
-echo "K8DASH_CLIENT_SECRET=${AZ_APP_DASH_SECRET}" >> ${PWD}/tmp/test_env
-echo "K8DASH_SCOPE=${AZ_APP_URI}/.default" >> ${PWD}/tmp/test_env
 ```
 
 ### Running the proxy

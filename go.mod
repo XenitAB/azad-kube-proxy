@@ -7,7 +7,6 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v0.12.0
 	github.com/alicebob/miniredis/v2 v2.15.1
 	github.com/bombsimon/logrusr/v2 v2.0.1
-	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/go-logr/logr v1.2.1
 	github.com/go-logr/zapr v1.2.0
 	github.com/go-playground/validator/v10 v10.9.0
@@ -19,7 +18,6 @@ require (
 	github.com/manifoldco/promptui v0.9.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/patrickmn/go-cache v2.1.0+incompatible
-	github.com/pquerna/cachecontrol v0.1.0 // indirect
 	github.com/prometheus/client_golang v1.11.0
 	github.com/rs/cors v1.8.0
 	github.com/sirupsen/logrus v1.8.1
@@ -27,9 +25,8 @@ require (
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/xenitab/go-oidc-middleware v0.0.23
 	go.uber.org/zap v1.19.1
-	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
+	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	k8s.io/api v0.22.4
 	k8s.io/apimachinery v0.22.4
 	k8s.io/client-go v0.22.4
