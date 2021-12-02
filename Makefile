@@ -78,7 +78,7 @@ token:
 .PHONY: build
 .SILENT: build
 build:
-	go build -ldflags "-w -s -X main.Version=$(VERSION) -X main.Revision=$(REVISION) -X main.Created=$(CREATED)" -o bin/azad-kube-proxy cmd/azad-kube-proxy/main.go
+	CGO_ENABLED=0 go build -ldflags "-w -s -X main.Version=$(VERSION) -X main.Revision=$(REVISION) -X main.Created=$(CREATED)" -o bin/azad-kube-proxy cmd/azad-kube-proxy/main.go
 
 .PHONY: build-plugin
 .SILENT: build-plugin
