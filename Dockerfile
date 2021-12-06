@@ -1,5 +1,5 @@
 # BUILDER
-FROM golang:1.17.3-bullseye as builder
+FROM golang:1.17.4-bullseye as builder
 WORKDIR /workspace
 
 ARG VERSION
