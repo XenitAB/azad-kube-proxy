@@ -13,7 +13,7 @@ require (
 	github.com/go-redis/redis/v8 v8.11.4
 	github.com/google/go-cmp v0.5.6
 	github.com/gorilla/mux v1.8.0
-	github.com/manicminer/hamilton v0.37.0
+	github.com/manicminer/hamilton v0.39.0
 	github.com/manifoldco/promptui v0.9.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/patrickmn/go-cache v2.1.0+incompatible
