@@ -170,8 +170,8 @@ github.com/go-logr/logr v1.0.0/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbV
 github.com/go-logr/logr v1.2.0/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
 github.com/go-logr/logr v1.2.2 h1:ahHml/yUpnlb96Rp8HCvtYVPY8ZYpxq3g7UYchIYwbs=
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
-github.com/go-logr/zapr v1.2.2 h1:5YNlIL6oZLydaV4dOFjL8YpgXF/tPeTbnpatnu3cq6o=
-github.com/go-logr/zapr v1.2.2/go.mod h1:eIauM6P8qSvTw5o2ez6UEAfGjQKrxQTl5EoK+Qa2oG4=
+github.com/go-logr/zapr v1.2.3 h1:a9vnzlIBPQBBkeaR9IuMUfmVOrQlkoC4YfPoFkX3T7A=
+github.com/go-logr/zapr v1.2.3/go.mod h1:eIauM6P8qSvTw5o2ez6UEAfGjQKrxQTl5EoK+Qa2oG4=
 github.com/go-oauth2/oauth2/v4 v4.3.0/go.mod h1:+rsyi0o/ZbSfhL/3Xr/sAtL4brS+IdGj86PHVlPjE+4=
 github.com/go-oauth2/oauth2/v4 v4.4.2 h1:tWQlR5I4/qhWiyOME67BAFmo622yi+2mm7DMm8DpMdg=
 github.com/go-oauth2/oauth2/v4 v4.4.2/go.mod h1:K4DemYzNwwYnIDOPdHtX/7SlO0AHdtlphsTgE7lA3PA=
