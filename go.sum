@@ -375,8 +375,9 @@ github.com/lestrrat-go/iter v1.0.1/go.mod h1:zIdgO1mRKhn8l9vrZJZz9TUMMFbQbLeTsbq
 github.com/lestrrat-go/jwx v1.2.4/go.mod h1:CAe9Z479rJwIYDR2DqWwMm9c+gCNoYB6+0wBxPkEh0Q=
 github.com/lestrrat-go/jwx v1.2.7/go.mod h1:bw24IXWbavc0R2RsOtpXL7RtMyP589yZ1+L7kd09ZGA=
 github.com/lestrrat-go/jwx v1.2.9/go.mod h1:25DcLbNWArPA/Ew5CcBmewl32cJKxOk5cbepBsIJFzw=
-github.com/lestrrat-go/jwx v1.2.18 h1:RV4hcTRUlPVYUnGqATKXEojoOsLexoU8Na4KheVzxQ8=
 github.com/lestrrat-go/jwx v1.2.18/go.mod h1:bWTBO7IHHVMtNunM8so9MT8wD+euEY1PzGEyCnuI2qM=
+github.com/lestrrat-go/jwx v1.2.20 h1:ckMNlG0MqCcVp7LnD5FN2+459ndm7SW3vryE79Dz9nk=
+github.com/lestrrat-go/jwx v1.2.20/go.mod h1:tLE1XszaFgd7zaS5wHe4NxA+XVhu7xgdRvDpNyi3kNM=
 github.com/lestrrat-go/option v0.0.0-20210103042652-6f1ecfceda35/go.mod h1:5ZHFbivi4xwXxhxY9XHDe2FHo6/Z7WWmtT7T5nBBp3I=
 github.com/lestrrat-go/option v1.0.0 h1:WqAWL8kh8VcSoD6xjSH34/1m8yxluXQbDeKNfvFeEO4=
 github.com/lestrrat-go/option v1.0.0/go.mod h1:5ZHFbivi4xwXxhxY9XHDe2FHo6/Z7WWmtT7T5nBBp3I=
@@ -569,8 +570,9 @@ github.com/xenitab/dispans v0.0.10/go.mod h1:CqxCO5jE4j2+6BK7z3pofaVTenZfRMqWtUA
 github.com/xenitab/go-oidc-middleware v0.0.2/go.mod h1:SvzP3YAkptnbYFJDvJZ4HoA6zHIRhZCYltW+PCk0O/8=
 github.com/xenitab/go-oidc-middleware v0.0.17/go.mod h1:aWEanD6vuJFr1XmO4FqxrjmaoHsNzowOkJzu9NO+SRc=
 github.com/xenitab/go-oidc-middleware v0.0.18/go.mod h1:v9HMAEJbVQ67Ygl1SPtfaPmyzIuVGRNa5wGYFWip2TQ=
-github.com/xenitab/go-oidc-middleware v0.0.24 h1:H9RFZxRJRQkIBcPUOdMQQm4hmFygVZgmCE2rHzV1qtU=
 github.com/xenitab/go-oidc-middleware v0.0.24/go.mod h1:Df40nl/Fon8cugr6m73CduAB/VeLP4PxHliZ35HWOf0=
+github.com/xenitab/go-oidc-middleware v0.0.25 h1:U5M8n2ZX/TG0QFfAm8+W2TAfOGAoZIEUY80fe6HcR0Y=
+github.com/xenitab/go-oidc-middleware v0.0.25/go.mod h1:0gok0J0D844fGs1+pPjvlVB0d4u2o1ezUcccArL5RK4=
 github.com/xenitab/go-oidc-middleware/oidchttp v0.0.24 h1:Nu2k3sOeZhEs4QTaJxEMgWEJSWBzLUVEFr1BWVPlpTY=
 github.com/xenitab/go-oidc-middleware/oidchttp v0.0.24/go.mod h1:dB1QVnH0vVBAcXY0qWpaNDw91wBC1xo3ORlf04VZOTE=
 github.com/xenitab/pkg v0.0.2/go.mod h1:Y8WrydjgisWoExwdlN8hs6SK9seZ3lgV5Tpub3pOw6o=
@@ -629,8 +631,9 @@ golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97/go.mod h1:GvvjBRRGRdwPK5y
 golang.org/x/crypto v0.0.0-20210817164053-32db794688a5/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
 golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
 golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
-golang.org/x/crypto v0.0.0-20220126234351-aa10faf2a1f8 h1:kACShD3qhmr/3rLmg1yXyt+N4HcwutKyPRB93s54TIU=
 golang.org/x/crypto v0.0.0-20220126234351-aa10faf2a1f8/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
+golang.org/x/crypto v0.0.0-20220214200702-86341886e292 h1:f+lwQ+GtmgoY+A2YaQxlSOnDjXcQ7ZRLWOHbC6HtRqE=
+golang.org/x/crypto v0.0.0-20220214200702-86341886e292/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
 golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/exp v0.0.0-20190306152737-a1d7652674e8/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/exp v0.0.0-20190510132918-efd6b22b2522/go.mod h1:ZjyILWgesfNpC6sMxTJOJm9Kp84zZh5NQWvqDGG3Qr8=
