@@ -14,7 +14,7 @@ endif
 
 .PHONY: all
 .SILENT: all
-all: tidy lint fmt vet gosec test build build-plugin
+all: tidy lint fmt vet test build build-plugin
 
 .PHONY: lint
 .SILENT: lint
@@ -41,11 +41,6 @@ vet:
 test:
 	mkdir -p tmp
 	go test -timeout 1m ./... -cover
-
-.PHONY: gosec
-.SILENT: gosec
-gosec:
-	gosec ./...
 
 .PHONY: cover
 .SILENT: cover

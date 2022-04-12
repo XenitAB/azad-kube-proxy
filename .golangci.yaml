@@ -6,6 +6,7 @@ linters:
   enable:
     - gocyclo
     - misspell
+    - gosec
 
 linters-settings:
   gocyclo:
