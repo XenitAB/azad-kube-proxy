@@ -1,6 +1,6 @@
 module github.com/xenitab/azad-kube-proxy
 
-go 1.17
+go 1.18
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v0.23.0
