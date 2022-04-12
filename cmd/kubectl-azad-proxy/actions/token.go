@@ -189,7 +189,7 @@ func newDefaultAzureCredential(options defaultAzureCredentialOptions) (*azidenti
 	var errMsg string
 
 	if !options.excludeEnvironmentCredential {
-		envCred, err := azidentity.NewEnvironmentCredential(&azidentity.EnvironmentCredentialOptions{AuthorityHost: opts.AuthorityHost,
+		envCred, err := azidentity.NewEnvironmentCredential(&azidentity.EnvironmentCredentialOptions{
 			ClientOptions: opts.ClientOptions,
 		})
 		if err == nil {
