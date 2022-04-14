@@ -16,7 +16,7 @@ jobs:
       - name: Setup go
         uses: actions/setup-go@v3
         with:
-          go-version: "^1.18"
+          go-version: "^1.18.1"
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3.1.0
         with:
@@ -30,7 +30,7 @@ jobs:
       - name: Setup go
         uses: actions/setup-go@v3
         with:
-          go-version: "^1.18"
+          go-version: "^1.18.1"
       - name: Run fmt
         run: |
           make fmt
@@ -50,7 +50,7 @@ jobs:
       - name: Setup go
         uses: actions/setup-go@v3
         with:
-          go-version: "^1.18"
+          go-version: "^1.18.1"
       - name: Run build
         run: |
           make build
@@ -63,7 +63,7 @@ jobs:
       - name: Setup go
         uses: actions/setup-go@v3
         with:
-          go-version: "^1.18"
+          go-version: "^1.18.1"
       - name: Run test
         env:
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
@@ -85,7 +85,7 @@ jobs:
       - name: Setup go
         uses: actions/setup-go@v3
         with:
-          go-version: "^1.18"
+          go-version: "^1.18.1"
       - name: coverage
         env:
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
