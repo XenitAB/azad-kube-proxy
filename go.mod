@@ -26,9 +26,9 @@ require (
 	github.com/xenitab/go-oidc-middleware/oidchttp v0.0.28
 	go.uber.org/zap v1.21.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	k8s.io/api v0.23.5
-	k8s.io/apimachinery v0.23.5
-	k8s.io/client-go v0.23.5
+	k8s.io/api v0.22.8
+	k8s.io/apimachinery v0.22.8
+	k8s.io/client-go v0.22.8
 )
 
 require (
