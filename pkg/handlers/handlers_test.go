@@ -705,7 +705,7 @@ func getAccessToken(ctx context.Context, tenantID, clientID, clientSecret, scope
 			return nil, err
 		}
 
-		err = os.WriteFile(tokenFilePath, fileContents, 0644)
+		err = os.WriteFile(tokenFilePath, fileContents, 0600)
 		if err != nil {
 			return nil, err
 		}

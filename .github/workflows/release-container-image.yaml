@@ -28,7 +28,7 @@ jobs:
         run: |
           echo "::set-output name=tag::${GITHUB_REF#refs/tags/}"
       - name: Cache container layers
-        uses: actions/cache@v2.1.7
+        uses: actions/cache@v3.0.2
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
@@ -45,7 +45,7 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
       - name: Build and push container (multi arch)
-        uses: docker/build-push-action@v2.9.0
+        uses: docker/build-push-action@v2.10.0
         with:
           push: true
           context: .

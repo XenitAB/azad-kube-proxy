@@ -18,9 +18,9 @@ jobs:
       - name: Clone repo
         uses: actions/checkout@v3
       - name: Setup go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
-          go-version: "1.17.3"
+          go-version: "^1.18.1"
       - name: Prepare
         id: prep
         run: |
@@ -31,7 +31,7 @@ jobs:
           echo ::set-output name=BUILD_DATE::$(date -u +'%Y-%m-%dT%H:%M:%SZ')
           echo ::set-output name=VERSION::${VERSION}
       - name: Cache container layers
-        uses: actions/cache@v2.1.7
+        uses: actions/cache@v3.0.2
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
@@ -47,7 +47,7 @@ jobs:
           version: v0.11.1
           image: kindest/node:v1.21.1
       - name: Set up helm
-        uses: azure/setup-helm@v2.0
+        uses: azure/setup-helm@v2.1
       - name: Build and load (current arch)
         run: |
           docker buildx build --load -t ${{ env.NAME }}:${{ steps.prep.outputs.VERSION }} .

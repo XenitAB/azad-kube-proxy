@@ -412,7 +412,7 @@ func generateRandomFile() (string, string, error) {
 	filename := fmt.Sprintf("test-random-%s.pem", timestamp)
 	content := []byte(timestamp)
 
-	err := os.WriteFile(filename, content, 0644)
+	err := os.WriteFile(filename, content, 0600)
 	if err != nil {
 		return "", "", fmt.Errorf("Failed to create %s: %v", filename, err)
 	}
