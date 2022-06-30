@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v0.23.1
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v0.14.0
-	github.com/alicebob/miniredis/v2 v2.20.0
+	github.com/alicebob/miniredis/v2 v2.22.0
 	github.com/bombsimon/logrusr/v2 v2.0.1
 	github.com/go-logr/logr v1.2.3
 	github.com/go-logr/zapr v1.2.3
