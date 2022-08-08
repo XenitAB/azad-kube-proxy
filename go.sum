@@ -402,12 +402,10 @@ github.com/urfave/cli/v2 v2.11.1/go.mod h1:f8iq5LtQ/bLxafbdBSLPPNsgaW0l/2fYYEHhA
 github.com/vmihailenco/msgpack/v4 v4.3.12/go.mod h1:gborTTJjAo/GWTqqRjrLCn9pgNN+NXzzngzBKDPIqw4=
 github.com/vmihailenco/tagparser v0.1.1/go.mod h1:OeAg3pn3UbLjkWt+rN9oFYB6u/cQgqMEUPoW2WPyhdI=
 github.com/xenitab/dispans v0.0.10 h1:S+gSUM14rDJWK7MYNrjb8JbjeQPip6mlNJyLX+g7Agc=
-github.com/xenitab/go-oidc-middleware v0.0.31 h1:6/Ebf6E+l7b6wWPIol02pqGrf1CGwd6Pwf/HmjiKoZI=
-github.com/xenitab/go-oidc-middleware v0.0.31/go.mod h1:jstNDKrVIR2QLgbtD6FC9yKTd5/ACkvwiXtLAGaNEWw=
+github.com/xenitab/go-oidc-middleware v0.0.28 h1:GpwRX0IlkUwzoBTtwQypu7cmGDKCdKk4TU7HDHnDkyA=
+github.com/xenitab/go-oidc-middleware v0.0.28/go.mod h1:TSn3/nWnymRRFTLJ5GVJ88001QgqTRFr5wcd8kOJ/kY=
 github.com/xenitab/go-oidc-middleware/oidchttp v0.0.28 h1:alVDtZF5smO+Cd3y7y57IPlVm13+iQUsxuLuKBrKs4k=
 github.com/xenitab/go-oidc-middleware/oidchttp v0.0.28/go.mod h1:NlrnAQoHvjKJ1BogvEwvxExuWNUSVD4+zbdHMaND3RA=
-github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 h1:bAn7/zixMGCfxrRTfdpNzjtPYqr8smhKouy9mxVdGPU=
-github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673/go.mod h1:N3UwUGtsrSj3ccvlPHLoLsHnpR27oXr4ZE984MbSER8=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=

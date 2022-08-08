@@ -22,8 +22,8 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.1
 	github.com/urfave/cli/v2 v2.4.0
-	github.com/xenitab/go-oidc-middleware v0.0.28
-	github.com/xenitab/go-oidc-middleware/oidchttp v0.0.28
+	github.com/xenitab/go-oidc-middleware v0.0.31
+	github.com/xenitab/go-oidc-middleware/oidchttp v0.0.31
 	go.uber.org/zap v1.21.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	k8s.io/api v0.22.8
