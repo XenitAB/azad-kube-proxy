@@ -40,6 +40,7 @@ func TestGetCertificate(t *testing.T) {
 		t.Errorf("Returned error: %q", err)
 	}
 
+	// nolint:staticcheck
 	if len(certPool.Subjects()) != 1 {
 		t.Error("certPool doesn't contain exactly one subject")
 	}
