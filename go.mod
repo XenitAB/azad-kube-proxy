@@ -11,7 +11,7 @@ require (
 	github.com/go-logr/zapr v1.2.3
 	github.com/go-playground/validator/v10 v10.11.0
 	github.com/go-redis/redis/v8 v8.11.5
-	github.com/google/go-cmp v0.5.7
+	github.com/google/go-cmp v0.5.8
 	github.com/gorilla/mux v1.8.0
 	github.com/manicminer/hamilton v0.43.0
 	github.com/manifoldco/promptui v0.9.0
