@@ -179,7 +179,7 @@ func getAccessToken(ctx context.Context, resource string, defaultAzureCredential
 		return nil, err
 	}
 
-	return token, nil
+	return &token, nil
 }
 
 func newDefaultAzureCredential(options defaultAzureCredentialOptions) (*azidentity.ChainedTokenCredential, error) {
