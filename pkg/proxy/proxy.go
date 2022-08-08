@@ -219,11 +219,19 @@ func (client *Client) listenAndServe(httpServer *http.Server) error {
 }
 
 func (client *Client) getHTTPServer(handler http.Handler) *http.Server {
-	return &http.Server{Addr: client.Config.ListenerAddress, Handler: handler}
+	return &http.Server{
+		Addr:              client.Config.ListenerAddress,
+		Handler:           handler,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
 }
 
 func (client *Client) getHTTPMetricsServer(handler http.Handler) *http.Server {
-	return &http.Server{Addr: client.Config.MetricsListenerAddress, Handler: handler}
+	return &http.Server{
+		Addr:              client.Config.MetricsListenerAddress,
+		Handler:           handler,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
 }
 
 func (client *Client) getReverseProxy(ctx context.Context) *httputil.ReverseProxy {

@@ -710,7 +710,7 @@ func getAccessToken(ctx context.Context, tenantID, clientID, clientSecret, scope
 			return nil, err
 		}
 
-		return token, nil
+		return &token, nil
 	}
 
 	return token, nil
