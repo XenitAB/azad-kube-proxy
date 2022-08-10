@@ -3,7 +3,7 @@ module github.com/xenitab/azad-kube-proxy
 go 1.19
 
 require (
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.1.1
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.1.2
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.1.0
 	github.com/alicebob/miniredis/v2 v2.22.0
 	github.com/bombsimon/logrusr/v2 v2.0.1
