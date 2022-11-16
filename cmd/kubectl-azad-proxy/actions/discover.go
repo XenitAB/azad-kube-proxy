@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 	"github.com/go-logr/logr"
 	hamiltonAuth "github.com/manicminer/hamilton/auth"
 	hamiltonEnvironments "github.com/manicminer/hamilton/environments"
@@ -207,6 +209,9 @@ func (client *DiscoverClient) Run(ctx context.Context) ([]discover, error) {
 
 	clusterApps, resCode, err := appsClient.List(ctx, odataQuery)
 	if err != nil {
+		if strings.Contains(err.Error(), "Insufficient privileges to complete the operation") {
+			return client.trySubscriptionDiscovery(ctx, "fixme")
+		}
 		log.V(1).Info("Unable to to list Azure AD applications", "error", err.Error(), "responseCode", resCode)
 		return []discover{}, customerrors.New(customerrors.ErrorTypeAuthorization, err)
 	}
@@ -214,6 +219,47 @@ func (client *DiscoverClient) Run(ctx context.Context) ([]discover, error) {
 	discoverData := getDiscoverData(*clusterApps)
 
 	return discoverData, nil
+}
+
+func (client *DiscoverClient) trySubscriptionDiscovery(ctx context.Context, subscriptionId string) ([]discover, error) {
+	cred, err := azidentity.NewDefaultAzureCredential(nil)
+	if err != nil {
+		return nil, err
+	}
+	tagClient, err := armresources.NewClient(subscriptionId, cred, nil)
+	if err != nil {
+		return nil, err
+	}
+	res, err := tagClient.GetByID(ctx, fmt.Sprintf("/subscriptions/%s", subscriptionId), "2021-04-01", &armresources.ClientGetByIDOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	clusters := []discover{}
+	for key, value := range res.Tags {
+		if value == nil {
+			continue
+		}
+		if !strings.HasPrefix(key, "_azad-kube-proxy") {
+			continue
+		}
+		cluster := discover{}
+		err := json.Unmarshal([]byte(*value), &cluster)
+		if err != nil {
+			return nil, err
+		}
+
+		if cluster.ClusterName == "" || cluster.ProxyURL == "" || cluster.Resource == "" {
+			return nil, fmt.Errorf("all fields of the cluster not found: %v", cluster)
+		}
+		clusters = append(clusters, cluster)
+	}
+
+	if len(clusters) == 0 {
+		return nil, fmt.Errorf("no clusters found on subscription")
+	}
+
+	return clusters, nil
 }
 
 func getDiscoverData(clusterApps []hamiltonMsgraph.Application) []discover {
