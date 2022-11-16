@@ -223,14 +223,16 @@ func (client *DiscoverClient) Run(ctx context.Context) ([]discover, error) {
 }
 
 func (client *DiscoverClient) trySubscriptionsDiscovery(ctx context.Context) ([]discover, error) {
+	log := logr.FromContextOrDiscard(ctx)
+
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
-		return nil, err
+		return nil, customerrors.New(customerrors.ErrorTypeAuthorization, err)
 	}
 
 	subscriptionClient, err := armsubscriptions.NewClient(cred, nil)
 	if err != nil {
-		return nil, err
+		return nil, customerrors.New(customerrors.ErrorTypeAuthorization, err)
 	}
 
 	subscriptionsIds := []string{}
@@ -238,7 +240,7 @@ func (client *DiscoverClient) trySubscriptionsDiscovery(ctx context.Context) ([]
 	for pager.More() {
 		nextResult, err := pager.NextPage(ctx)
 		if err != nil {
-			return nil, err
+			return nil, customerrors.New(customerrors.ErrorTypeAuthorization, err)
 		}
 		for _, v := range nextResult.Value {
 			if v.SubscriptionID == nil {
@@ -249,13 +251,14 @@ func (client *DiscoverClient) trySubscriptionsDiscovery(ctx context.Context) ([]
 	}
 
 	for _, subscriptionId := range subscriptionsIds {
+		log.V(1).Info("Trying to find clusters on subscription", "subscription_id", subscriptionId)
 		clusters, err := client.trySubscriptionDiscovery(ctx, cred, subscriptionId)
 		if err == nil {
 			return clusters, nil
 		}
 	}
 
-	return nil, fmt.Errorf("unable to find any clusters on any subscriptions")
+	return nil, customerrors.New(customerrors.ErrorTypeAuthentication, fmt.Errorf("unable to find any clusters on any subscriptions"))
 }
 
 func (client *DiscoverClient) trySubscriptionDiscovery(ctx context.Context, cred *azidentity.DefaultAzureCredential, subscriptionId string) ([]discover, error) {
