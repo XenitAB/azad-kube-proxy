@@ -8,6 +8,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armsubscriptions"
 	"github.com/go-logr/logr"
 	hamiltonAuth "github.com/manicminer/hamilton/auth"
 	hamiltonEnvironments "github.com/manicminer/hamilton/environments"
@@ -210,7 +211,7 @@ func (client *DiscoverClient) Run(ctx context.Context) ([]discover, error) {
 	clusterApps, resCode, err := appsClient.List(ctx, odataQuery)
 	if err != nil {
 		if strings.Contains(err.Error(), "Insufficient privileges to complete the operation") {
-			return client.trySubscriptionDiscovery(ctx, "fixme")
+			return client.trySubscriptionsDiscovery(ctx)
 		}
 		log.V(1).Info("Unable to to list Azure AD applications", "error", err.Error(), "responseCode", resCode)
 		return []discover{}, customerrors.New(customerrors.ErrorTypeAuthorization, err)
@@ -221,11 +222,43 @@ func (client *DiscoverClient) Run(ctx context.Context) ([]discover, error) {
 	return discoverData, nil
 }
 
-func (client *DiscoverClient) trySubscriptionDiscovery(ctx context.Context, subscriptionId string) ([]discover, error) {
+func (client *DiscoverClient) trySubscriptionsDiscovery(ctx context.Context) ([]discover, error) {
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
 		return nil, err
 	}
+
+	subscriptionClient, err := armsubscriptions.NewClient(cred, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	subscriptionsIds := []string{}
+	pager := subscriptionClient.NewListPager(nil)
+	for pager.More() {
+		nextResult, err := pager.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, v := range nextResult.Value {
+			if v.SubscriptionID == nil {
+				continue
+			}
+			subscriptionsIds = append(subscriptionsIds, *v.SubscriptionID)
+		}
+	}
+
+	for _, subscriptionId := range subscriptionsIds {
+		clusters, err := client.trySubscriptionDiscovery(ctx, cred, subscriptionId)
+		if err == nil {
+			return clusters, nil
+		}
+	}
+
+	return nil, fmt.Errorf("unable to find any clusters on any subscriptions")
+}
+
+func (client *DiscoverClient) trySubscriptionDiscovery(ctx context.Context, cred *azidentity.DefaultAzureCredential, subscriptionId string) ([]discover, error) {
 	tagClient, err := armresources.NewClient(subscriptionId, cred, nil)
 	if err != nil {
 		return nil, err
