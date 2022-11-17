@@ -19,8 +19,10 @@ import (
 	"github.com/xenitab/azad-kube-proxy/cmd/kubectl-azad-proxy/customerrors"
 )
 
-var (
-	azureADAppTag = "azad-kube-proxy"
+const (
+	azureADAppTag         = "azad-kube-proxy"
+	tagRestApiVersion     = "2021-04-01"
+	tagSubscriptionPrefix = "_azad-kube-proxy"
 )
 
 type outputType string
@@ -266,7 +268,7 @@ func (client *DiscoverClient) trySubscriptionDiscovery(ctx context.Context, cred
 	if err != nil {
 		return nil, err
 	}
-	res, err := tagClient.GetByID(ctx, fmt.Sprintf("/subscriptions/%s", subscriptionId), "2021-04-01", &armresources.ClientGetByIDOptions{})
+	res, err := tagClient.GetByID(ctx, fmt.Sprintf("/subscriptions/%s", subscriptionId), tagRestApiVersion, &armresources.ClientGetByIDOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +278,7 @@ func (client *DiscoverClient) trySubscriptionDiscovery(ctx context.Context, cred
 		if value == nil {
 			continue
 		}
-		if !strings.HasPrefix(key, "_azad-kube-proxy") {
+		if !strings.HasPrefix(key, tagSubscriptionPrefix) {
 			continue
 		}
 		cluster := discover{}
