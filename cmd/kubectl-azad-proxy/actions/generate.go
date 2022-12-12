@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"os"
 	"os/user"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -50,7 +52,7 @@ func NewGenerateClient(ctx context.Context, c *cli.Context) (GenerateInterface, 
 		clusterName:        c.String("cluster-name"),
 		proxyURL:           *proxyURL,
 		resource:           c.String("resource"),
-		kubeConfig:         c.String("kubeconfig"),
+		kubeConfig:         filepath.Clean(c.String("kubeconfig")),
 		tokenCache:         c.String("token-cache"),
 		overwrite:          c.Bool("overwrite"),
 		insecureSkipVerify: c.Bool("tls-insecure-skip-verify"),
@@ -136,12 +138,12 @@ func (client *GenerateClient) Generate(ctx context.Context) error {
 	log := logr.FromContextOrDiscard(ctx)
 
 	kubeCfg, err := k8sclientcmd.LoadFromFile(client.kubeConfig)
-	if err != nil && !strings.Contains(err.Error(), "no such file or directory") {
+	if err != nil && !os.IsNotExist(err) {
 		log.V(1).Info("Unable to load kubeConfig", "error", err.Error(), "kubeConfig", client.kubeConfig)
 		return customerrors.New(customerrors.ErrorTypeKubeConfig, err)
 	}
 
-	if err != nil && strings.Contains(err.Error(), "no such file or directory") {
+	if err != nil && os.IsNotExist(err) {
 		kubeCfg = k8sclientcmdapi.NewConfig()
 	}
 
