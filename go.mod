@@ -23,7 +23,7 @@ require (
 	github.com/rs/cors v1.8.2
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.0
-	github.com/urfave/cli/v2 v2.23.5
+	github.com/urfave/cli/v2 v2.23.7
 	github.com/xenitab/go-oidc-middleware v0.0.32
 	github.com/xenitab/go-oidc-middleware/oidchttp v0.0.32
 	go.uber.org/zap v1.23.0
