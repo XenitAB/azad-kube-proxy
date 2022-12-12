@@ -160,12 +160,12 @@ func (client *GenerateClient) Generate(ctx context.Context) error {
 	log := logr.FromContextOrDiscard(ctx)
 
 	kubeCfg, err := k8sclientcmd.LoadFromFile(client.kubeConfig)
-	if err != nil && !strings.Contains(err.Error(), "no such file or directory") {
+	if err != nil && !os.IsNotExist(err) {
 		log.V(1).Info("Unable to load kubeConfig", "error", err.Error(), "kubeConfig", client.kubeConfig)
 		return customerrors.New(customerrors.ErrorTypeKubeConfig, err)
 	}
 
-	if err != nil && strings.Contains(err.Error(), "no such file or directory") {
+	if err != nil && os.IsNotExist(err) {
 		kubeCfg = k8sclientcmdapi.NewConfig()
 	}
 
