@@ -137,6 +137,8 @@ It's not tested, but MSI / aad-pod-identity may also work.
 
 **DISCOVER**
 
+> `discover` and `menu` requires the user running the command to have the Azure AD `Directory reader` role or the Microsoft Graph permission `Application.Read.All` which a locked down Azure AD may limit guests. If that's the case, you can also create tags on the subscriptions and they can be used for discovery.
+
 If you want an easy way of discovering what proxies are published, tag them using the following:
 
 ```shell
@@ -160,6 +162,16 @@ All three together would look like this:
 ```shell
 az rest --method PATCH --uri "https://graph.microsoft.com/beta/applications/${AZ_APP_OBJECT_ID}" --body '{"tags":["azad-kube-proxy","cluster_name:dev-cluster","proxy_url:https://dev.example.com"]}'
 ```
+
+If you want to use tags on the subscription as well, or instead, create them like this:
+
+```
+_azad-kube-proxy_dev={"cluster_name":"aks-dev-we","resource":"https://aks-we.dev.foobar.io","proxy_url":"https://aks-we.dev.foobar.io"}
+_azad-kube-proxy_qa={"cluster_name":"aks-qa-we","resource":"https://aks-we.qa.foobar.io","proxy_url":"https://aks-we.qa.foobar.io"}
+_azad-kube-proxy_prod={"cluster_name":"aks-prod-we","resource":"https://aks-we.prod.foobar.io","proxy_url":"https://aks-we.prod.foobar.io"}
+```
+
+> The tag is required to start with `_azad-kube-proxy`. You can have these tags on all subscriptions the user may have access to and the first one found will be used.
 
 Then the end users can use the following to discover the proxies:
 
