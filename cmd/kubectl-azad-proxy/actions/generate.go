@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/url"
 	"os/user"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -46,11 +47,13 @@ func NewGenerateClient(ctx context.Context, c *cli.Context) (GenerateInterface, 
 		return nil, err
 	}
 
+	kubeConfig := filepath.Clean(c.String("kubeconfig"))
+
 	return &GenerateClient{
 		clusterName:        c.String("cluster-name"),
 		proxyURL:           *proxyURL,
 		resource:           c.String("resource"),
-		kubeConfig:         c.String("kubeconfig"),
+		kubeConfig:         kubeConfig,
 		tokenCache:         c.String("token-cache"),
 		overwrite:          c.Bool("overwrite"),
 		insecureSkipVerify: c.Bool("tls-insecure-skip-verify"),
