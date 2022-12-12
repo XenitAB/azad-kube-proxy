@@ -106,14 +106,14 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 	log := logr.FromContextOrDiscard(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		rawClaims, ok := r.Context().Value(options.DefaultClaimsContextKeyName).(externalAzureADClaims)
+		externalClaims, ok := r.Context().Value(options.DefaultClaimsContextKeyName).(externalAzureADClaims)
 		if !ok {
 			log.Error(fmt.Errorf("unable to typecast claims"), "not able to typecast claims to externalAzureADClaims")
 			http.Error(w, "Unexpected error", http.StatusInternalServerError)
 			return
 		}
 
-		claims, err := toInternalAzureADClaims(rawClaims)
+		claims, err := toInternalAzureADClaims(&externalClaims)
 		if err != nil {
 			log.Error(err, "not able to convert rawClaims to azureClaims")
 			http.Error(w, "Unexpected error", http.StatusInternalServerError)

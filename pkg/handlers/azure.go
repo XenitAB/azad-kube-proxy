@@ -11,7 +11,11 @@ type internalAzureADClaims struct {
 }
 
 // toInternalAzureADClaims converts the externalAzureADClaims from context.Value() to externalAzureADClaims
-func toInternalAzureADClaims(externalClaims externalAzureADClaims) (internalAzureADClaims, error) {
+func toInternalAzureADClaims(externalClaims *externalAzureADClaims) (internalAzureADClaims, error) {
+	if externalClaims == nil {
+		return internalAzureADClaims{}, fmt.Errorf("external claims nil")
+	}
+
 	if externalClaims.Subject == nil {
 		return internalAzureADClaims{}, fmt.Errorf("unable to find sub claim")
 	}

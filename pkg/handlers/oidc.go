@@ -47,6 +47,10 @@ type externalAzureADClaims struct {
 
 func newAzureADClaimsValidationFn(requiredTenantId string) options.ClaimsValidationFn[externalAzureADClaims] {
 	return func(claims *externalAzureADClaims) error {
+		if requiredTenantId == "" {
+			return nil
+		}
+
 		if claims.TenantId == nil {
 			return fmt.Errorf("tid claim missing")
 		}
