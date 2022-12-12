@@ -47,7 +47,7 @@ jobs:
           version: v0.11.1
           image: kindest/node:v1.21.1
       - name: Set up helm
-        uses: azure/setup-helm@v3.4
+        uses: azure/setup-helm@v3.5
       - name: Build and load (current arch)
         run: |
           docker buildx build --load -t ${{ env.NAME }}:${{ steps.prep.outputs.VERSION }} .
