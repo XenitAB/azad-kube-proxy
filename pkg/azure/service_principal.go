@@ -35,7 +35,7 @@ func (user *servicePrincipalUser) getGroups(ctx context.Context, objectID string
 
 	var groups []models.Group
 	for _, group := range *groupsResponse {
-		group, found, err := user.cacheClient.GetGroup(ctx, *group.ID)
+		group, found, err := user.cacheClient.GetGroup(ctx, *group.ID())
 		if err != nil {
 			return nil, err
 		}
