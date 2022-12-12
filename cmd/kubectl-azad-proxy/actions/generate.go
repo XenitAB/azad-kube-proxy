@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"os"
 	"os/user"
 	"path/filepath"
 	"strings"
@@ -47,7 +48,11 @@ func NewGenerateClient(ctx context.Context, c *cli.Context) (GenerateInterface, 
 		return nil, err
 	}
 
-	kubeConfig := filepath.Clean(c.String("kubeconfig"))
+	kubeConfig, err := getKubeConfig(c.String("kubeconfig"))
+	if err != nil {
+		log.V(1).Info("Unable to get the kube config", "error", err.Error())
+		return nil, err
+	}
 
 	return &GenerateClient{
 		clusterName:        c.String("cluster-name"),
@@ -63,6 +68,22 @@ func NewGenerateClient(ctx context.Context, c *cli.Context) (GenerateInterface, 
 			excludeMSICredential:         c.Bool("exclude-msi-auth"),
 		},
 	}, nil
+}
+
+func getKubeConfig(path string) (string, error) {
+	kubeConfig := filepath.Clean(path)
+	dir := filepath.Dir(kubeConfig)
+	_, err := os.Stat(dir)
+	if !os.IsNotExist(err) {
+		return kubeConfig, err
+	}
+
+	err = os.MkdirAll(dir, 600)
+	if err != nil {
+		return "", err
+	}
+
+	return kubeConfig, nil
 }
 
 // GenerateFlags ...
