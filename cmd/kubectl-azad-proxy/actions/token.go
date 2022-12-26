@@ -61,6 +61,7 @@ type Tokens struct {
 	defaultAzureCredentialOptions defaultAzureCredentialOptions
 }
 
+// nolint: gosec
 const tokenCacheFileName = "azad-proxy.json"
 
 // NewTokens returns a TokensInterface or error
