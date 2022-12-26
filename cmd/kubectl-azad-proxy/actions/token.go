@@ -88,7 +88,6 @@ func NewTokens(ctx context.Context, tokenCacheDir string, defaultAzureCredential
 
 	err = json.Unmarshal(fileContent, &t.cachedTokens)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Received the following error unmarshalling: %v", err)
 		log.V(1).Info("Unable to unmarshal cachedTokens", "error", err.Error())
 		return nil, customerrors.New(customerrors.ErrorTypeTokenCache, err)
 	}
