@@ -107,11 +107,15 @@ func TestGetToken(t *testing.T) {
 		excludeMSICredential:         true,
 	}
 
-	curDir, err := os.Getwd()
-	if err != nil {
-		t.Errorf("Expected err to be nil: %q", err)
-	}
-	fakeFile := fmt.Sprintf("%s/../../../tmp/test-cached-tokens-fake", curDir)
+	tmpDir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	fakeDir := fmt.Sprintf("%s/fake", tmpDir)
+	err = os.Mkdir(fakeDir, 0700)
+	require.NoError(t, err)
+
+	fakeFile := fmt.Sprintf("%s/%s", fakeDir, tokenCacheFileName)
 	fakeToken := make(map[string]Token)
 	fakeToken["fake-cluster-1"] = Token{
 		Token:               "abc123",
@@ -124,22 +128,26 @@ func TestGetToken(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected err to be nil: %q", err)
 	}
-	defer deleteFile(t, fakeFile)
 
-	fakeTokens, err := NewTokens(ctx, fakeFile, creds)
+	fakeTokens, err := NewTokens(ctx, fakeDir, creds)
 	if err != nil {
 		t.Errorf("Expected err to be nil: %q", err)
 	}
 
-	realFile := fmt.Sprintf("%s/../../../tmp/test-cached-tokens-real", curDir)
-	realTokens, err := NewTokens(ctx, realFile, creds)
+	realDir := fmt.Sprintf("%s/real", tmpDir)
+	err = os.Mkdir(realDir, 0700)
+	require.NoError(t, err)
+
+	realTokens, err := NewTokens(ctx, realDir, creds)
 	if err != nil {
 		t.Errorf("Expected err to be nil: %q", err)
 	}
-	defer deleteFile(t, realFile)
 
-	realFalseFile := fmt.Sprintf("%s/../../../tmp/test-cached-tokens-realfalse", curDir)
-	realFalseTokens, err := NewTokens(ctx, realFalseFile, credsFalse)
+	realFalseDir := fmt.Sprintf("%s/realfalse", tmpDir)
+	err = os.Mkdir(realFalseDir, 0700)
+	require.NoError(t, err)
+
+	realFalseTokens, err := NewTokens(ctx, realFalseDir, credsFalse)
 	if err != nil {
 		t.Errorf("Expected err to be nil: %q", err)
 	}
