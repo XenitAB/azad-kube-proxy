@@ -26,7 +26,7 @@ type GenerateClient struct {
 	proxyURL                      url.URL
 	resource                      string
 	kubeConfig                    string
-	tokenCache                    string
+	tokenCacheDir                 string
 	overwrite                     bool
 	insecureSkipVerify            bool
 	defaultAzureCredentialOptions defaultAzureCredentialOptions
@@ -48,12 +48,14 @@ func NewGenerateClient(ctx context.Context, c *cli.Context) (GenerateInterface, 
 		return nil, err
 	}
 
+	tokenCacheDir := getTokenCacheDirectory(c.String("token-cache-dir"), c.String("kubeconfig"))
+
 	return &GenerateClient{
 		clusterName:        c.String("cluster-name"),
 		proxyURL:           *proxyURL,
 		resource:           c.String("resource"),
 		kubeConfig:         filepath.Clean(c.String("kubeconfig")),
-		tokenCache:         c.String("token-cache"),
+		tokenCacheDir:      tokenCacheDir,
 		overwrite:          c.Bool("overwrite"),
 		insecureSkipVerify: c.Bool("tls-insecure-skip-verify"),
 		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
@@ -66,6 +68,7 @@ func NewGenerateClient(ctx context.Context, c *cli.Context) (GenerateInterface, 
 
 // GenerateFlags ...
 func GenerateFlags(ctx context.Context) []cli.Flag {
+	// FIXME: Make sure this can fail
 	usr, _ := user.Current()
 	return []cli.Flag{
 		&cli.StringFlag{
@@ -94,11 +97,9 @@ func GenerateFlags(ctx context.Context) []cli.Flag {
 			Required: false,
 		},
 		&cli.StringFlag{
-			Name:     "token-cache",
-			Usage:    "The token cache path to cache tokens",
-			EnvVars:  []string{"TOKEN_CACHE"},
-			Value:    "~/.kube/azad-proxy.json",
-			Required: false,
+			Name:    "token-cache-dir",
+			Usage:   "The directory to where the tokens are cached, defaults to the same as KUBECONFIG",
+			EnvVars: []string{"TOKEN_CACHE_DIR"},
 		},
 		&cli.BoolFlag{
 			Name:    "overwrite",
@@ -205,8 +206,8 @@ func (client *GenerateClient) Generate(ctx context.Context) error {
 					Value: client.resource,
 				},
 				{
-					Name:  "TOKEN_CACHE",
-					Value: client.tokenCache,
+					Name:  "TOKEN_CACHE_DIR",
+					Value: client.tokenCacheDir,
 				},
 				{
 					Name:  "EXCLUDE_AZURE_CLI_AUTH",
@@ -262,8 +263,8 @@ func (client *GenerateClient) Merge(new GenerateClient) {
 		client.kubeConfig = new.kubeConfig
 	}
 
-	if new.tokenCache != "" {
-		client.tokenCache = new.tokenCache
+	if new.tokenCacheDir != "" {
+		client.tokenCacheDir = new.tokenCacheDir
 	}
 
 	if new.overwrite != client.overwrite {

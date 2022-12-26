@@ -10,107 +10,68 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewTokens(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
-	fakeHomeDir := "/home/test-user"
-	restoreHomeDir := tempChangeEnv("HOME", fakeHomeDir)
-	defer restoreHomeDir()
-
-	defaultAzureCredentialOptions := defaultAzureCredentialOptions{
-		excludeAzureCLICredential:    false,
-		excludeEnvironmentCredential: false,
-		excludeMSICredential:         false,
+	opts := defaultAzureCredentialOptions{
+		excludeAzureCLICredential:    true,
+		excludeEnvironmentCredential: true,
+		excludeMSICredential:         true,
 	}
 
-	cases := []struct {
-		path                string
-		expectedErrContains string
-		expectedPath        string
-	}{
-		{
-			path:                "~/test",
-			expectedErrContains: "",
-			expectedPath:        fmt.Sprintf("%s/test", fakeHomeDir),
-		},
-		{
-			path:                "~/.kube/abc",
-			expectedErrContains: "",
-			expectedPath:        fmt.Sprintf("%s/.kube/abc", fakeHomeDir),
-		},
-		{
-			path:                "/home/test2/.kube/abc",
-			expectedErrContains: "",
-			expectedPath:        "/home/test2/.kube/abc",
-		},
-	}
+	t.Run("cache file doesn't exist", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "")
+		require.NoError(t, err)
+		defer os.RemoveAll(tmpDir)
 
-	for _, c := range cases {
-		tokens, err := NewTokens(ctx, c.path, defaultAzureCredentialOptions)
-		if err != nil && c.expectedErrContains == "" {
-			t.Errorf("Expected err to be nil: %q", err)
-		}
-
-		if err == nil && c.expectedErrContains != "" {
-			t.Errorf("Expected err to contain '%s' but was nil", c.expectedErrContains)
-		}
-
-		if err != nil && c.expectedErrContains != "" {
-			if !strings.Contains(err.Error(), c.expectedErrContains) {
-				t.Errorf("Expected err to contain '%s' but was: %q", c.expectedErrContains, err)
-			}
-		}
-
-		if !strings.Contains(tokens.GetPath(), c.expectedPath) {
-			t.Errorf("Expected path to be '%s' but was: %s", c.expectedPath, tokens.GetPath())
-		}
-	}
-
-	curDir, err := os.Getwd()
-	if err != nil {
-		t.Errorf("Expected err to be nil: %q", err)
-	}
-	fakeFile := fmt.Sprintf("%s/../../../tmp/test-cached-tokens", curDir)
-	fakeToken := make(map[string]Token)
-	fakeToken["test"] = Token{
-		Token:               "abc123",
-		ExpirationTimestamp: time.Now().Add(1 * time.Hour),
-		Resource:            "https://fake-resource",
-		Name:                "test",
-	}
-
-	err = createCacheFile(fakeFile, fakeToken)
-	if err != nil {
-		t.Errorf("Expected err to be nil: %q", err)
-	}
-	defer deleteFile(t, fakeFile)
-
-	_, err = NewTokens(ctx, fakeFile, defaultAzureCredentialOptions)
-	if err != nil {
-		t.Errorf("Expected err to be nil: %q", err)
-	}
-
-	fakeFileErr := fmt.Sprintf("%s/../../../tmp/test-cached-tokens-err", curDir)
-	fakeTokenErr := make(map[string]struct {
-		FakeToken bool `json:"token"`
+		_, err = NewTokens(ctx, tmpDir, opts)
+		require.NoError(t, err)
 	})
-	fakeTokenErr["test"] = struct {
-		FakeToken bool `json:"token"`
-	}{
-		FakeToken: true,
-	}
-	err = createCacheFile(fakeFileErr, fakeTokenErr)
-	if err != nil {
-		t.Errorf("Expected err to be nil: %q", err)
-	}
-	defer deleteFile(t, fakeFileErr)
 
-	_, err = NewTokens(ctx, fakeFileErr, defaultAzureCredentialOptions)
-	if !strings.Contains(err.Error(), "Token cache error: ") {
-		t.Errorf("Expected err contain 'Token cache error: ' but was: %q", err)
-	}
+	t.Run("cache exists but can't read it", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "")
+		require.NoError(t, err)
+		defer os.RemoveAll(tmpDir)
+
+		tmpFilePath := fmt.Sprintf("%s/%s", tmpDir, tokenCacheFileName)
+		_, err = os.Create(tmpFilePath)
+		require.NoError(t, err)
+
+		err = os.Chmod(tmpFilePath, 0000)
+		require.NoError(t, err)
+
+		_, err = NewTokens(ctx, tmpDir, opts)
+		require.ErrorContains(t, err, "Token cache error: ")
+	})
+
+	t.Run("cache exists but wrong format", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "")
+		require.NoError(t, err)
+		defer os.RemoveAll(tmpDir)
+
+		tmpFilePath := fmt.Sprintf("%s/%s", tmpDir, tokenCacheFileName)
+		err = os.WriteFile(tmpFilePath, []byte("[]"), 0600)
+		require.NoError(t, err)
+
+		_, err = NewTokens(ctx, tmpDir, opts)
+		require.ErrorContains(t, err, "Token cache error: ")
+	})
+
+	t.Run("cache exists", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "")
+		require.NoError(t, err)
+		defer os.RemoveAll(tmpDir)
+
+		tmpFilePath := fmt.Sprintf("%s/%s", tmpDir, tokenCacheFileName)
+		err = os.WriteFile(tmpFilePath, []byte("{}"), 0600)
+		require.NoError(t, err)
+
+		_, err = NewTokens(ctx, tmpDir, opts)
+		require.NoError(t, err)
+	})
 }
 
 func TestGetToken(t *testing.T) {

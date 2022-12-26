@@ -3,6 +3,9 @@ package actions
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"os/user"
+	"path/filepath"
 
 	"github.com/urfave/cli/v2"
 	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,7 +16,7 @@ import (
 type LoginClient struct {
 	clusterName                   string
 	resource                      string
-	tokenCache                    string
+	tokenCacheDir                 string
 	defaultAzureCredentialOptions defaultAzureCredentialOptions
 }
 
@@ -24,10 +27,11 @@ type LoginInterface interface {
 
 // NewLoginClient ...
 func NewLoginClient(ctx context.Context, c *cli.Context) (LoginInterface, error) {
+	tokenCacheDir := getTokenCacheDirectory(c.String("token-cache-dir"), c.String("kubeconfig"))
 	return &LoginClient{
-		clusterName: c.String("cluster-name"),
-		resource:    c.String("resource"),
-		tokenCache:  c.String("token-cache"),
+		clusterName:   c.String("cluster-name"),
+		resource:      c.String("resource"),
+		tokenCacheDir: tokenCacheDir,
 		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
 			excludeAzureCLICredential:    c.Bool("exclude-azure-cli-auth"),
 			excludeEnvironmentCredential: c.Bool("exclude-environment-auth"),
@@ -36,8 +40,28 @@ func NewLoginClient(ctx context.Context, c *cli.Context) (LoginInterface, error)
 	}, nil
 }
 
+func getTokenCacheDirectory(tokenCacheDirectory, kubeConfig string) string {
+	if tokenCacheDirectory != "" {
+		return filepath.Clean(tokenCacheDirectory)
+	}
+
+	if kubeConfig != "" {
+		return filepath.Dir(kubeConfig)
+	}
+
+	userHomeDir := "~"
+	usr, err := user.Current()
+	if err == nil {
+		userHomeDir = usr.HomeDir
+	}
+
+	return filepath.Clean(fmt.Sprintf("%s/.kube", userHomeDir))
+}
+
 // LoginFlags ...
 func LoginFlags(ctx context.Context) []cli.Flag {
+	// FIXME: Make sure this can fail
+	usr, _ := user.Current()
 	return []cli.Flag{
 		&cli.StringFlag{
 			Name:     "cluster-name",
@@ -52,10 +76,16 @@ func LoginFlags(ctx context.Context) []cli.Flag {
 			Required: true,
 		},
 		&cli.StringFlag{
-			Name:    "token-cache",
-			Usage:   "The token cache path to cache tokens",
-			EnvVars: []string{"TOKEN_CACHE"},
-			Value:   "~/.kube/azad-proxy.json",
+			Name:    "token-cache-dir",
+			Usage:   "The directory to where the tokens are cached, defaults to the same as KUBECONFIG",
+			EnvVars: []string{"TOKEN_CACHE_DIR"},
+		},
+		&cli.StringFlag{
+			Name:     "kubeconfig",
+			Usage:    "The path of the Kubernetes Config",
+			EnvVars:  []string{"KUBECONFIG"},
+			Value:    fmt.Sprintf("%s/.kube/config", usr.HomeDir),
+			Required: false,
 		},
 		&cli.BoolFlag{
 			Name:    "exclude-azure-cli-auth",
@@ -80,7 +110,7 @@ func LoginFlags(ctx context.Context) []cli.Flag {
 
 // Login ...
 func (client *LoginClient) Login(ctx context.Context) (string, error) {
-	tokens, err := NewTokens(ctx, client.tokenCache, client.defaultAzureCredentialOptions)
+	tokens, err := NewTokens(ctx, client.tokenCacheDir, client.defaultAzureCredentialOptions)
 	if err != nil {
 		return "", err
 	}

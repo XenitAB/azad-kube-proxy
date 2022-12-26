@@ -6,10 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/user"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v2"
 	k8sclientauth "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
 )
@@ -127,14 +130,14 @@ func TestLogin(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected err to be nil: %q", err)
 	}
-	tokenCacheFile := fmt.Sprintf("%s/../../../tmp/test-login-token-cache", curDir)
+	tokenCacheFile := fmt.Sprintf("%s/../../../tmp/%s", curDir, tokenCacheFileName)
 	defer deleteFile(t, tokenCacheFile)
 
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 	client := &LoginClient{
-		clusterName: "test",
-		resource:    resource,
-		tokenCache:  tokenCacheFile,
+		clusterName:   "test",
+		resource:      resource,
+		tokenCacheDir: filepath.Dir(tokenCacheFile),
 		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
 			excludeAzureCLICredential:    true,
 			excludeEnvironmentCredential: false,
@@ -142,11 +145,14 @@ func TestLogin(t *testing.T) {
 		},
 	}
 
-	tokenCacheFileErr := fmt.Sprintf("%s/../../../tmp/test-login-token-cache-err", curDir)
+	tmpDir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
 	clientErr := &LoginClient{
-		clusterName: "test",
-		resource:    resource,
-		tokenCache:  tokenCacheFileErr,
+		clusterName:   "test",
+		resource:      resource,
+		tokenCacheDir: tmpDir,
 		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
 			excludeAzureCLICredential:    true,
 			excludeEnvironmentCredential: true,
@@ -199,5 +205,48 @@ func TestLogin(t *testing.T) {
 				t.Errorf("Expected tokenRes.Kind to be '%s' but was: %s", "ExecCredential", tokenRes.Kind)
 			}
 		}
+	}
+}
+
+func TestGetTokenCacheDirectory(t *testing.T) {
+	usr, err := user.Current()
+	require.NoError(t, err)
+
+	cases := []struct {
+		testDescription string
+		tokenCacheDir   string
+		kubeConfig      string
+		expectedResult  string
+	}{
+		{
+			testDescription: "all inputs empty strings",
+			tokenCacheDir:   "",
+			kubeConfig:      "",
+			expectedResult:  fmt.Sprintf("%s/.kube", usr.HomeDir),
+		},
+		{
+			testDescription: "kubeConfig set but not tokenCachePath",
+			tokenCacheDir:   "",
+			kubeConfig:      "/foo/bar/config",
+			expectedResult:  "/foo/bar",
+		},
+		{
+			testDescription: "tokenCachePath set but not kubeConfig",
+			tokenCacheDir:   "/foo/bar",
+			kubeConfig:      "",
+			expectedResult:  "/foo/bar",
+		},
+		{
+			testDescription: "tokenCachePath set as well as kubeConfig",
+			tokenCacheDir:   "/foo/bar",
+			kubeConfig:      "/foo/baz",
+			expectedResult:  "/foo/bar",
+		},
+	}
+
+	for i, c := range cases {
+		t.Logf("Test #%d: %s", i, c.testDescription)
+		result := getTokenCacheDirectory(c.tokenCacheDir, c.kubeConfig)
+		require.Equal(t, c.expectedResult, result)
 	}
 }

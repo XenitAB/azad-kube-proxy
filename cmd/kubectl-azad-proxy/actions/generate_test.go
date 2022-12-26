@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v2"
 	k8sclientcmd "k8s.io/client-go/tools/clientcmd"
 )
@@ -129,7 +130,7 @@ func TestMergeGenerateClient(t *testing.T) {
 		proxyURL:           getURL("https://www.google.com"),
 		resource:           "https://fake",
 		kubeConfig:         "/tmp/kubeconfig",
-		tokenCache:         "/tmp/tokencache",
+		tokenCacheDir:      "/tmp/tokencache",
 		overwrite:          false,
 		insecureSkipVerify: false,
 		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
@@ -144,7 +145,7 @@ func TestMergeGenerateClient(t *testing.T) {
 		proxyURL:           getURL("https://www.example.com"),
 		resource:           "https://fake2",
 		kubeConfig:         "/tmp2/kubeconfig",
-		tokenCache:         "/tmp2/tokencache",
+		tokenCacheDir:      "/tmp2/tokencache",
 		overwrite:          true,
 		insecureSkipVerify: true,
 	})
@@ -161,8 +162,8 @@ func TestMergeGenerateClient(t *testing.T) {
 	if client.kubeConfig != "/tmp2/kubeconfig" {
 		t.Errorf("Expected client.kubeConfig to be '/tmp2/kubeconfig' but was: %s", client.kubeConfig)
 	}
-	if client.tokenCache != "/tmp2/tokencache" {
-		t.Errorf("Expected client.tokenCache to be '/tmp2/tokencache' but was: %s", client.tokenCache)
+	if client.tokenCacheDir != "/tmp2/tokencache" {
+		t.Errorf("Expected client.tokenCache to be '/tmp2/tokencache' but was: %s", client.tokenCacheDir)
 	}
 	if client.overwrite != true {
 		t.Errorf("Expected client.overwrite to be 'true' but was: %t", client.overwrite)
@@ -174,12 +175,12 @@ func TestMergeGenerateClient(t *testing.T) {
 
 func TestGenerate(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
-	curDir, err := os.Getwd()
-	if err != nil {
-		t.Errorf("Expected err to be nil: %q", err)
-	}
-	tokenCacheFile := fmt.Sprintf("%s/../../../tmp/test-cached-tokens-generate", curDir)
-	kubeConfigFile := fmt.Sprintf("%s/../../../tmp/test-generate-kubeconfig", curDir)
+
+	tmpDir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+
+	tokenCacheDir := tmpDir
+	kubeConfigFile := fmt.Sprintf("%s/kubeconfig", tmpDir)
 	defer deleteFile(t, kubeConfigFile)
 
 	client := &GenerateClient{
@@ -187,7 +188,7 @@ func TestGenerate(t *testing.T) {
 		proxyURL:           getURL("https://www.google.com"),
 		resource:           "https://fake",
 		kubeConfig:         kubeConfigFile,
-		tokenCache:         tokenCacheFile,
+		tokenCacheDir:      tokenCacheDir,
 		overwrite:          false,
 		insecureSkipVerify: false,
 		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
