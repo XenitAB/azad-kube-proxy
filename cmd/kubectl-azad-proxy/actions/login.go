@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os/user"
+	"os"
 	"path/filepath"
 
 	"github.com/urfave/cli/v2"
@@ -40,9 +40,9 @@ func NewLoginClient(ctx context.Context, c *cli.Context) (LoginInterface, error)
 	}, nil
 }
 
-func getTokenCacheDirectory(tokenCacheDirectory, kubeConfig string) string {
-	if tokenCacheDirectory != "" {
-		return filepath.Clean(tokenCacheDirectory)
+func getTokenCacheDirectory(tokenCacheDir, kubeConfig string) string {
+	if tokenCacheDir != "" {
+		return filepath.Clean(tokenCacheDir)
 	}
 
 	if kubeConfig != "" {
@@ -50,9 +50,9 @@ func getTokenCacheDirectory(tokenCacheDirectory, kubeConfig string) string {
 	}
 
 	userHomeDir := "~"
-	usr, err := user.Current()
+	osUserHomeDir, err := os.UserHomeDir()
 	if err == nil {
-		userHomeDir = usr.HomeDir
+		userHomeDir = osUserHomeDir
 	}
 
 	return filepath.Clean(fmt.Sprintf("%s/.kube", userHomeDir))

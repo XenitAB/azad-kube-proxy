@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"os/user"
 	"path/filepath"
 	"strings"
 	"time"
