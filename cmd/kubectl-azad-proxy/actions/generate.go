@@ -154,21 +154,21 @@ func (client *GenerateClient) Generate(ctx context.Context) error {
 	var found bool
 	_, found = kubeCfg.Clusters[client.clusterName]
 	if found && !client.overwrite {
-		err := fmt.Errorf("Cluster (%s) was found in config (%s) but overwrite is %t", client.clusterName, client.kubeConfig, client.overwrite)
+		err := fmt.Errorf("cluster (%s) was found in config (%s) but overwrite is %t", client.clusterName, client.kubeConfig, client.overwrite)
 		log.V(1).Info("Overwrite is not enabled", "error", err.Error())
 		return customerrors.New(customerrors.ErrorTypeOverwriteConfig, err)
 	}
 
 	_, found = kubeCfg.Contexts[client.clusterName]
 	if found && !client.overwrite {
-		err := fmt.Errorf("Context (%s) was found in config (%s) but overwrite is %t", client.clusterName, client.kubeConfig, client.overwrite)
+		err := fmt.Errorf("context (%s) was found in config (%s) but overwrite is %t", client.clusterName, client.kubeConfig, client.overwrite)
 		log.V(1).Info("Overwrite is not enabled", "error", err.Error())
 		return customerrors.New(customerrors.ErrorTypeOverwriteConfig, err)
 	}
 
 	_, found = kubeCfg.AuthInfos[client.clusterName]
 	if found && !client.overwrite {
-		err := fmt.Errorf("User (%s) was found in config (%s) but overwrite is %t", client.clusterName, client.kubeConfig, client.overwrite)
+		err := fmt.Errorf("user (%s) was found in config (%s) but overwrite is %t", client.clusterName, client.kubeConfig, client.overwrite)
 		log.V(1).Info("Overwrite is not enabled", "error", err.Error())
 		return customerrors.New(customerrors.ErrorTypeOverwriteConfig, err)
 	}
