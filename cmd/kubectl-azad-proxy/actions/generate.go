@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"os/user"
 	"path/filepath"
 	"strings"
 	"time"
@@ -26,7 +25,7 @@ type GenerateClient struct {
 	proxyURL                      url.URL
 	resource                      string
 	kubeConfig                    string
-	tokenCache                    string
+	tokenCacheDir                 string
 	overwrite                     bool
 	insecureSkipVerify            bool
 	defaultAzureCredentialOptions defaultAzureCredentialOptions
@@ -48,12 +47,14 @@ func NewGenerateClient(ctx context.Context, c *cli.Context) (GenerateInterface, 
 		return nil, err
 	}
 
+	tokenCacheDir := getTokenCacheDirectory(c.String("token-cache-dir"), c.String("kubeconfig"))
+
 	return &GenerateClient{
 		clusterName:        c.String("cluster-name"),
 		proxyURL:           *proxyURL,
 		resource:           c.String("resource"),
 		kubeConfig:         filepath.Clean(c.String("kubeconfig")),
-		tokenCache:         c.String("token-cache"),
+		tokenCacheDir:      tokenCacheDir,
 		overwrite:          c.Bool("overwrite"),
 		insecureSkipVerify: c.Bool("tls-insecure-skip-verify"),
 		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
@@ -65,8 +66,12 @@ func NewGenerateClient(ctx context.Context, c *cli.Context) (GenerateInterface, 
 }
 
 // GenerateFlags ...
-func GenerateFlags(ctx context.Context) []cli.Flag {
-	usr, _ := user.Current()
+func GenerateFlags(ctx context.Context) ([]cli.Flag, error) {
+	osUserHomeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+
 	return []cli.Flag{
 		&cli.StringFlag{
 			Name:     "cluster-name",
@@ -90,15 +95,13 @@ func GenerateFlags(ctx context.Context) []cli.Flag {
 			Name:     "kubeconfig",
 			Usage:    "The path of the Kubernetes Config",
 			EnvVars:  []string{"KUBECONFIG"},
-			Value:    fmt.Sprintf("%s/.kube/config", usr.HomeDir),
+			Value:    fmt.Sprintf("%s/.kube/config", osUserHomeDir),
 			Required: false,
 		},
 		&cli.StringFlag{
-			Name:     "token-cache",
-			Usage:    "The token cache path to cache tokens",
-			EnvVars:  []string{"TOKEN_CACHE"},
-			Value:    "~/.kube/azad-proxy.json",
-			Required: false,
+			Name:    "token-cache-dir",
+			Usage:   "The directory to where the tokens are cached, defaults to the same as KUBECONFIG",
+			EnvVars: []string{"TOKEN_CACHE_DIR"},
 		},
 		&cli.BoolFlag{
 			Name:    "overwrite",
@@ -130,7 +133,7 @@ func GenerateFlags(ctx context.Context) []cli.Flag {
 			EnvVars: []string{"EXCLUDE_MSI_AUTH"},
 			Value:   true,
 		},
-	}
+	}, nil
 }
 
 // Generate ...
@@ -150,21 +153,21 @@ func (client *GenerateClient) Generate(ctx context.Context) error {
 	var found bool
 	_, found = kubeCfg.Clusters[client.clusterName]
 	if found && !client.overwrite {
-		err := fmt.Errorf("Cluster (%s) was found in config (%s) but overwrite is %t", client.clusterName, client.kubeConfig, client.overwrite)
+		err := fmt.Errorf("cluster (%s) was found in config (%s) but overwrite is %t", client.clusterName, client.kubeConfig, client.overwrite)
 		log.V(1).Info("Overwrite is not enabled", "error", err.Error())
 		return customerrors.New(customerrors.ErrorTypeOverwriteConfig, err)
 	}
 
 	_, found = kubeCfg.Contexts[client.clusterName]
 	if found && !client.overwrite {
-		err := fmt.Errorf("Context (%s) was found in config (%s) but overwrite is %t", client.clusterName, client.kubeConfig, client.overwrite)
+		err := fmt.Errorf("context (%s) was found in config (%s) but overwrite is %t", client.clusterName, client.kubeConfig, client.overwrite)
 		log.V(1).Info("Overwrite is not enabled", "error", err.Error())
 		return customerrors.New(customerrors.ErrorTypeOverwriteConfig, err)
 	}
 
 	_, found = kubeCfg.AuthInfos[client.clusterName]
 	if found && !client.overwrite {
-		err := fmt.Errorf("User (%s) was found in config (%s) but overwrite is %t", client.clusterName, client.kubeConfig, client.overwrite)
+		err := fmt.Errorf("user (%s) was found in config (%s) but overwrite is %t", client.clusterName, client.kubeConfig, client.overwrite)
 		log.V(1).Info("Overwrite is not enabled", "error", err.Error())
 		return customerrors.New(customerrors.ErrorTypeOverwriteConfig, err)
 	}
@@ -205,8 +208,8 @@ func (client *GenerateClient) Generate(ctx context.Context) error {
 					Value: client.resource,
 				},
 				{
-					Name:  "TOKEN_CACHE",
-					Value: client.tokenCache,
+					Name:  "TOKEN_CACHE_DIR",
+					Value: client.tokenCacheDir,
 				},
 				{
 					Name:  "EXCLUDE_AZURE_CLI_AUTH",
@@ -262,8 +265,8 @@ func (client *GenerateClient) Merge(new GenerateClient) {
 		client.kubeConfig = new.kubeConfig
 	}
 
-	if new.tokenCache != "" {
-		client.tokenCache = new.tokenCache
+	if new.tokenCacheDir != "" {
+		client.tokenCacheDir = new.tokenCacheDir
 	}
 
 	if new.overwrite != client.overwrite {

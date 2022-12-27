@@ -26,7 +26,6 @@ var (
 )
 
 func main() {
-	// Initiate the logging
 	logrusLog := logrus.New()
 	if util.SliceContains(os.Args, "--debug") || util.SliceContains(os.Args, "-debug") {
 		logrusLog.Level = 10
@@ -34,6 +33,15 @@ func main() {
 	log := logrusr.New(logrusLog)
 	ctx := logr.NewContext(context.Background(), log)
 
+	err := run(ctx)
+	if err != nil {
+		customErr := customerrors.To(err)
+		log.Error(customErr, "Application returned error", "ErrorType", customErr.ErrorType)
+		os.Exit(1)
+	}
+}
+
+func run(ctx context.Context) error {
 	cli.VersionPrinter = func(c *cli.Context) {
 		fmt.Printf("version=%s revision=%s created=%s\n", c.App.Version, Revision, Created)
 	}
@@ -46,6 +54,21 @@ func main() {
 		},
 	}
 
+	generateFlags, err := actions.GenerateFlags(ctx)
+	if err != nil {
+		return err
+	}
+
+	loginFlags, err := actions.LoginFlags(ctx)
+	if err != nil {
+		return err
+	}
+
+	menuFlags, err := actions.MenuFlags(ctx)
+	if err != nil {
+		return err
+	}
+
 	app := &cli.App{
 		Name:    "kubectl-azad-proxy",
 		Usage:   "kubectl plugin for azad-kube-proxy",
@@ -56,7 +79,7 @@ func main() {
 				Name:    "generate",
 				Aliases: []string{"g"},
 				Usage:   "Generate kubeconfig",
-				Flags:   append(actions.GenerateFlags(ctx), globalFlags...),
+				Flags:   append(generateFlags, globalFlags...),
 				Action: func(c *cli.Context) error {
 					client, err := actions.NewGenerateClient(ctx, c)
 					if err != nil {
@@ -69,7 +92,7 @@ func main() {
 				Name:    "login",
 				Aliases: []string{"l"},
 				Usage:   "Login to Azure AD app and return token",
-				Flags:   append(actions.LoginFlags(ctx), globalFlags...),
+				Flags:   append(loginFlags, globalFlags...),
 				Action: func(c *cli.Context) error {
 					client, err := actions.NewLoginClient(ctx, c)
 					if err != nil {
@@ -109,7 +132,7 @@ func main() {
 				Name:    "menu",
 				Aliases: []string{"m"},
 				Usage:   "Menu for the azad-kube-proxy configuration",
-				Flags:   append(actions.MenuFlags(ctx), globalFlags...),
+				Flags:   append(menuFlags, globalFlags...),
 				Action: func(c *cli.Context) error {
 					client, err := actions.NewMenuClient(ctx, c)
 					if err != nil {
@@ -122,12 +145,10 @@ func main() {
 		},
 	}
 
-	err := app.Run(os.Args)
+	err = app.Run(os.Args)
 	if err != nil {
-		customErr := customerrors.To(err)
-		log.Error(customErr, "Application returned error", "ErrorType", customErr.ErrorType)
-		os.Exit(1)
+		return err
 	}
 
-	os.Exit(0)
+	return nil
 }

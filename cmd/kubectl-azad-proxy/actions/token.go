@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
+	"path/filepath"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -49,7 +49,7 @@ func (t *Token) Valid() bool {
 
 // TokensInterface is the interface for the Tokens struct
 type TokensInterface interface {
-	GetPath() string
+	GetTokenCacheFilePath() string
 	GetToken(ctx context.Context, name string, resource string) (Token, error)
 	SetToken(ctx context.Context, name string, token Token) error
 }
@@ -57,36 +57,32 @@ type TokensInterface interface {
 // Tokens contains the token struct
 type Tokens struct {
 	cachedTokens                  map[string]Token
-	path                          string
+	tokenCacheFilePath            string
 	defaultAzureCredentialOptions defaultAzureCredentialOptions
 }
 
-// NewTokens returns a TokensInterface or error
-func NewTokens(ctx context.Context, path string, defaultAzureCredentialOptions defaultAzureCredentialOptions) (TokensInterface, error) {
-	log := logr.FromContextOrDiscard(ctx)
+// nolint: gosec
+const tokenCacheFileName = "azad-proxy.json"
 
-	if strings.HasPrefix(path, "~/") {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			log.V(1).Info("Unable to get user home directory", "error", err.Error())
-		}
-		path = strings.Replace(path, "~/", fmt.Sprintf("%s/", homeDir), 1)
-	}
+// NewTokens returns a TokensInterface or error
+func NewTokens(ctx context.Context, tokenCacheDir string, defaultAzureCredentialOptions defaultAzureCredentialOptions) (TokensInterface, error) {
+	log := logr.FromContextOrDiscard(ctx)
+	tokenCacheFilePath := filepath.Clean(fmt.Sprintf("%s/%s", tokenCacheDir, tokenCacheFileName))
 
 	t := Tokens{
 		cachedTokens:                  make(map[string]Token),
-		path:                          path,
+		tokenCacheFilePath:            tokenCacheFilePath,
 		defaultAzureCredentialOptions: defaultAzureCredentialOptions,
 	}
-	cacheFileExists := fileExists(path)
+	cacheFileExists := fileExists(tokenCacheFilePath)
 
 	if !cacheFileExists {
 		return t, nil
 	}
 
-	fileContent, err := getFileContent(path)
+	fileContent, err := getFileContent(tokenCacheFilePath)
 	if err != nil {
-		log.V(1).Info("Unable to get file content", "error", err.Error(), "path", path)
+		log.V(1).Info("Unable to get file content", "error", err.Error(), "path", tokenCacheFilePath)
 		return nil, customerrors.New(customerrors.ErrorTypeTokenCache, err)
 	}
 
@@ -99,9 +95,9 @@ func NewTokens(ctx context.Context, path string, defaultAzureCredentialOptions d
 	return t, nil
 }
 
-// GetPath returns the path where the cached tokens are stored
-func (t Tokens) GetPath() string {
-	return t.path
+// GetTokenCacheFilePath returns the path where the cached tokens are stored
+func (t Tokens) GetTokenCacheFilePath() string {
+	return t.tokenCacheFilePath
 }
 
 // GetToken ...
@@ -158,9 +154,9 @@ func (t Tokens) SetToken(ctx context.Context, name string, token Token) error {
 		return customerrors.New(customerrors.ErrorTypeTokenCache, err)
 	}
 
-	err = os.WriteFile(t.path, fileContents, 0600)
+	err = os.WriteFile(t.tokenCacheFilePath, fileContents, 0600)
 	if err != nil {
-		log.V(1).Info("Unable to write token cache file", "error", err.Error(), "path", t.path)
+		log.V(1).Info("Unable to write token cache file", "error", err.Error(), "path", t.tokenCacheFilePath)
 		return customerrors.New(customerrors.ErrorTypeTokenCache, err)
 	}
 
