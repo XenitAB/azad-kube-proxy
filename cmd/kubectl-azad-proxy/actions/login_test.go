@@ -212,7 +212,7 @@ func TestLogin(t *testing.T) {
 }
 
 func TestGetTokenCacheDirectory(t *testing.T) {
-	usr, err := user.Current()
+	osUserHomeDir, err := os.UserHomeDir()
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -225,7 +225,7 @@ func TestGetTokenCacheDirectory(t *testing.T) {
 			testDescription: "all inputs empty strings",
 			tokenCacheDir:   "",
 			kubeConfig:      "",
-			expectedResult:  fmt.Sprintf("%s/.kube", usr.HomeDir),
+			expectedResult:  fmt.Sprintf("%s/.kube", osUserHomeDir),
 		},
 		{
 			testDescription: "kubeConfig set but not tokenCachePath",

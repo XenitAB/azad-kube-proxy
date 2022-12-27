@@ -60,7 +60,7 @@ func getTokenCacheDirectory(tokenCacheDirectory, kubeConfig string) string {
 
 // LoginFlags ...
 func LoginFlags(ctx context.Context) ([]cli.Flag, error) {
-	usr, err := user.Current()
+	osUserHomeDir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func LoginFlags(ctx context.Context) ([]cli.Flag, error) {
 			Name:     "kubeconfig",
 			Usage:    "The path of the Kubernetes Config",
 			EnvVars:  []string{"KUBECONFIG"},
-			Value:    fmt.Sprintf("%s/.kube/config", usr.HomeDir),
+			Value:    fmt.Sprintf("%s/.kube/config", osUserHomeDir),
 			Required: false,
 		},
 		&cli.BoolFlag{
