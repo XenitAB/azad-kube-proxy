@@ -21,6 +21,9 @@ func TestNewLoginClient(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 	client := &LoginClient{}
 
+	loginFlags, err := LoginFlags(ctx)
+	require.NoError(t, err)
+
 	app := &cli.App{
 		Name:  "test",
 		Usage: "test",
@@ -29,7 +32,7 @@ func TestNewLoginClient(t *testing.T) {
 				Name:    "test",
 				Aliases: []string{"t"},
 				Usage:   "test",
-				Flags:   LoginFlags(ctx),
+				Flags:   loginFlags,
 				Action: func(c *cli.Context) error {
 					ci, err := NewLoginClient(ctx, c)
 					if err != nil {

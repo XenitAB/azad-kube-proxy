@@ -67,9 +67,12 @@ func NewGenerateClient(ctx context.Context, c *cli.Context) (GenerateInterface, 
 }
 
 // GenerateFlags ...
-func GenerateFlags(ctx context.Context) []cli.Flag {
-	// FIXME: Make sure this can fail
-	usr, _ := user.Current()
+func GenerateFlags(ctx context.Context) ([]cli.Flag, error) {
+	usr, err := user.Current()
+	if err != nil {
+		return nil, err
+	}
+
 	return []cli.Flag{
 		&cli.StringFlag{
 			Name:     "cluster-name",
@@ -131,7 +134,7 @@ func GenerateFlags(ctx context.Context) []cli.Flag {
 			EnvVars: []string{"EXCLUDE_MSI_AUTH"},
 			Value:   true,
 		},
-	}
+	}, nil
 }
 
 // Generate ...

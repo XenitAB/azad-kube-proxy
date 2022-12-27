@@ -19,6 +19,9 @@ func TestNewGenerateClient(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 	client := &GenerateClient{}
 
+	generateFlags, err := GenerateFlags(ctx)
+	require.NoError(t, err)
+
 	app := &cli.App{
 		Name:  "test",
 		Usage: "test",
@@ -27,7 +30,7 @@ func TestNewGenerateClient(t *testing.T) {
 				Name:    "test",
 				Aliases: []string{"t"},
 				Usage:   "test",
-				Flags:   GenerateFlags(ctx),
+				Flags:   generateFlags,
 				Action: func(c *cli.Context) error {
 					ci, err := NewGenerateClient(ctx, c)
 					if err != nil {

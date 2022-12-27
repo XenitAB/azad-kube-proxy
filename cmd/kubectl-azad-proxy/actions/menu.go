@@ -42,11 +42,16 @@ func NewMenuClient(ctx context.Context, c *cli.Context) (MenuInterface, error) {
 }
 
 // MenuFlags ...
-func MenuFlags(ctx context.Context) []cli.Flag {
-	flags := mergeFlags(DiscoverFlags(ctx), GenerateFlags(ctx))
+func MenuFlags(ctx context.Context) ([]cli.Flag, error) {
+	generateFlags, err := GenerateFlags(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	flags := mergeFlags(DiscoverFlags(ctx), generateFlags)
 	flags = unrequireFlags(flags)
 
-	return flags
+	return flags, nil
 }
 
 // Menu ...

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v2"
 	"github.com/xenitab/azad-kube-proxy/cmd/kubectl-azad-proxy/customerrors"
 )
@@ -17,6 +18,9 @@ func TestNewMenuClient(t *testing.T) {
 	restoreAzureCLIAuth := tempChangeEnv("EXCLUDE_AZURE_CLI_AUTH", "true")
 	defer restoreAzureCLIAuth()
 
+	menuFlags, err := MenuFlags(ctx)
+	require.NoError(t, err)
+
 	app := &cli.App{
 		Name:  "test",
 		Usage: "test",
@@ -25,7 +29,7 @@ func TestNewMenuClient(t *testing.T) {
 				Name:    "test",
 				Aliases: []string{"t"},
 				Usage:   "test",
-				Flags:   MenuFlags(ctx),
+				Flags:   menuFlags,
 				Action: func(c *cli.Context) error {
 					_, err := NewMenuClient(ctx, c)
 					if err != nil {
@@ -39,7 +43,7 @@ func TestNewMenuClient(t *testing.T) {
 
 	app.Writer = &bytes.Buffer{}
 	app.ErrWriter = &bytes.Buffer{}
-	err := app.Run([]string{"fake-binary", "test"})
+	err = app.Run([]string{"fake-binary", "test"})
 	if err != nil {
 		t.Errorf("Expected err to be nil: %q", err)
 	}

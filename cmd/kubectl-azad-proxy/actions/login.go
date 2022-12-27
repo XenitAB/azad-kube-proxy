@@ -59,9 +59,12 @@ func getTokenCacheDirectory(tokenCacheDirectory, kubeConfig string) string {
 }
 
 // LoginFlags ...
-func LoginFlags(ctx context.Context) []cli.Flag {
-	// FIXME: Make sure this can fail
-	usr, _ := user.Current()
+func LoginFlags(ctx context.Context) ([]cli.Flag, error) {
+	usr, err := user.Current()
+	if err != nil {
+		return nil, err
+	}
+
 	return []cli.Flag{
 		&cli.StringFlag{
 			Name:     "cluster-name",
@@ -105,7 +108,7 @@ func LoginFlags(ctx context.Context) []cli.Flag {
 			EnvVars: []string{"EXCLUDE_MSI_AUTH"},
 			Value:   true,
 		},
-	}
+	}, nil
 }
 
 // Login ...
