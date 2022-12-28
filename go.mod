@@ -25,7 +25,7 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/urfave/cli/v2 v2.23.7
 	github.com/xenitab/go-oidc-middleware v0.0.39
-	github.com/xenitab/go-oidc-middleware/oidchttp v0.0.38
+	github.com/xenitab/go-oidc-middleware/oidchttp v0.0.39
 	go.uber.org/zap v1.24.0
 	golang.org/x/sync v0.1.0
 	k8s.io/api v0.26.0
