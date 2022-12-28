@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/require"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
@@ -41,50 +42,43 @@ func TestGetUser(t *testing.T) {
 	}
 
 	cases := []struct {
-		userClient       ClientInterface
-		username         string
-		objectID         string
-		expectedUserType models.UserType
-		expectedErr      error
+		userClient          ClientInterface
+		username            string
+		objectID            string
+		expectedUserType    models.UserType
+		expectedErrContains string
 	}{
 		{
-			userClient:       NewUserClient(config, azureClient),
-			username:         "",
-			objectID:         "00000000-0000-0000-0000-000000000000",
-			expectedUserType: models.ServicePrincipalUserType,
-			expectedErr:      nil,
+			userClient:          NewUserClient(config, azureClient),
+			username:            "",
+			objectID:            "00000000-0000-0000-0000-000000000000",
+			expectedUserType:    models.ServicePrincipalUserType,
+			expectedErrContains: "",
 		},
 		{
-			userClient:       NewUserClient(config, azureClient),
-			username:         "username",
-			objectID:         "00000000-0000-0000-0000-000000000000",
-			expectedUserType: models.NormalUserType,
-			expectedErr:      nil,
+			userClient:          NewUserClient(config, azureClient),
+			username:            "username",
+			objectID:            "00000000-0000-0000-0000-000000000000",
+			expectedUserType:    models.NormalUserType,
+			expectedErrContains: "",
 		},
 		{
-			userClient:       NewUserClient(config, azureClientError),
-			username:         "username",
-			objectID:         "00000000-0000-0000-0000-000000000000",
-			expectedUserType: models.NormalUserType,
-			expectedErr:      errors.New("Fake error"),
+			userClient:          NewUserClient(config, azureClientError),
+			username:            "username",
+			objectID:            "00000000-0000-0000-0000-000000000000",
+			expectedUserType:    models.NormalUserType,
+			expectedErrContains: "Fake error",
 		},
 	}
 
 	for _, c := range cases {
 		user, err := c.userClient.GetUser(ctx, c.username, c.objectID)
-
-		if user.Type != c.expectedUserType && c.expectedErr == nil {
-			t.Errorf("Expected user type (%s) was not returned: %s", c.expectedUserType, user.Type)
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+			continue
 		}
 
-		if err != nil && c.expectedErr == nil {
-			t.Errorf("Expected err to be nil but it was %q", err)
-		}
-
-		if c.expectedErr != nil {
-			if err.Error() != c.expectedErr.Error() {
-				t.Errorf("Expected err to be %q but it was %q", c.expectedErr, err)
-			}
-		}
+		require.NoError(t, err)
+		require.Equal(t, c.expectedUserType, user.Type)
 	}
 }

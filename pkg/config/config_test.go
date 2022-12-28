@@ -13,11 +13,11 @@ import (
 	"math/big"
 	"os"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v2"
 )
 
@@ -58,16 +58,12 @@ func TestNewConfig(t *testing.T) {
 
 	// Fake certificate
 	certPath, err := generateCertificateFile()
-	if err != nil {
-		t.Errorf("Unable to generate temporary certificate for test: %q", err)
-	}
+	require.NoError(t, err)
 	defer deleteFile(t, certPath)
 
 	// Fake token
 	tokenPath, _, err := generateRandomFile()
-	if err != nil {
-		t.Errorf("Unable to generate temporary file for test: %q", err)
-	}
+	require.NoError(t, err)
 	defer deleteFile(t, tokenPath)
 
 	baseArgs := []string{"fake-bin", fmt.Sprintf("--kubernetes-api-ca-cert-path=%s", certPath), fmt.Sprintf("--kubernetes-api-token-path=%s", tokenPath)}
@@ -226,30 +222,17 @@ func TestNewConfig(t *testing.T) {
 	}
 
 	for _, c := range cases {
+		cfg = Config{}
 		c.cliApp.Writer = &c.outBuffer
 		c.cliApp.ErrWriter = &c.errBuffer
 		err := c.cliApp.Run(c.args)
-		if err != nil && c.expectedErrContains == "" {
-			t.Errorf("Expected err to be nil: %q", err)
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+			continue
 		}
 
-		if err == nil && c.expectedErrContains != "" {
-			t.Errorf("Expected err to contain '%s' but was nil", c.expectedErrContains)
-		}
-
-		if err != nil && c.expectedErrContains != "" {
-			if !strings.Contains(err.Error(), c.expectedErrContains) {
-				t.Errorf("Expected err to contain '%s' but was: %q", c.expectedErrContains, err)
-			}
-		}
-
-		if c.expectedErrContains == "" {
-			if cfg.ClientID != c.expectedConfig.ClientID {
-				t.Errorf("Expected cfg.ClientID to be '%s' but was: %s", c.expectedConfig.ClientID, cfg.ClientID)
-			}
-		}
-
-		cfg = Config{}
+		require.NoError(t, err)
+		require.Equal(t, c.expectedConfig.ClientID, cfg.ClientID)
 	}
 }
 
@@ -299,9 +282,7 @@ func generateCertificateFile() (string, error) {
 
 func TestConfigValidate(t *testing.T) {
 	randomFile, _, err := generateRandomFile()
-	if err != nil {
-		t.Errorf("Unable to generate temporary file for test: %q", err)
-	}
+	require.NoError(t, err)
 	defer deleteFile(t, randomFile)
 
 	cases := []struct {
@@ -359,9 +340,7 @@ func TestConfigValidate(t *testing.T) {
 		c.config.RedisURI = "redis://127.0.0.1:6379/0"
 		c.config.AzureADMaxGroupCount = 50
 		err := c.config.Validate()
-		if !strings.Contains(err.Error(), c.expectedErrContains) {
-			t.Errorf("Expected error to contain '%s' but was: %q", c.expectedErrContains, err)
-		}
+		require.ErrorContains(t, err, c.expectedErrContains)
 	}
 }
 

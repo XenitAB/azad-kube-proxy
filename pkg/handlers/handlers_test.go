@@ -11,7 +11,6 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -20,6 +19,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
+	"github.com/stretchr/testify/require"
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"github.com/xenitab/azad-kube-proxy/pkg/health"
@@ -38,9 +38,7 @@ func TestNewHandlersClient(t *testing.T) {
 	fakeUserClient := newFakeUserClient("", "", nil, nil)
 	fakeHealthClient := newFakeHealthClient(true, nil, true, nil)
 	fakeURL, err := url.Parse("https://fake-url")
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
-	}
+	require.NoError(t, err)
 
 	cfg := config.Config{
 		TenantID: tenantID,
@@ -50,9 +48,7 @@ func TestNewHandlersClient(t *testing.T) {
 	}
 
 	_, err = NewHandlersClient(ctx, cfg, fakeCacheClient, fakeUserClient, fakeHealthClient)
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
-	}
+	require.NoError(t, err)
 }
 
 func TestReadinessHandler(t *testing.T) {
@@ -60,14 +56,10 @@ func TestReadinessHandler(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	req, err := http.NewRequest("GET", "/readyz", nil)
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
-	}
+	require.NoError(t, err)
 
 	fakeURL, err := url.Parse("https://fake-url")
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
-	}
+	require.NoError(t, err)
 
 	cfg := config.Config{
 		TenantID: tenantID,
@@ -98,25 +90,14 @@ func TestReadinessHandler(t *testing.T) {
 
 	for _, c := range cases {
 		proxyHandlers, err := NewHandlersClient(ctx, cfg, fakeCacheClient, fakeUserClient, c.healthClient)
-		if err != nil {
-			t.Errorf("Expected err to be nil but it was %q", err)
-		}
+		require.NoError(t, err)
 
 		rr := httptest.NewRecorder()
 		router := mux.NewRouter()
 		router.HandleFunc("/readyz", proxyHandlers.ReadinessHandler(ctx)).Methods("GET")
 		router.ServeHTTP(rr, req)
-
-		// Check the status code is what we expect.
-		if rr.Code != c.expectedResCode {
-			t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, c.expectedResCode)
-		}
-
-		// Check the response body is what we expect.
-		if rr.Body.String() != c.expectedString {
-			t.Errorf("handler returned unexpected body: got %v want %v",
-				rr.Body.String(), c.expectedString)
-		}
+		require.Equal(t, c.expectedResCode, rr.Code)
+		require.Equal(t, c.expectedString, rr.Body.String())
 	}
 }
 
@@ -125,14 +106,10 @@ func TestLivenessHandler(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	req, err := http.NewRequest("GET", "/healthz", nil)
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
-	}
+	require.NoError(t, err)
 
 	fakeURL, err := url.Parse("https://fake-url")
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
-	}
+	require.NoError(t, err)
 
 	cfg := config.Config{
 		TenantID: tenantID,
@@ -163,25 +140,14 @@ func TestLivenessHandler(t *testing.T) {
 
 	for _, c := range cases {
 		proxyHandlers, err := NewHandlersClient(ctx, cfg, fakeCacheClient, fakeUserClient, c.healthClient)
-		if err != nil {
-			t.Errorf("Expected err to be nil but it was %q", err)
-		}
+		require.NoError(t, err)
 
 		rr := httptest.NewRecorder()
 		router := mux.NewRouter()
 		router.HandleFunc("/healthz", proxyHandlers.LivenessHandler(ctx)).Methods("GET")
 		router.ServeHTTP(rr, req)
-
-		// Check the status code is what we expect.
-		if rr.Code != c.expectedResCode {
-			t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, c.expectedResCode)
-		}
-
-		// Check the response body is what we expect.
-		if rr.Body.String() != c.expectedString {
-			t.Errorf("handler returned unexpected body: got %v want %v",
-				rr.Body.String(), c.expectedString)
-		}
+		require.Equal(t, c.expectedResCode, rr.Code)
+		require.Equal(t, c.expectedString, rr.Body.String())
 	}
 }
 
@@ -196,14 +162,10 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	token, err := getAccessToken(ctx, tenantID, spClientID, spClientSecret, fmt.Sprintf("%s/.default", spResource))
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
-	}
+	require.NoError(t, err)
 
 	memCacheClient, err := cache.NewMemoryCache(5*time.Minute, 10*time.Minute)
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
-	}
+	require.NoError(t, err)
 	fakeCacheClient := newFakeCacheClient("", "", nil, false, nil)
 	fakeUserClient := newFakeUserClient("", "", nil, nil)
 	fakeHealthClient := newFakeHealthClient(true, nil, true, nil)
@@ -213,9 +175,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 	}))
 	defer fakeBackend.Close()
 	fakeBackendURL, err := url.Parse(fakeBackend.URL)
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
-	}
+	require.NoError(t, err)
 
 	cfg := config.Config{
 		ClientID:             clientID,
@@ -523,9 +483,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 		}
 
 		proxyHandlers, err := NewHandlersClient(ctx, c.config, c.cacheClient, c.userClient, fakeHealthClient)
-		if err != nil {
-			t.Errorf("Expected err to be nil but it was %q", err)
-		}
+		require.NoError(t, err)
 
 		proxy := httputil.NewSingleHostReverseProxy(c.config.KubernetesConfig.URL)
 		proxy.ErrorHandler = proxyHandlers.ErrorHandler(ctx)
@@ -536,19 +494,12 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 		router.PathPrefix("/").Handler(oidcHandler)
 
 		router.ServeHTTP(rr, c.request)
+		require.Equal(t, c.expectedResCode, rr.Code)
 
-		if rr.Code != c.expectedResCode {
-			t.Errorf("Handler returned unexpected status code.\nExpected: %d\nActual:   %d", c.expectedResCode, rr.Code)
-		}
-
-		if rr.Body.String() != c.expectedResBody && c.expectedErrContains == "" {
-			t.Errorf("Handler returned unexpected body.\nExpected: %s\nActual:   %s", c.expectedResBody, rr.Body.String())
-		}
-
-		if c.expectedErrContains != "" {
-			if !strings.Contains(rr.Body.String(), c.expectedErrContains) {
-				t.Errorf("Handler returned unexpected body.\nExpected: %s\nActual:   %s", c.expectedErrContains, rr.Body.String())
-			}
+		if c.expectedErrContains == "" {
+			require.Equal(t, c.expectedResBody, rr.Body.String())
+		} else {
+			require.Contains(t, rr.Body.String(), c.expectedErrContains)
 		}
 	}
 }

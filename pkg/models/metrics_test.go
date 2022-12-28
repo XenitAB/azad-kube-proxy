@@ -1,53 +1,47 @@
 package models
 
 import (
-	"errors"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetMetrics(t *testing.T) {
 	cases := []struct {
-		metricsString   string
-		expectedMetrics Metrics
-		expectedErr     error
+		metricsString       string
+		expectedMetrics     Metrics
+		expectedErrContains string
 	}{
 		{
-			metricsString:   "NONE",
-			expectedMetrics: NoneMetrics,
-			expectedErr:     nil,
+			metricsString:       "NONE",
+			expectedMetrics:     NoneMetrics,
+			expectedErrContains: "",
 		},
 		{
-			metricsString:   "PROMETHEUS",
-			expectedMetrics: PrometheusMetrics,
-			expectedErr:     nil,
+			metricsString:       "PROMETHEUS",
+			expectedMetrics:     PrometheusMetrics,
+			expectedErrContains: "",
 		},
 		{
-			metricsString:   "",
-			expectedMetrics: "",
-			expectedErr:     errors.New("Unknown metrics ''. Supported engines are: NONE or PROMETHEUS"),
+			metricsString:       "",
+			expectedMetrics:     "",
+			expectedErrContains: "Unknown metrics ''. Supported engines are: NONE or PROMETHEUS",
 		},
 		{
-			metricsString:   "DUMMY",
-			expectedMetrics: "",
-			expectedErr:     errors.New("Unknown metrics 'DUMMY'. Supported engines are: NONE or PROMETHEUS"),
+			metricsString:       "DUMMY",
+			expectedMetrics:     "",
+			expectedErrContains: "Unknown metrics 'DUMMY'. Supported engines are: NONE or PROMETHEUS",
 		},
 	}
 
 	for _, c := range cases {
 		resMetrics, err := GetMetrics(c.metricsString)
-
-		if resMetrics != c.expectedMetrics && c.expectedErr == nil {
-			t.Errorf("Expected cacheEngine (%s) was not returned: %s", c.expectedMetrics, resMetrics)
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+			continue
 		}
 
-		if err != nil && c.expectedErr == nil {
-			t.Errorf("Expected err to be nil but it was %q", err)
-		}
-
-		if c.expectedErr != nil {
-			if err.Error() != c.expectedErr.Error() {
-				t.Errorf("Expected err to be %q but it was %q", c.expectedErr, err)
-			}
-		}
+		require.NoError(t, err)
+		require.Equal(t, c.expectedMetrics, resMetrics)
 	}
 }

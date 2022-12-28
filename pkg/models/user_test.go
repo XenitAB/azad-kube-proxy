@@ -1,10 +1,9 @@
 package models
 
 import (
-	"errors"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMarshalBinary(t *testing.T) {
@@ -12,22 +11,14 @@ func TestMarshalBinary(t *testing.T) {
 
 	for _, c := range userCases {
 		response, err := c.MarshalBinary()
-		if c.expectedString != string(response) {
-			t.Errorf("User case: Expected response was not returned.\nExpected: %s\nActual:   %s", c.expectedString, response)
-		}
-		if err != nil {
-			t.Errorf("User case: Did not expect error: %q", err)
-		}
+		require.NoError(t, err)
+		require.Equal(t, c.expectedString, string(response))
 	}
 
 	for _, c := range groupCases {
 		response, err := c.MarshalBinary()
-		if c.expectedString != string(response) {
-			t.Errorf("Group case: Expected response was not returned.\nExpected: %s\nActual:   %s", c.expectedString, response)
-		}
-		if err != nil {
-			t.Errorf("Group case: Did not expect error: %q", err)
-		}
+		require.NoError(t, err)
+		require.Equal(t, c.expectedString, string(response))
 	}
 }
 
@@ -37,23 +28,15 @@ func TestUnmarshalBinary(t *testing.T) {
 	for _, c := range userCases {
 		user := User{}
 		err := user.UnmarshalBinary([]byte(c.expectedString))
-		if !cmp.Equal(c.User, user) {
-			t.Errorf("User case: Expected response was not returned.\nExpected: %s\nActual:   %s", c.User, user)
-		}
-		if err != nil {
-			t.Errorf("User case: Did not expect error: %q", err)
-		}
+		require.NoError(t, err)
+		require.Equal(t, c.User, user)
 	}
 
 	for _, c := range groupCases {
 		group := Group{}
 		err := group.UnmarshalBinary([]byte(c.expectedString))
-		if !cmp.Equal(c.Group, group) {
-			t.Errorf("Group case: Expected response was not returned.\nExpected: %s\nActual:   %s", c.Group, group)
-		}
-		if err != nil {
-			t.Errorf("Group case: Did not expect error: %q", err)
-		}
+		require.NoError(t, err)
+		require.Equal(t, c.Group, group)
 	}
 }
 
@@ -138,45 +121,38 @@ func TestGetGroupIdentifier(t *testing.T) {
 	cases := []struct {
 		groupIdentifierString   string
 		expectedGroupIdentifier GroupIdentifier
-		expectedErr             error
+		expectedErrContains     string
 	}{
 		{
 			groupIdentifierString:   "NAME",
 			expectedGroupIdentifier: NameGroupIdentifier,
-			expectedErr:             nil,
+			expectedErrContains:     "",
 		},
 		{
 			groupIdentifierString:   "OBJECTID",
 			expectedGroupIdentifier: ObjectIDGroupIdentifier,
-			expectedErr:             nil,
+			expectedErrContains:     "",
 		},
 		{
 			groupIdentifierString:   "",
 			expectedGroupIdentifier: "",
-			expectedErr:             errors.New("Unknown group identifier ''. Supported identifiers are: NAME or OBJECTID"),
+			expectedErrContains:     "Unknown group identifier ''. Supported identifiers are: NAME or OBJECTID",
 		},
 		{
 			groupIdentifierString:   "DUMMY",
 			expectedGroupIdentifier: "",
-			expectedErr:             errors.New("Unknown group identifier 'DUMMY'. Supported identifiers are: NAME or OBJECTID"),
+			expectedErrContains:     "Unknown group identifier 'DUMMY'. Supported identifiers are: NAME or OBJECTID",
 		},
 	}
 
 	for _, c := range cases {
 		resGroupIdentifier, err := GetGroupIdentifier(c.groupIdentifierString)
-
-		if resGroupIdentifier != c.expectedGroupIdentifier && c.expectedErr == nil {
-			t.Errorf("Expected group identifier (%s) was not returned: %s", c.expectedGroupIdentifier, resGroupIdentifier)
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+			continue
 		}
 
-		if err != nil && c.expectedErr == nil {
-			t.Errorf("Expected err to be nil but it was %q", err)
-		}
-
-		if c.expectedErr != nil {
-			if err.Error() != c.expectedErr.Error() {
-				t.Errorf("Expected err to be %q but it was %q", c.expectedErr, err)
-			}
-		}
+		require.NoError(t, err)
+		require.Equal(t, c.expectedGroupIdentifier, resGroupIdentifier)
 	}
 }

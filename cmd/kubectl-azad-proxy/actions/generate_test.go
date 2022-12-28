@@ -204,6 +204,8 @@ func TestGenerate(t *testing.T) {
 			continue
 		}
 
+		require.NoError(t, err)
+
 		kubeCfg, err := k8sclientcmd.LoadFromFile(c.GenerateClient.kubeConfig)
 		require.NoError(t, err)
 		require.Equal(t, fmt.Sprintf("%s://%s", c.GenerateClient.proxyURL.Scheme, c.GenerateClient.proxyURL.Host), kubeCfg.Clusters[c.GenerateClient.clusterName].Server)
