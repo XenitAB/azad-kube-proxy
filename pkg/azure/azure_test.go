@@ -3,11 +3,11 @@ package azure
 import (
 	"context"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/require"
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
@@ -20,9 +20,7 @@ func TestNewAzureClient(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	memCache, err := cache.NewCache(ctx, models.MemoryCacheEngine, config.Config{})
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
-	}
+	require.NoError(t, err)
 
 	cases := []struct {
 		clientID            string
@@ -68,15 +66,11 @@ func TestNewAzureClient(t *testing.T) {
 
 	for _, c := range cases {
 		_, err := NewAzureClient(ctx, c.clientID, c.clientSecret, c.tenantID, c.graphFilter, c.cacheClient)
-		if err != nil && len(c.expectedErrContains) == 0 {
-			t.Errorf("Expected err to be nil but it was %q", err)
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+			continue
 		}
-
-		if len(c.expectedErrContains) > 0 {
-			if !strings.Contains(err.Error(), c.expectedErrContains) {
-				t.Errorf("Expected err to contain %q but it was %q", c.expectedErrContains, err)
-			}
-		}
+		require.NoError(t, err)
 	}
 }
 
@@ -88,14 +82,10 @@ func TestValid(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	memCache, err := cache.NewCache(ctx, models.MemoryCacheEngine, config.Config{})
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
-	}
+	require.NoError(t, err)
 
 	azureClient, err := NewAzureClient(ctx, clientID, clientSecret, tenantID, graphFilter, memCache)
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
-	}
+	require.NoError(t, err)
 
 	cases := []struct {
 		client      *Client
@@ -109,9 +99,7 @@ func TestValid(t *testing.T) {
 
 	for _, c := range cases {
 		valid := c.client.Valid(ctx)
-		if !valid {
-			t.Errorf("Expected valid to be %T but it was %T", c.expectedRes, valid)
-		}
+		require.True(t, valid)
 	}
 }
 
@@ -125,14 +113,10 @@ func TestGetUserGroups(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	memCache, err := cache.NewCache(ctx, models.MemoryCacheEngine, config.Config{})
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
-	}
+	require.NoError(t, err)
 
 	azureClient, err := NewAzureClient(ctx, clientID, clientSecret, tenantID, graphFilter, memCache)
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
-	}
+	require.NoError(t, err)
 
 	cases := []struct {
 		objectID            string
@@ -163,22 +147,16 @@ func TestGetUserGroups(t *testing.T) {
 
 	for _, c := range cases {
 		_, err := azureClient.GetUserGroups(ctx, c.objectID, c.userType)
-		if err != nil && len(c.expectedErrContains) == 0 {
-			t.Errorf("Expected err to be nil but it was %q", err)
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+			continue
 		}
-
-		if len(c.expectedErrContains) > 0 {
-			if !strings.Contains(err.Error(), c.expectedErrContains) {
-				t.Errorf("Expected err to contain %q but it was %q", c.expectedErrContains, err)
-			}
-		}
+		require.NoError(t, err)
 	}
 
 	emptyAzureClient := Client{}
 	_, err = emptyAzureClient.GetUserGroups(ctx, "", "FAKE")
-	if !strings.Contains(err.Error(), "Unknown userType: FAKE") {
-		t.Errorf("Expected err to contain 'Unknown userType: FAKE' but was %q", err)
-	}
+	require.ErrorContains(t, err, "Unknown userType: FAKE")
 }
 
 func TestStartSyncGroups(t *testing.T) {
@@ -189,19 +167,13 @@ func TestStartSyncGroups(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	memCache, err := cache.NewCache(ctx, models.MemoryCacheEngine, config.Config{})
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
-	}
+	require.NoError(t, err)
 
 	azureClient, err := NewAzureClient(ctx, clientID, clientSecret, tenantID, graphFilter, memCache)
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
-	}
+	require.NoError(t, err)
 
 	groupSyncTicker, groupSyncChan, err := azureClient.StartSyncGroups(ctx, 1*time.Second)
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
-	}
+	require.NoError(t, err)
 	time.Sleep(2 * time.Second)
 	var stopGroupSync func() = func() {
 		groupSyncTicker.Stop()
