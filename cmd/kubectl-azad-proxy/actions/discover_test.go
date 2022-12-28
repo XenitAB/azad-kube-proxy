@@ -3,11 +3,11 @@ package actions
 import (
 	"bytes"
 	"context"
-	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
 	hamiltonMsgraph "github.com/manicminer/hamilton/msgraph"
+	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v2"
 )
 
@@ -95,24 +95,12 @@ func TestNewDiscoverClient(t *testing.T) {
 		c.cliApp.Writer = &c.outBuffer
 		c.cliApp.ErrWriter = &c.errBuffer
 		err := c.cliApp.Run(c.args)
-		if err != nil && c.expectedErrContains == "" {
-			t.Errorf("Expected err to be nil: %q", err)
-		}
 
-		if err == nil && c.expectedErrContains != "" {
-			t.Errorf("Expected err to contain '%s' but was nil", c.expectedErrContains)
-		}
-
-		if err != nil && c.expectedErrContains != "" {
-			if !strings.Contains(err.Error(), c.expectedErrContains) {
-				t.Errorf("Expected err to contain '%s' but was: %q", c.expectedErrContains, err)
-			}
-		}
-
-		if c.expectedErrContains == "" {
-			if client.outputType != c.expectedConfig.outputType {
-				t.Errorf("Expected client.clusterName to be '%s' but was: %s", c.expectedConfig.outputType, client.outputType)
-			}
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+		} else {
+			require.NoError(t, err)
+			require.Equal(t, c.expectedConfig.outputType, client.outputType)
 		}
 
 		client = &DiscoverClient{}
@@ -175,25 +163,13 @@ func TestDiscover(t *testing.T) {
 
 	for _, c := range cases {
 		rawRes, err := c.DiscoverClient.Discover(ctx)
-		if err != nil && c.expectedErrContains == "" {
-			t.Errorf("Expected err to be nil: %q", err)
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+			continue
 		}
 
-		if err == nil && c.expectedErrContains != "" {
-			t.Errorf("Expected err to contain '%s' but was nil", c.expectedErrContains)
-		}
-
-		if err != nil && c.expectedErrContains != "" {
-			if !strings.Contains(err.Error(), c.expectedErrContains) {
-				t.Errorf("Expected err to contain '%s' but was: %q", c.expectedErrContains, err)
-			}
-		}
-
-		if c.expectedErrContains == "" {
-			if !strings.Contains(rawRes, c.expectedOutputContains) {
-				t.Errorf("Expected output to contain '%s' but was: %s", c.expectedErrContains, rawRes)
-			}
-		}
+		require.NoError(t, err)
+		require.Contains(t, rawRes, c.expectedOutputContains)
 	}
 }
 
@@ -307,15 +283,9 @@ func TestGetDiscoverData(t *testing.T) {
 	for _, c := range cases {
 		discoverData := getDiscoverData(c.clusterApps)
 		for i, d := range discoverData {
-			if c.expectedOutput[i].ClusterName != d.ClusterName {
-				t.Errorf("Expected output cluster name to be '%s' but was: %s", c.expectedOutput[i].ClusterName, d.ClusterName)
-			}
-			if c.expectedOutput[i].Resource != d.Resource {
-				t.Errorf("Expected output resource to be '%s' but was: %s", c.expectedOutput[i].Resource, d.Resource)
-			}
-			if c.expectedOutput[i].ProxyURL != d.ProxyURL {
-				t.Errorf("Expected output proxy url to be '%s' but was: %s", c.expectedOutput[i].ProxyURL, d.ProxyURL)
-			}
+			require.Equal(t, c.expectedOutput[i].ClusterName, d.ClusterName)
+			require.Equal(t, c.expectedOutput[i].Resource, d.Resource)
+			require.Equal(t, c.expectedOutput[i].ProxyURL, d.ProxyURL)
 		}
 	}
 }

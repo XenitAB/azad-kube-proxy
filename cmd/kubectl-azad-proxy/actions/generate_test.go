@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -95,34 +94,16 @@ func TestNewGenerateClient(t *testing.T) {
 		c.cliApp.Writer = &c.outBuffer
 		c.cliApp.ErrWriter = &c.errBuffer
 		err := c.cliApp.Run(c.args)
-		if err != nil && c.expectedErrContains == "" {
-			t.Errorf("Expected err to be nil: %q", err)
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+		} else {
+			require.NoError(t, err)
+			require.Equal(t, c.expectedConfig.clusterName, client.clusterName)
+			require.Equal(t, c.expectedConfig.proxyURL.Host, client.proxyURL.Host)
+			require.Equal(t, c.expectedConfig.proxyURL.Scheme, client.proxyURL.Scheme)
+			require.Equal(t, c.expectedConfig.resource, client.resource)
 		}
 
-		if err == nil && c.expectedErrContains != "" {
-			t.Errorf("Expected err to contain '%s' but was nil", c.expectedErrContains)
-		}
-
-		if err != nil && c.expectedErrContains != "" {
-			if !strings.Contains(err.Error(), c.expectedErrContains) {
-				t.Errorf("Expected err to contain '%s' but was: %q", c.expectedErrContains, err)
-			}
-		}
-
-		if c.expectedErrContains == "" {
-			if client.clusterName != c.expectedConfig.clusterName {
-				t.Errorf("Expected client.clusterName to be '%s' but was: %s", c.expectedConfig.clusterName, client.clusterName)
-			}
-			if client.proxyURL.Host != c.expectedConfig.proxyURL.Host {
-				t.Errorf("Expected client.proxyURL.Host to be '%s' but was: %s", c.expectedConfig.proxyURL.Host, client.proxyURL.Host)
-			}
-			if client.proxyURL.Scheme != c.expectedConfig.proxyURL.Scheme {
-				t.Errorf("Expected client.proxyURL.Scheme to be '%s' but was: %s", c.expectedConfig.proxyURL.Scheme, client.proxyURL.Scheme)
-			}
-			if client.resource != c.expectedConfig.resource {
-				t.Errorf("Expected client.resource to be '%s' but was: %s", c.expectedConfig.resource, client.resource)
-			}
-		}
 		client = &GenerateClient{}
 	}
 }
@@ -153,27 +134,13 @@ func TestMergeGenerateClient(t *testing.T) {
 		insecureSkipVerify: true,
 	})
 
-	if client.clusterName != "test2" {
-		t.Errorf("Expected client.clusterName to be 'test2' but was: %s", client.clusterName)
-	}
-	if client.proxyURL.String() != "https://www.example.com" {
-		t.Errorf("Expected client.proxyURL.String() to be 'https://www.example.com' but was: %s", client.proxyURL.String())
-	}
-	if client.resource != "https://fake2" {
-		t.Errorf("Expected client.resource to be 'https://fake2' but was: %s", client.resource)
-	}
-	if client.kubeConfig != "/tmp2/kubeconfig" {
-		t.Errorf("Expected client.kubeConfig to be '/tmp2/kubeconfig' but was: %s", client.kubeConfig)
-	}
-	if client.tokenCacheDir != "/tmp2/tokencache" {
-		t.Errorf("Expected client.tokenCache to be '/tmp2/tokencache' but was: %s", client.tokenCacheDir)
-	}
-	if client.overwrite != true {
-		t.Errorf("Expected client.overwrite to be 'true' but was: %t", client.overwrite)
-	}
-	if client.insecureSkipVerify != true {
-		t.Errorf("Expected client.insecureSkipVerify to be 'true' but was: %t", client.insecureSkipVerify)
-	}
+	require.Equal(t, "test2", client.clusterName)
+	require.Equal(t, "https://www.example.com", client.proxyURL.String())
+	require.Equal(t, "https://fake2", client.resource)
+	require.Equal(t, "/tmp2/kubeconfig", client.kubeConfig)
+	require.Equal(t, "/tmp2/tokencache", client.tokenCacheDir)
+	require.Equal(t, true, client.overwrite)
+	require.Equal(t, true, client.insecureSkipVerify)
 }
 
 func TestGenerate(t *testing.T) {
@@ -232,34 +199,16 @@ func TestGenerate(t *testing.T) {
 		}
 
 		err := c.GenerateClient.Generate(ctx)
-		if err != nil && c.expectedErrContains == "" {
-			t.Errorf("Expected err to be nil: %q", err)
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+			continue
 		}
 
-		if err == nil && c.expectedErrContains != "" {
-			t.Errorf("Expected err to contain '%s' but was nil", c.expectedErrContains)
-		}
+		kubeCfg, err := k8sclientcmd.LoadFromFile(c.GenerateClient.kubeConfig)
+		require.NoError(t, err)
+		require.Equal(t, fmt.Sprintf("%s://%s", c.GenerateClient.proxyURL.Scheme, c.GenerateClient.proxyURL.Host), kubeCfg.Clusters[c.GenerateClient.clusterName].Server)
+		require.NotEmpty(t, kubeCfg.Clusters[c.GenerateClient.clusterName].CertificateAuthorityData)
 
-		if err != nil && c.expectedErrContains != "" {
-			if !strings.Contains(err.Error(), c.expectedErrContains) {
-				t.Errorf("Expected err to contain '%s' but was: %q", c.expectedErrContains, err)
-			}
-		}
-
-		if c.expectedErrContains == "" {
-			kubeCfg, err := k8sclientcmd.LoadFromFile(c.GenerateClient.kubeConfig)
-			if err != nil && c.expectedErrContains == "" {
-				t.Errorf("Expected err to be nil: %q", err)
-			}
-
-			if kubeCfg.Clusters[c.GenerateClient.clusterName].Server != fmt.Sprintf("%s://%s", c.GenerateClient.proxyURL.Scheme, c.GenerateClient.proxyURL.Host) {
-				t.Errorf("Expected kubeCfg.Clusters[c.GenerateClient.clusterName].Server to be '%s' but was: %s", fmt.Sprintf("%s://%s", c.GenerateClient.proxyURL.Scheme, c.GenerateClient.proxyURL.Host), kubeCfg.Clusters[c.GenerateClient.clusterName].Server)
-			}
-
-			if len(kubeCfg.Clusters[c.GenerateClient.clusterName].CertificateAuthorityData) == 0 {
-				t.Errorf("Expected length of kubeCfg.Clusters[c.GenerateClient.clusterName].CertificateAuthorityData to be lager than 0")
-			}
-		}
 	}
 }
 
