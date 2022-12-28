@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
+	"github.com/stretchr/testify/require"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
 )
 
@@ -17,9 +18,7 @@ func TestMiddleware(t *testing.T) {
 	}))
 	defer fakeBackend.Close()
 	fakeBackendURL, err := url.Parse(fakeBackend.URL)
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
-	}
+	require.NoError(t, err)
 
 	cases := []struct {
 		config          config.Config
@@ -210,9 +209,7 @@ func TestMiddleware(t *testing.T) {
 		client := NewCORSClient(c.config)
 
 		req, err := http.NewRequest(c.reqMethod, "/", nil)
-		if err != nil {
-			t.Errorf("Expected err to be nil but it was %q", err)
-		}
+		require.NoError(t, err)
 		req.Host = c.reqHost
 		req.Header.Add("Origin", c.reqOrigin)
 		for k, v := range c.reqHeaders {
@@ -227,16 +224,8 @@ func TestMiddleware(t *testing.T) {
 		router.Use(client.Middleware)
 		router.ServeHTTP(rr, req)
 
-		if rr.Result().Header.Get("Access-Control-Allow-Origin") != c.expectedOrigin {
-			t.Errorf("unexpected Access-Control-Allow-Origin header: got %v want %v", rr.Result().Header.Get("Access-Control-Allow-Origin"), c.expectedOrigin)
-		}
-
-		if rr.Result().Header.Get("Access-Control-Allow-Headers") != c.expectedHeaders {
-			t.Errorf("unexpected Access-Control-Allow-Headers header: got %v want %v", rr.Result().Header.Get("Access-Control-Allow-Headers"), c.expectedHeaders)
-		}
-
-		if rr.Result().Header.Get("Access-Control-Allow-Methods") != c.expectedMethods {
-			t.Errorf("unexpected Access-Control-Allow-Methods header: got %v want %v", rr.Result().Header.Get("Access-Control-Allow-Methods"), c.expectedMethods)
-		}
+		require.Equal(t, c.expectedOrigin, rr.Result().Header.Get("Access-Control-Allow-Origin"))
+		require.Equal(t, c.expectedHeaders, rr.Result().Header.Get("Access-Control-Allow-Headers"))
+		require.Equal(t, c.expectedMethods, rr.Result().Header.Get("Access-Control-Allow-Methods"))
 	}
 }

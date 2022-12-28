@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -75,24 +74,24 @@ func TestNewTokens(t *testing.T) {
 }
 
 func TestGetToken(t *testing.T) {
-	tenantID := getEnvOrSkip(t, "TENANT_ID")
-	clientID := getEnvOrSkip(t, "TEST_USER_SP_CLIENT_ID")
-	clientSecret := getEnvOrSkip(t, "TEST_USER_SP_CLIENT_SECRET")
-	resource := getEnvOrSkip(t, "TEST_USER_SP_RESOURCE")
+	tenantID := testGetEnvOrSkip(t, "TENANT_ID")
+	clientID := testGetEnvOrSkip(t, "TEST_USER_SP_CLIENT_ID")
+	clientSecret := testGetEnvOrSkip(t, "TEST_USER_SP_CLIENT_SECRET")
+	resource := testGetEnvOrSkip(t, "TEST_USER_SP_RESOURCE")
 
-	restoreTenantID := tempChangeEnv("AZURE_TENANT_ID", tenantID)
+	restoreTenantID := testTempChangeEnv(t, "AZURE_TENANT_ID", tenantID)
 	defer restoreTenantID()
 
-	restoreClientID := tempChangeEnv("AZURE_CLIENT_ID", clientID)
+	restoreClientID := testTempChangeEnv(t, "AZURE_CLIENT_ID", clientID)
 	defer restoreClientID()
 
-	restoreClientSecret := tempChangeEnv("AZURE_CLIENT_SECRET", clientSecret)
+	restoreClientSecret := testTempChangeEnv(t, "AZURE_CLIENT_SECRET", clientSecret)
 	defer restoreClientSecret()
 
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	fakeHomeDir := "/home/test-user"
-	restoreHomeDir := tempChangeEnv("HOME", fakeHomeDir)
+	restoreHomeDir := testTempChangeEnv(t, "HOME", fakeHomeDir)
 	defer restoreHomeDir()
 
 	creds := defaultAzureCredentialOptions{
@@ -124,33 +123,24 @@ func TestGetToken(t *testing.T) {
 		Name:                "fake-cluster-1",
 	}
 
-	err = createCacheFile(fakeFile, fakeToken)
-	if err != nil {
-		t.Errorf("Expected err to be nil: %q", err)
-	}
+	testCreateCacheFile(t, fakeFile, fakeToken)
 
 	fakeTokens, err := NewTokens(ctx, fakeDir, creds)
-	if err != nil {
-		t.Errorf("Expected err to be nil: %q", err)
-	}
+	require.NoError(t, err)
 
 	realDir := fmt.Sprintf("%s/real", tmpDir)
 	err = os.Mkdir(realDir, 0700)
 	require.NoError(t, err)
 
 	realTokens, err := NewTokens(ctx, realDir, creds)
-	if err != nil {
-		t.Errorf("Expected err to be nil: %q", err)
-	}
+	require.NoError(t, err)
 
 	realFalseDir := fmt.Sprintf("%s/realfalse", tmpDir)
 	err = os.Mkdir(realFalseDir, 0700)
 	require.NoError(t, err)
 
 	realFalseTokens, err := NewTokens(ctx, realFalseDir, credsFalse)
-	if err != nil {
-		t.Errorf("Expected err to be nil: %q", err)
-	}
+	require.NoError(t, err)
 
 	cases := []struct {
 		tokens              TokensInterface
@@ -180,31 +170,15 @@ func TestGetToken(t *testing.T) {
 
 	for _, c := range cases {
 		token, err := c.tokens.GetToken(ctx, c.clusterName, c.resource)
-		if err != nil && c.expectedErrContains == "" {
-			t.Errorf("Expected err to be nil: %q", err)
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+			continue
 		}
 
-		if err == nil && c.expectedErrContains != "" {
-			t.Errorf("Expected err to contain '%s' but was nil", c.expectedErrContains)
-		}
-
-		if err != nil && c.expectedErrContains != "" {
-			if !strings.Contains(err.Error(), c.expectedErrContains) {
-				t.Errorf("Expected err to contain '%s' but was: %q", c.expectedErrContains, err)
-			}
-		}
-
-		if c.expectedErrContains == "" {
-			if token.Name != c.clusterName {
-				t.Errorf("Expected token.Name to be '%s' but was: %s", c.clusterName, token.Name)
-			}
-			if token.Resource != c.resource {
-				t.Errorf("Expected token.Resource to be '%s' but was: %s", c.resource, token.Resource)
-			}
-			if len(token.Token) == 0 {
-				t.Errorf("Expected token.Token to be larger than 0")
-			}
-		}
+		require.NoError(t, err)
+		require.Equal(t, c.clusterName, token.Name)
+		require.Equal(t, c.resource, token.Resource)
+		require.NotEmpty(t, token.Token)
 	}
 }
 
@@ -265,15 +239,13 @@ func TestTokenExpired(t *testing.T) {
 		},
 	}
 
-	for idx, c := range cases {
+	for _, c := range cases {
 		token := Token{
 			Token:               "fake-token",
 			ExpirationTimestamp: c.expirationTimestamp,
 		}
 
-		if token.expired(c.expiryDelta, c.timeNow) != c.expired {
-			t.Errorf("Expected iteration %d of token.expired() to be '%t'", idx+1, c.expired)
-		}
+		require.Equal(t, c.expired, token.expired(c.expiryDelta, c.timeNow))
 	}
 }
 
@@ -308,41 +280,39 @@ func TestTokenValid(t *testing.T) {
 		},
 	}
 
-	for idx, c := range cases {
-		if c.token.Valid() != c.valid {
-			t.Errorf("Expected iteration %d of token.Valid() to be '%t'", idx+1, c.valid)
-		}
+	for _, c := range cases {
+		require.Equal(t, c.valid, c.token.Valid())
 	}
 }
 
-func tempChangeEnv(key, value string) func() {
+func testTempChangeEnv(t *testing.T, key, value string) func() {
+	t.Helper()
+
 	oldEnv := os.Getenv(key)
 	os.Setenv(key, value)
 	return func() { os.Setenv(key, oldEnv) }
 }
 
-func createCacheFile(path string, cachedTokens interface{}) error {
+func testCreateCacheFile(t *testing.T, path string, cachedTokens interface{}) {
+	t.Helper()
+
 	fileContents, err := json.Marshal(&cachedTokens)
-	if err != nil {
-		return err
-	}
+	require.NoError(t, err)
 
 	err = os.WriteFile(path, fileContents, 0600)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	require.NoError(t, err)
 }
 
-func deleteFile(t *testing.T, file string) {
+func testDeleteFile(t *testing.T, file string) {
+	t.Helper()
+
 	err := os.Remove(file)
-	if err != nil {
-		t.Errorf("Unable to delete file: %q", err)
-	}
+	require.NoError(t, err)
 }
 
-func getEnvOrSkip(t *testing.T, envVar string) string {
+func testGetEnvOrSkip(t *testing.T, envVar string) string {
+	t.Helper()
+
 	v := os.Getenv(envVar)
 	if v == "" {
 		t.Skipf("%s environment variable is empty, skipping.", envVar)

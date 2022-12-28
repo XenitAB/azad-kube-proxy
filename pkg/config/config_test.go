@@ -9,15 +9,14 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"log"
 	"math/big"
 	"os"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v2"
 )
 
@@ -38,7 +37,7 @@ func TestNewConfig(t *testing.T) {
 	}
 
 	for _, envVar := range envVarsToClear {
-		restore := tempUnsetEnv(envVar)
+		restore := testTempUnsetEnv(t, envVar)
 		defer restore()
 	}
 
@@ -57,18 +56,13 @@ func TestNewConfig(t *testing.T) {
 	}
 
 	// Fake certificate
-	certPath, err := generateCertificateFile()
-	if err != nil {
-		t.Errorf("Unable to generate temporary certificate for test: %q", err)
-	}
-	defer deleteFile(t, certPath)
+	certPath := testGenerateCertificateFile(t)
+	defer testDeleteFile(t, certPath)
 
 	// Fake token
-	tokenPath, _, err := generateRandomFile()
-	if err != nil {
-		t.Errorf("Unable to generate temporary file for test: %q", err)
-	}
-	defer deleteFile(t, tokenPath)
+	tokenPath, _, err := testGenerateRandomFile(t)
+	require.NoError(t, err)
+	defer testDeleteFile(t, tokenPath)
 
 	baseArgs := []string{"fake-bin", fmt.Sprintf("--kubernetes-api-ca-cert-path=%s", certPath), fmt.Sprintf("--kubernetes-api-token-path=%s", tokenPath)}
 	baseWorkingArgs := append(baseArgs, "--client-id=00000000-0000-0000-0000-000000000000", "--client-secret=supersecret", "--tenant-id=00000000-0000-0000-0000-000000000000")
@@ -226,83 +220,24 @@ func TestNewConfig(t *testing.T) {
 	}
 
 	for _, c := range cases {
+		cfg = Config{}
 		c.cliApp.Writer = &c.outBuffer
 		c.cliApp.ErrWriter = &c.errBuffer
 		err := c.cliApp.Run(c.args)
-		if err != nil && c.expectedErrContains == "" {
-			t.Errorf("Expected err to be nil: %q", err)
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+			continue
 		}
 
-		if err == nil && c.expectedErrContains != "" {
-			t.Errorf("Expected err to contain '%s' but was nil", c.expectedErrContains)
-		}
-
-		if err != nil && c.expectedErrContains != "" {
-			if !strings.Contains(err.Error(), c.expectedErrContains) {
-				t.Errorf("Expected err to contain '%s' but was: %q", c.expectedErrContains, err)
-			}
-		}
-
-		if c.expectedErrContains == "" {
-			if cfg.ClientID != c.expectedConfig.ClientID {
-				t.Errorf("Expected cfg.ClientID to be '%s' but was: %s", c.expectedConfig.ClientID, cfg.ClientID)
-			}
-		}
-
-		cfg = Config{}
+		require.NoError(t, err)
+		require.Equal(t, c.expectedConfig.ClientID, cfg.ClientID)
 	}
-}
-
-func generateCertificateFile() (string, error) {
-	timestamp := strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
-	filename := fmt.Sprintf("test-cert-%s.pem", timestamp)
-	priv, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	template := x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject: pkix.Name{
-			Organization: []string{"Testing"},
-		},
-		NotBefore: time.Now(),
-		NotAfter:  time.Now().Add(time.Hour * 24 * 180),
-
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		BasicConstraintsValid: true,
-	}
-
-	certBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
-	if err != nil {
-		return "", fmt.Errorf("Failed to create certificate: %v", err)
-	}
-
-	certOut, err := os.Create(filename)
-	if err != nil {
-		return "", fmt.Errorf("Failed to open %s for writing: %v", filename, err)
-	}
-
-	err = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
-	if err != nil {
-		return "", fmt.Errorf("Failed to write data to %s: %v", filename, err)
-	}
-
-	err = certOut.Close()
-	if err != nil {
-		return "", fmt.Errorf("Error closing %s: %v", filename, err)
-	}
-
-	return filename, nil
 }
 
 func TestConfigValidate(t *testing.T) {
-	randomFile, _, err := generateRandomFile()
-	if err != nil {
-		t.Errorf("Unable to generate temporary file for test: %q", err)
-	}
-	defer deleteFile(t, randomFile)
+	randomFile, _, err := testGenerateRandomFile(t)
+	require.NoError(t, err)
+	defer testDeleteFile(t, randomFile)
 
 	cases := []struct {
 		config              Config
@@ -359,33 +294,69 @@ func TestConfigValidate(t *testing.T) {
 		c.config.RedisURI = "redis://127.0.0.1:6379/0"
 		c.config.AzureADMaxGroupCount = 50
 		err := c.config.Validate()
-		if !strings.Contains(err.Error(), c.expectedErrContains) {
-			t.Errorf("Expected error to contain '%s' but was: %q", c.expectedErrContains, err)
-		}
+		require.ErrorContains(t, err, c.expectedErrContains)
 	}
 }
 
-func generateRandomFile() (string, string, error) {
+func testGenerateCertificateFile(t *testing.T) string {
+	t.Helper()
+
+	timestamp := strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
+	filename := fmt.Sprintf("test-cert-%s.pem", timestamp)
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			Organization: []string{"Testing"},
+		},
+		NotBefore: time.Now(),
+		NotAfter:  time.Now().Add(time.Hour * 24 * 180),
+
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+	}
+
+	certBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	require.NoError(t, err)
+
+	certOut, err := os.Create(filename)
+	require.NoError(t, err)
+
+	err = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
+	require.NoError(t, err)
+
+	err = certOut.Close()
+	require.NoError(t, err)
+
+	return filename
+}
+
+func testGenerateRandomFile(t *testing.T) (string, string, error) {
+	t.Helper()
+
 	timestamp := strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
 	filename := fmt.Sprintf("test-random-%s.pem", timestamp)
 	content := []byte(timestamp)
 
 	err := os.WriteFile(filename, content, 0600)
-	if err != nil {
-		return "", "", fmt.Errorf("Failed to create %s: %v", filename, err)
-	}
+	require.NoError(t, err)
 
 	return filename, timestamp, nil
 }
 
-func deleteFile(t *testing.T, file string) {
+func testDeleteFile(t *testing.T, file string) {
+	t.Helper()
+
 	err := os.Remove(file)
-	if err != nil {
-		t.Errorf("Unable to delete file: %q", err)
-	}
+	require.NoError(t, err)
 }
 
-func tempUnsetEnv(key string) func() {
+func testTempUnsetEnv(t *testing.T, key string) func() {
+	t.Helper()
+
 	oldEnv := os.Getenv(key)
 	os.Unsetenv(key)
 	return func() { os.Setenv(key, oldEnv) }

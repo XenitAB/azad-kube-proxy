@@ -3,11 +3,11 @@ package actions
 import (
 	"bytes"
 	"context"
-	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
 	hamiltonMsgraph "github.com/manicminer/hamilton/msgraph"
+	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v2"
 )
 
@@ -15,7 +15,7 @@ func TestNewDiscoverClient(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 	client := &DiscoverClient{}
 
-	restoreAzureCLIAuth := tempChangeEnv("EXCLUDE_AZURE_CLI_AUTH", "true")
+	restoreAzureCLIAuth := testTempChangeEnv(t, "EXCLUDE_AZURE_CLI_AUTH", "true")
 	defer restoreAzureCLIAuth()
 
 	app := &cli.App{
@@ -92,38 +92,26 @@ func TestNewDiscoverClient(t *testing.T) {
 	}
 
 	for _, c := range cases {
+		client = &DiscoverClient{}
 		c.cliApp.Writer = &c.outBuffer
 		c.cliApp.ErrWriter = &c.errBuffer
 		err := c.cliApp.Run(c.args)
-		if err != nil && c.expectedErrContains == "" {
-			t.Errorf("Expected err to be nil: %q", err)
+
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+			continue
 		}
 
-		if err == nil && c.expectedErrContains != "" {
-			t.Errorf("Expected err to contain '%s' but was nil", c.expectedErrContains)
-		}
-
-		if err != nil && c.expectedErrContains != "" {
-			if !strings.Contains(err.Error(), c.expectedErrContains) {
-				t.Errorf("Expected err to contain '%s' but was: %q", c.expectedErrContains, err)
-			}
-		}
-
-		if c.expectedErrContains == "" {
-			if client.outputType != c.expectedConfig.outputType {
-				t.Errorf("Expected client.clusterName to be '%s' but was: %s", c.expectedConfig.outputType, client.outputType)
-			}
-		}
-
-		client = &DiscoverClient{}
+		require.NoError(t, err)
+		require.Equal(t, c.expectedConfig.outputType, client.outputType)
 	}
 }
 
 func TestDiscover(t *testing.T) {
-	tenantID := getEnvOrSkip(t, "TENANT_ID")
-	clientID := getEnvOrSkip(t, "CLIENT_ID")
-	clientSecret := getEnvOrSkip(t, "CLIENT_SECRET")
-	resource := getEnvOrSkip(t, "TEST_USER_SP_RESOURCE")
+	tenantID := testGetEnvOrSkip(t, "TENANT_ID")
+	clientID := testGetEnvOrSkip(t, "CLIENT_ID")
+	clientSecret := testGetEnvOrSkip(t, "CLIENT_SECRET")
+	resource := testGetEnvOrSkip(t, "TEST_USER_SP_RESOURCE")
 
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
@@ -175,25 +163,13 @@ func TestDiscover(t *testing.T) {
 
 	for _, c := range cases {
 		rawRes, err := c.DiscoverClient.Discover(ctx)
-		if err != nil && c.expectedErrContains == "" {
-			t.Errorf("Expected err to be nil: %q", err)
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+			continue
 		}
 
-		if err == nil && c.expectedErrContains != "" {
-			t.Errorf("Expected err to contain '%s' but was nil", c.expectedErrContains)
-		}
-
-		if err != nil && c.expectedErrContains != "" {
-			if !strings.Contains(err.Error(), c.expectedErrContains) {
-				t.Errorf("Expected err to contain '%s' but was: %q", c.expectedErrContains, err)
-			}
-		}
-
-		if c.expectedErrContains == "" {
-			if !strings.Contains(rawRes, c.expectedOutputContains) {
-				t.Errorf("Expected output to contain '%s' but was: %s", c.expectedErrContains, rawRes)
-			}
-		}
+		require.NoError(t, err)
+		require.Contains(t, rawRes, c.expectedOutputContains)
 	}
 }
 
@@ -205,9 +181,9 @@ func TestGetDiscoverData(t *testing.T) {
 		{
 			clusterApps: []hamiltonMsgraph.Application{
 				{
-					DisplayName:    toStringPtr("fake"),
-					IdentifierUris: toStringArrayPtr([]string{"https://fake"}),
-					Tags:           toStringArrayPtr([]string{"azad-kube-proxy"}),
+					DisplayName:    testToPtr(t, "fake"),
+					IdentifierUris: testToPtr(t, []string{"https://fake"}),
+					Tags:           testToPtr(t, []string{"azad-kube-proxy"}),
 				},
 			},
 			expectedOutput: []discover{
@@ -221,14 +197,14 @@ func TestGetDiscoverData(t *testing.T) {
 		{
 			clusterApps: []hamiltonMsgraph.Application{
 				{
-					DisplayName:    toStringPtr("fake"),
-					IdentifierUris: toStringArrayPtr([]string{"https://fake"}),
-					Tags:           toStringArrayPtr([]string{"azad-kube-proxy"}),
+					DisplayName:    testToPtr(t, "fake"),
+					IdentifierUris: testToPtr(t, []string{"https://fake"}),
+					Tags:           testToPtr(t, []string{"azad-kube-proxy"}),
 				},
 				{
-					DisplayName:    toStringPtr("fake2"),
-					IdentifierUris: toStringArrayPtr([]string{"https://fake2"}),
-					Tags:           toStringArrayPtr([]string{"azad-kube-proxy"}),
+					DisplayName:    testToPtr(t, "fake2"),
+					IdentifierUris: testToPtr(t, []string{"https://fake2"}),
+					Tags:           testToPtr(t, []string{"azad-kube-proxy"}),
 				},
 			},
 			expectedOutput: []discover{
@@ -247,9 +223,9 @@ func TestGetDiscoverData(t *testing.T) {
 		{
 			clusterApps: []hamiltonMsgraph.Application{
 				{
-					DisplayName:    toStringPtr("fake"),
-					IdentifierUris: toStringArrayPtr([]string{"https://fake"}),
-					Tags:           toStringArrayPtr([]string{"azad-kube-proxy", "cluster_name:newfake"}),
+					DisplayName:    testToPtr(t, "fake"),
+					IdentifierUris: testToPtr(t, []string{"https://fake"}),
+					Tags:           testToPtr(t, []string{"azad-kube-proxy", "cluster_name:newfake"}),
 				},
 			},
 			expectedOutput: []discover{
@@ -263,14 +239,14 @@ func TestGetDiscoverData(t *testing.T) {
 		{
 			clusterApps: []hamiltonMsgraph.Application{
 				{
-					DisplayName:    toStringPtr("fake"),
-					IdentifierUris: toStringArrayPtr([]string{"https://fake"}),
-					Tags:           toStringArrayPtr([]string{"azad-kube-proxy", "proxy_url:https://newfake"}),
+					DisplayName:    testToPtr(t, "fake"),
+					IdentifierUris: testToPtr(t, []string{"https://fake"}),
+					Tags:           testToPtr(t, []string{"azad-kube-proxy", "proxy_url:https://newfake"}),
 				},
 				{
-					DisplayName:    toStringPtr("fake"),
-					IdentifierUris: toStringArrayPtr([]string{"https://fake"}),
-					Tags:           toStringArrayPtr([]string{"azad-kube-proxy", "cluster_name:newfake2", "proxy_url:https://newfake2"}),
+					DisplayName:    testToPtr(t, "fake"),
+					IdentifierUris: testToPtr(t, []string{"https://fake"}),
+					Tags:           testToPtr(t, []string{"azad-kube-proxy", "cluster_name:newfake2", "proxy_url:https://newfake2"}),
 				},
 			},
 			expectedOutput: []discover{
@@ -289,9 +265,9 @@ func TestGetDiscoverData(t *testing.T) {
 		{
 			clusterApps: []hamiltonMsgraph.Application{
 				{
-					DisplayName:    toStringPtr("fake"),
-					IdentifierUris: toStringArrayPtr([]string{"https://fake"}),
-					Tags:           toStringArrayPtr([]string{"azad-kube-proxy", "fake"}),
+					DisplayName:    testToPtr(t, "fake"),
+					IdentifierUris: testToPtr(t, []string{"https://fake"}),
+					Tags:           testToPtr(t, []string{"azad-kube-proxy", "fake"}),
 				},
 			},
 			expectedOutput: []discover{
@@ -307,23 +283,15 @@ func TestGetDiscoverData(t *testing.T) {
 	for _, c := range cases {
 		discoverData := getDiscoverData(c.clusterApps)
 		for i, d := range discoverData {
-			if c.expectedOutput[i].ClusterName != d.ClusterName {
-				t.Errorf("Expected output cluster name to be '%s' but was: %s", c.expectedOutput[i].ClusterName, d.ClusterName)
-			}
-			if c.expectedOutput[i].Resource != d.Resource {
-				t.Errorf("Expected output resource to be '%s' but was: %s", c.expectedOutput[i].Resource, d.Resource)
-			}
-			if c.expectedOutput[i].ProxyURL != d.ProxyURL {
-				t.Errorf("Expected output proxy url to be '%s' but was: %s", c.expectedOutput[i].ProxyURL, d.ProxyURL)
-			}
+			require.Equal(t, c.expectedOutput[i].ClusterName, d.ClusterName)
+			require.Equal(t, c.expectedOutput[i].Resource, d.Resource)
+			require.Equal(t, c.expectedOutput[i].ProxyURL, d.ProxyURL)
 		}
 	}
 }
 
-func toStringPtr(s string) *string {
-	return &s
-}
+func testToPtr[T any](t *testing.T, s T) *T {
+	t.Helper()
 
-func toStringArrayPtr(s []string) *[]string {
 	return &s
 }

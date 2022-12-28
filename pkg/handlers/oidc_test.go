@@ -38,5 +38,6 @@ func TestNewAzureADClaimsValidationFn(t *testing.T) {
 
 func testToPtr[P any](t *testing.T, v P) *P {
 	t.Helper()
+
 	return &v
 }

@@ -2,8 +2,9 @@ package customerrors
 
 import (
 	"errors"
-	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestError(t *testing.T) {
@@ -51,21 +52,14 @@ func TestError(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		if strings.Contains(c.errorContains, c.customError.Error()) {
-			t.Errorf("Expected customError to contain %q but was: %q", c.errorContains, c.customError.Error())
-		}
+		require.ErrorContains(t, c.customError, c.errorContains)
 	}
 }
 
 func TestNew(t *testing.T) {
 	ce := New(ErrorTypeUnknown, errors.New("Unknown"))
-	if ce.ErrorType != ErrorTypeUnknown {
-		t.Errorf("Expected ErrorType to be ErrorTypeUnknown: %q", ce.ErrorType)
-	}
-
-	if ce.ErrorMessage != "Unknown" {
-		t.Errorf("Expected ErrorMessage to be 'Unknown': %q", ce.ErrorMessage)
-	}
+	require.Equal(t, ErrorTypeUnknown, ce.ErrorType)
+	require.Equal(t, "Unknown", ce.ErrorMessage)
 }
 
 func TestTo(t *testing.T) {
@@ -75,21 +69,11 @@ func TestTo(t *testing.T) {
 	}
 
 	ce := To(a)
-	if ce.ErrorType != ErrorTypeUnknown {
-		t.Errorf("Expected ErrorType to be ErrorTypeUnknown: %q", ce.ErrorType)
-	}
-
-	if ce.ErrorMessage != "Unknown" {
-		t.Errorf("Expected ErrorMessage to be 'Unknown': %q", ce.ErrorMessage)
-	}
+	require.Equal(t, ErrorTypeUnknown, ce.ErrorType)
+	require.Equal(t, "Unknown", ce.ErrorMessage)
 
 	b := errors.New("Fake")
 	ce = To(b)
-	if ce.ErrorType != ErrorTypeUnknown {
-		t.Errorf("Expected ErrorType to be ErrorTypeUnknown: %q", ce.ErrorType)
-	}
-
-	if ce.ErrorMessage != "Non-default error" {
-		t.Errorf("Expected ErrorMessage to be 'Non-default error': %q", ce.ErrorMessage)
-	}
+	require.Equal(t, ErrorTypeUnknown, ce.ErrorType)
+	require.Equal(t, "Non-default error", ce.ErrorMessage)
 }

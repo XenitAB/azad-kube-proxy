@@ -3,10 +3,10 @@ package health
 import (
 	"context"
 	"net/url"
-	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/require"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	k8sapiauthorization "k8s.io/api/authorization/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -45,21 +45,14 @@ func TestNewHealthClient(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		validator := &fakeValidator{}
+		validator := &testFakeValidator{t}
 		_, err := NewHealthClient(ctx, c.config, validator)
-		if err != nil && c.expectedErrContains == "" {
-			t.Errorf("Expected err to be nil: %q", err)
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+			continue
 		}
 
-		if err == nil && c.expectedErrContains != "" {
-			t.Errorf("Expected err to contain '%s' but was nil", c.expectedErrContains)
-		}
-
-		if err != nil && c.expectedErrContains != "" {
-			if !strings.Contains(err.Error(), c.expectedErrContains) {
-				t.Errorf("Expected err to contain '%s' but was: %q", c.expectedErrContains, err)
-			}
-		}
+		require.NoError(t, err)
 	}
 }
 
@@ -111,30 +104,20 @@ func TestReady(t *testing.T) {
 		client := c.clientFunc(fakeClient)
 
 		ready, err := client.Ready(ctx)
-		if err != nil && c.expectedErrContains == "" {
-			t.Errorf("Expected err to be nil: %q", err)
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+			continue
 		}
 
-		if err == nil && c.expectedErrContains != "" {
-			t.Errorf("Expected err to contain '%s' but was nil", c.expectedErrContains)
-		}
-
-		if err != nil && c.expectedErrContains != "" {
-			if !strings.Contains(err.Error(), c.expectedErrContains) {
-				t.Errorf("Expected err to contain '%s' but was: %q", c.expectedErrContains, err)
-			}
-		}
-
-		if c.expectedReady != ready {
-			t.Errorf("Expected ready to be '%t' but was: %t", c.expectedReady, ready)
-		}
+		require.NoError(t, err)
+		require.Equal(t, c.expectedReady, ready)
 	}
 }
 
 func TestLive(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
-	validator := &fakeValidator{}
+	validator := &testFakeValidator{t}
 	fakeConfig := config.Config{
 		KubernetesConfig: config.KubernetesConfig{
 			ValidateCertificate: false,
@@ -144,23 +127,20 @@ func TestLive(t *testing.T) {
 		},
 	}
 	client, err := NewHealthClient(ctx, fakeConfig, validator)
-	if err != nil {
-		t.Errorf("Expected err to be nil: %q", err)
-	}
+	require.NoError(t, err)
 
 	live, err := client.Live(ctx)
-	if err != nil {
-		t.Errorf("Expected err to be nil: %q", err)
-	}
-
-	if !live {
-		t.Errorf("Expected live to be 'true': %T", live)
-	}
+	require.NoError(t, err)
+	require.True(t, live)
 }
 
-type fakeValidator struct{}
+type testFakeValidator struct {
+	t *testing.T
+}
 
 // Valid ...
-func (client *fakeValidator) Valid(ctx context.Context) bool {
+func (client *testFakeValidator) Valid(ctx context.Context) bool {
+	client.t.Helper()
+
 	return true
 }

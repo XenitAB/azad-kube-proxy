@@ -7,70 +7,48 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
 
 func TestNewMemoryCache(t *testing.T) {
 	_, err := NewMemoryCache(5*time.Minute, 10*time.Minute)
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
-	}
+	require.NoError(t, err)
 }
 
 func TestMemoryGetUser(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 	cache, err := NewMemoryCache(5*time.Minute, 10*time.Minute)
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
-	}
+	require.NoError(t, err)
 
-	cases, _ := getMemoryCases()
+	cases, _ := testGetMemoryCases(t)
 
 	for _, c := range cases {
 		cache.CacheClient.Set(c.Key, c.User, 0)
 		cacheRes, found, err := cache.GetUser(ctx, c.Key)
-		if !cmp.Equal(c.User, cacheRes) {
-			t.Errorf("Expected response was not returned.\nExpected: %s\nActual:   %s", c.User, cacheRes)
-		}
-		if err != nil {
-			t.Errorf("Did not expect error: %q", err)
-		}
-		if !found {
-			t.Errorf("Expected cached user to be found")
-		}
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, c.User, cacheRes)
 	}
 
 	_, found, _ := cache.GetUser(ctx, "does-not-exist")
-	if found {
-		t.Errorf("Expected cached user not to be found")
-	}
+	require.False(t, found)
 }
 
 func TestMemorySetUser(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 	cache, err := NewMemoryCache(5*time.Minute, 10*time.Minute)
-	if err != nil {
-		t.Errorf("Expected err to be nil but it was %q", err)
-	}
+	require.NoError(t, err)
 
-	cases, _ := getMemoryCases()
+	cases, _ := testGetMemoryCases(t)
 
 	for _, c := range cases {
 		err := cache.SetUser(ctx, c.Key, c.User)
-		if err != nil {
-			t.Errorf("Expected err to be nil but it was %q", err)
-		}
+		require.NoError(t, err)
 
 		cacheRes, found := cache.CacheClient.Get(c.Key)
-		if !cmp.Equal(c.User, cacheRes.(models.User)) {
-			t.Errorf("Expected response was not returned.\nExpected: %s\nActual:   %s", c.User, cacheRes.(models.User))
-		}
-		if err != nil {
-			t.Errorf("Did not expect error: %q", err)
-		}
-		if !found {
-			t.Errorf("Expected cached user to be found")
-		}
+		require.True(t, found)
+		require.Equal(t, c.User, cacheRes.(models.User))
 	}
 }
 
@@ -81,26 +59,19 @@ func TestMemoryGetGroup(t *testing.T) {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
 
-	_, cases := getMemoryCases()
+	_, cases := testGetMemoryCases(t)
 
 	for _, c := range cases {
 		cache.CacheClient.Set(c.Key, c.Group, 0)
 		cacheRes, found, err := cache.GetGroup(ctx, c.Key)
-		if !cmp.Equal(c.Group, cacheRes) {
-			t.Errorf("Expected response was not returned.\nExpected: %s\nActual:   %s", c.Group, cacheRes)
-		}
-		if err != nil {
-			t.Errorf("Did not expect error: %q", err)
-		}
-		if !found {
-			t.Errorf("Expected cached user to be found")
-		}
+
+		require.NoError(t, err)
+		require.Equal(t, c.Group, cacheRes)
+		require.True(t, found)
 	}
 
 	_, found, _ := cache.GetGroup(ctx, "does-not-exist")
-	if found {
-		t.Errorf("Expected cached group not to be found")
-	}
+	require.False(t, found)
 }
 
 func TestMemorySetGroup(t *testing.T) {
@@ -110,7 +81,7 @@ func TestMemorySetGroup(t *testing.T) {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
 
-	_, cases := getMemoryCases()
+	_, cases := testGetMemoryCases(t)
 
 	for _, c := range cases {
 		err := cache.SetGroup(ctx, c.Key, c.Group)
@@ -130,18 +101,20 @@ func TestMemorySetGroup(t *testing.T) {
 	}
 }
 
-type memoryUserCase struct {
+type testMemoryUserCase struct {
 	User models.User
 	Key  string
 }
 
-type memoryGroupCase struct {
+type testMemoryGroupCase struct {
 	Group models.Group
 	Key   string
 }
 
-func getMemoryCases() ([]memoryUserCase, []memoryGroupCase) {
-	userCases := []memoryUserCase{
+func testGetMemoryCases(t *testing.T) ([]testMemoryUserCase, []testMemoryGroupCase) {
+	t.Helper()
+
+	userCases := []testMemoryUserCase{
 		{
 			User: models.User{
 				Username: "user1",
@@ -189,7 +162,7 @@ func getMemoryCases() ([]memoryUserCase, []memoryGroupCase) {
 		},
 	}
 
-	groupCases := []memoryGroupCase{
+	groupCases := []testMemoryGroupCase{
 		{
 			Group: models.Group{Name: "group1"},
 			Key:   "00000000-0000-0000-0000-000000000000",

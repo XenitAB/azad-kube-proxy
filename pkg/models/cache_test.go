@@ -1,53 +1,47 @@
 package models
 
 import (
-	"errors"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetCacheEngine(t *testing.T) {
 	cases := []struct {
 		cacheEngineString   string
 		expectedCacheEngine CacheEngine
-		expectedErr         error
+		expectedErrContains string
 	}{
 		{
 			cacheEngineString:   "MEMORY",
 			expectedCacheEngine: MemoryCacheEngine,
-			expectedErr:         nil,
+			expectedErrContains: "",
 		},
 		{
 			cacheEngineString:   "REDIS",
 			expectedCacheEngine: RedisCacheEngine,
-			expectedErr:         nil,
+			expectedErrContains: "",
 		},
 		{
 			cacheEngineString:   "",
 			expectedCacheEngine: "",
-			expectedErr:         errors.New("Unknown cache engine type ''. Supported engines are: MEMORY or REDIS"),
+			expectedErrContains: "Unknown cache engine type ''. Supported engines are: MEMORY or REDIS",
 		},
 		{
 			cacheEngineString:   "DUMMY",
 			expectedCacheEngine: "",
-			expectedErr:         errors.New("Unknown cache engine type 'DUMMY'. Supported engines are: MEMORY or REDIS"),
+			expectedErrContains: "Unknown cache engine type 'DUMMY'. Supported engines are: MEMORY or REDIS",
 		},
 	}
 
 	for _, c := range cases {
 		resCacheEngine, err := GetCacheEngine(c.cacheEngineString)
-
-		if resCacheEngine != c.expectedCacheEngine && c.expectedErr == nil {
-			t.Errorf("Expected cacheEngine (%s) was not returned: %s", c.expectedCacheEngine, resCacheEngine)
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+			continue
 		}
 
-		if err != nil && c.expectedErr == nil {
-			t.Errorf("Expected err to be nil but it was %q", err)
-		}
-
-		if c.expectedErr != nil {
-			if err.Error() != c.expectedErr.Error() {
-				t.Errorf("Expected err to be %q but it was %q", c.expectedErr, err)
-			}
-		}
+		require.NoError(t, err)
+		require.Equal(t, c.expectedCacheEngine, resCacheEngine)
 	}
 }

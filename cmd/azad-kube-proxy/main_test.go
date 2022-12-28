@@ -3,10 +3,12 @@ package main
 import (
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestCIRequirements(t *testing.T) {
-	ciEnvVar := getEnvOrSkip(t, "CI")
+	ciEnvVar := testGetEnvOrSkip(t, "CI")
 	if ciEnvVar != "true" {
 		t.Skipf("CI environment variable not set to true: %s", ciEnvVar)
 	}
@@ -22,21 +24,23 @@ func TestCIRequirements(t *testing.T) {
 	}
 
 	for _, envVar := range reqEnvVars {
-		getEnvOrError(t, envVar)
+		testGetEnvOrError(t, envVar)
 	}
 
 }
 
-func getEnvOrError(t *testing.T, envVar string) string {
+func testGetEnvOrError(t *testing.T, envVar string) string {
+	t.Helper()
+
 	v := os.Getenv(envVar)
-	if v == "" {
-		t.Errorf("%s environment variable is required by CI.", envVar)
-	}
+	require.NotEmpty(t, v)
 
 	return v
 }
 
-func getEnvOrSkip(t *testing.T, envVar string) string {
+func testGetEnvOrSkip(t *testing.T, envVar string) string {
+	t.Helper()
+
 	v := os.Getenv(envVar)
 	if v == "" {
 		t.Skipf("%s environment variable is empty, skipping.", envVar)
