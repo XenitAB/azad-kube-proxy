@@ -28,15 +28,15 @@ import (
 )
 
 var (
-	fakeMaxGroups = 50
+	testFakeMaxGroups = 50
 )
 
 func TestNewHandlersClient(t *testing.T) {
-	tenantID := getEnvOrSkip(t, "TENANT_ID")
+	tenantID := testGetEnvOrSkip(t, "TENANT_ID")
 	ctx := logr.NewContext(context.Background(), logr.Discard())
-	fakeCacheClient := newFakeCacheClient("", "", nil, false, nil)
-	fakeUserClient := newFakeUserClient("", "", nil, nil)
-	fakeHealthClient := newFakeHealthClient(true, nil, true, nil)
+	testFakeCacheClient := newTestFakeCacheClient(t, "", "", nil, false, nil)
+	testFakeUserClient := newTestFakeUserClient(t, "", "", nil, nil)
+	testFakeHealthClient := newTestFakeHealthClient(t, true, nil, true, nil)
 	fakeURL, err := url.Parse("https://fake-url")
 	require.NoError(t, err)
 
@@ -47,12 +47,12 @@ func TestNewHandlersClient(t *testing.T) {
 		},
 	}
 
-	_, err = NewHandlersClient(ctx, cfg, fakeCacheClient, fakeUserClient, fakeHealthClient)
+	_, err = NewHandlersClient(ctx, cfg, testFakeCacheClient, testFakeUserClient, testFakeHealthClient)
 	require.NoError(t, err)
 }
 
 func TestReadinessHandler(t *testing.T) {
-	tenantID := getEnvOrSkip(t, "TENANT_ID")
+	tenantID := testGetEnvOrSkip(t, "TENANT_ID")
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	req, err := http.NewRequest("GET", "/readyz", nil)
@@ -68,8 +68,8 @@ func TestReadinessHandler(t *testing.T) {
 		},
 	}
 
-	fakeCacheClient := newFakeCacheClient("", "", nil, true, nil)
-	fakeUserClient := newFakeUserClient("", "", nil, nil)
+	testFakeCacheClient := newTestFakeCacheClient(t, "", "", nil, true, nil)
+	testFakeUserClient := newTestFakeUserClient(t, "", "", nil, nil)
 
 	cases := []struct {
 		healthClient    health.ClientInterface
@@ -77,19 +77,19 @@ func TestReadinessHandler(t *testing.T) {
 		expectedResCode int
 	}{
 		{
-			healthClient:    newFakeHealthClient(true, nil, true, nil),
+			healthClient:    newTestFakeHealthClient(t, true, nil, true, nil),
 			expectedString:  `{"status": "ok"}`,
 			expectedResCode: http.StatusOK,
 		},
 		{
-			healthClient:    newFakeHealthClient(false, nil, false, nil),
+			healthClient:    newTestFakeHealthClient(t, false, nil, false, nil),
 			expectedString:  `{"status": "error"}`,
 			expectedResCode: http.StatusInternalServerError,
 		},
 	}
 
 	for _, c := range cases {
-		proxyHandlers, err := NewHandlersClient(ctx, cfg, fakeCacheClient, fakeUserClient, c.healthClient)
+		proxyHandlers, err := NewHandlersClient(ctx, cfg, testFakeCacheClient, testFakeUserClient, c.healthClient)
 		require.NoError(t, err)
 
 		rr := httptest.NewRecorder()
@@ -102,7 +102,7 @@ func TestReadinessHandler(t *testing.T) {
 }
 
 func TestLivenessHandler(t *testing.T) {
-	tenantID := getEnvOrSkip(t, "TENANT_ID")
+	tenantID := testGetEnvOrSkip(t, "TENANT_ID")
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	req, err := http.NewRequest("GET", "/healthz", nil)
@@ -118,8 +118,8 @@ func TestLivenessHandler(t *testing.T) {
 		},
 	}
 
-	fakeCacheClient := newFakeCacheClient("", "", nil, true, nil)
-	fakeUserClient := newFakeUserClient("", "", nil, nil)
+	testFakeCacheClient := newTestFakeCacheClient(t, "", "", nil, true, nil)
+	testFakeUserClient := newTestFakeUserClient(t, "", "", nil, nil)
 
 	cases := []struct {
 		healthClient    health.ClientInterface
@@ -127,19 +127,19 @@ func TestLivenessHandler(t *testing.T) {
 		expectedResCode int
 	}{
 		{
-			healthClient:    newFakeHealthClient(true, nil, true, nil),
+			healthClient:    newTestFakeHealthClient(t, true, nil, true, nil),
 			expectedString:  `{"status": "ok"}`,
 			expectedResCode: http.StatusOK,
 		},
 		{
-			healthClient:    newFakeHealthClient(false, nil, false, nil),
+			healthClient:    newTestFakeHealthClient(t, false, nil, false, nil),
 			expectedString:  `{"status": "error"}`,
 			expectedResCode: http.StatusInternalServerError,
 		},
 	}
 
 	for _, c := range cases {
-		proxyHandlers, err := NewHandlersClient(ctx, cfg, fakeCacheClient, fakeUserClient, c.healthClient)
+		proxyHandlers, err := NewHandlersClient(ctx, cfg, testFakeCacheClient, testFakeUserClient, c.healthClient)
 		require.NoError(t, err)
 
 		rr := httptest.NewRecorder()
@@ -152,23 +152,22 @@ func TestLivenessHandler(t *testing.T) {
 }
 
 func TestAzadKubeProxyHandler(t *testing.T) {
-	clientID := getEnvOrSkip(t, "CLIENT_ID")
-	clientSecret := getEnvOrSkip(t, "CLIENT_SECRET")
-	tenantID := getEnvOrSkip(t, "TENANT_ID")
-	spClientID := getEnvOrSkip(t, "TEST_USER_SP_CLIENT_ID")
-	spClientSecret := getEnvOrSkip(t, "TEST_USER_SP_CLIENT_SECRET")
-	spResource := getEnvOrSkip(t, "TEST_USER_SP_RESOURCE")
+	clientID := testGetEnvOrSkip(t, "CLIENT_ID")
+	clientSecret := testGetEnvOrSkip(t, "CLIENT_SECRET")
+	tenantID := testGetEnvOrSkip(t, "TENANT_ID")
+	spClientID := testGetEnvOrSkip(t, "TEST_USER_SP_CLIENT_ID")
+	spClientSecret := testGetEnvOrSkip(t, "TEST_USER_SP_CLIENT_SECRET")
+	spResource := testGetEnvOrSkip(t, "TEST_USER_SP_RESOURCE")
 
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
-	token, err := getAccessToken(ctx, tenantID, spClientID, spClientSecret, fmt.Sprintf("%s/.default", spResource))
-	require.NoError(t, err)
+	token := testGetAccessToken(t, ctx, tenantID, spClientID, spClientSecret, fmt.Sprintf("%s/.default", spResource))
 
 	memCacheClient, err := cache.NewMemoryCache(5*time.Minute, 10*time.Minute)
 	require.NoError(t, err)
-	fakeCacheClient := newFakeCacheClient("", "", nil, false, nil)
-	fakeUserClient := newFakeUserClient("", "", nil, nil)
-	fakeHealthClient := newFakeHealthClient(true, nil, true, nil)
+	testFakeCacheClient := newTestFakeCacheClient(t, "", "", nil, false, nil)
+	testFakeUserClient := newTestFakeUserClient(t, "", "", nil, nil)
+	testFakeHealthClient := newTestFakeHealthClient(t, true, nil, true, nil)
 
 	fakeBackend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("{\"fake\": true}"))
@@ -182,7 +181,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 		ClientSecret:         clientSecret,
 		TenantID:             tenantID,
 		CacheEngine:          models.MemoryCacheEngine,
-		AzureADMaxGroupCount: fakeMaxGroups,
+		AzureADMaxGroupCount: testFakeMaxGroups,
 		GroupIdentifier:      models.NameGroupIdentifier,
 		KubernetesConfig: config.KubernetesConfig{
 			URL:   fakeBackendURL,
@@ -216,7 +215,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 			},
 			config:          cfg,
 			cacheClient:     memCacheClient,
-			userClient:      fakeUserClient,
+			userClient:      testFakeUserClient,
 			expectedResCode: http.StatusOK,
 			expectedResBody: `{"fake": true}`,
 		},
@@ -249,7 +248,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 			},
 			config:          cfg,
 			cacheClient:     memCacheClient,
-			userClient:      fakeUserClient,
+			userClient:      testFakeUserClient,
 			expectedResCode: http.StatusUnauthorized,
 			expectedResBody: "",
 		},
@@ -265,8 +264,8 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 				},
 			},
 			config:          cfg,
-			cacheClient:     fakeCacheClient,
-			userClient:      fakeUserClient,
+			cacheClient:     testFakeCacheClient,
+			userClient:      testFakeUserClient,
 			expectedResCode: http.StatusOK,
 			expectedResBody: `{"fake": true}`,
 		},
@@ -282,8 +281,8 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 				},
 			},
 			config:          cfg,
-			cacheClient:     fakeCacheClient,
-			userClient:      fakeUserClient,
+			cacheClient:     testFakeCacheClient,
+			userClient:      testFakeUserClient,
 			expectedResCode: http.StatusUnauthorized,
 			expectedResBody: "",
 		},
@@ -299,8 +298,8 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 				},
 			},
 			config:              cfg,
-			cacheClient:         newFakeCacheClient("", "", nil, true, errors.New("Fake error")),
-			userClient:          fakeUserClient,
+			cacheClient:         newTestFakeCacheClient(t, "", "", nil, true, errors.New("Fake error")),
+			userClient:          testFakeUserClient,
 			expectedResCode:     http.StatusInternalServerError,
 			expectedErrContains: "Unexpected error",
 		},
@@ -317,8 +316,8 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 				},
 			},
 			config:              cfg,
-			cacheClient:         fakeCacheClient,
-			userClient:          fakeUserClient,
+			cacheClient:         testFakeCacheClient,
+			userClient:          testFakeUserClient,
 			expectedResCode:     http.StatusForbidden,
 			expectedErrContains: "User unauthorized",
 		},
@@ -335,8 +334,8 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 				},
 			},
 			config:              cfg,
-			cacheClient:         fakeCacheClient,
-			userClient:          fakeUserClient,
+			cacheClient:         testFakeCacheClient,
+			userClient:          testFakeUserClient,
 			expectedResCode:     http.StatusForbidden,
 			expectedErrContains: "User unauthorized",
 		},
@@ -354,8 +353,8 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 				},
 			},
 			config:              cfg,
-			cacheClient:         fakeCacheClient,
-			userClient:          fakeUserClient,
+			cacheClient:         testFakeCacheClient,
+			userClient:          testFakeUserClient,
 			expectedResCode:     http.StatusForbidden,
 			expectedErrContains: "User unauthorized",
 		},
@@ -373,8 +372,8 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 				},
 			},
 			config:              cfg,
-			cacheClient:         fakeCacheClient,
-			userClient:          fakeUserClient,
+			cacheClient:         testFakeCacheClient,
+			userClient:          testFakeUserClient,
 			expectedResCode:     http.StatusForbidden,
 			expectedErrContains: "User unauthorized",
 		},
@@ -390,8 +389,8 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 				},
 			},
 			config:              cfg,
-			cacheClient:         fakeCacheClient,
-			userClient:          newFakeUserClient("", "", nil, errors.New("fake error")),
+			cacheClient:         testFakeCacheClient,
+			userClient:          newTestFakeUserClient(t, "", "", nil, errors.New("fake error")),
 			expectedResCode:     http.StatusForbidden,
 			expectedErrContains: "Unable to get user",
 		},
@@ -407,19 +406,19 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 				},
 			},
 			config:      cfg,
-			cacheClient: fakeCacheClient,
-			userClient:  fakeUserClient,
+			cacheClient: testFakeCacheClient,
+			userClient:  testFakeUserClient,
 			userFunction: func(oldUserClient user.ClientInterface) user.ClientInterface {
 				i := 1
 				groups := []models.Group{}
-				for i < fakeMaxGroups+1 {
+				for i < testFakeMaxGroups+1 {
 					groups = append(groups, models.Group{
 						Name: fmt.Sprintf("group-%d", i),
 					})
 					i++
 				}
 
-				return newFakeUserClient("", "", groups, nil)
+				return newTestFakeUserClient(t, "", "", groups, nil)
 			},
 			expectedResCode:     http.StatusForbidden,
 			expectedErrContains: "Too many groups",
@@ -441,7 +440,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 				return oldConfig
 			},
 			cacheClient:     memCacheClient,
-			userClient:      fakeUserClient,
+			userClient:      testFakeUserClient,
 			expectedResCode: http.StatusOK,
 			expectedResBody: `{"fake": true}`,
 		},
@@ -462,7 +461,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 				return oldConfig
 			},
 			cacheClient:         memCacheClient,
-			userClient:          fakeUserClient,
+			userClient:          testFakeUserClient,
 			expectedResCode:     http.StatusInternalServerError,
 			expectedErrContains: "Unexpected error",
 		},
@@ -482,7 +481,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 			c.userClient = c.userFunction(c.userClient)
 		}
 
-		proxyHandlers, err := NewHandlersClient(ctx, c.config, c.cacheClient, c.userClient, fakeHealthClient)
+		proxyHandlers, err := NewHandlersClient(ctx, c.config, c.cacheClient, c.userClient, testFakeHealthClient)
 		require.NoError(t, err)
 
 		proxy := httputil.NewSingleHostReverseProxy(c.config.KubernetesConfig.URL)
@@ -504,13 +503,16 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 	}
 }
 
-type fakeUserClient struct {
+type testFakeUserClient struct {
 	fakeError error
 	fakeUser  models.User
 	fakeGroup models.Group
+	t         *testing.T
 }
 
-func newFakeUserClient(username string, objectID string, groups []models.Group, fakeError error) *fakeUserClient {
+func newTestFakeUserClient(t *testing.T, username string, objectID string, groups []models.Group, fakeError error) *testFakeUserClient {
+	t.Helper()
+
 	if username == "" {
 		username = "username"
 	}
@@ -522,7 +524,7 @@ func newFakeUserClient(username string, objectID string, groups []models.Group, 
 			{Name: "group"},
 		}
 	}
-	return &fakeUserClient{
+	return &testFakeUserClient{
 		fakeError: fakeError,
 		fakeUser: models.User{
 			Username: username,
@@ -530,21 +532,27 @@ func newFakeUserClient(username string, objectID string, groups []models.Group, 
 			Groups:   groups,
 		},
 		fakeGroup: groups[0],
+		t:         t,
 	}
 }
 
-func (client *fakeUserClient) GetUser(ctx context.Context, username, objectID string) (models.User, error) {
+func (client *testFakeUserClient) GetUser(ctx context.Context, username, objectID string) (models.User, error) {
+	client.t.Helper()
+
 	return client.fakeUser, client.fakeError
 }
 
-type fakeCacheClient struct {
+type testFakeCacheClient struct {
 	fakeError error
 	fakeFound bool
 	fakeUser  models.User
 	fakeGroup models.Group
+	t         *testing.T
 }
 
-func newFakeCacheClient(username string, objectID string, groups []models.Group, fakeFound bool, fakeError error) *fakeCacheClient {
+func newTestFakeCacheClient(t *testing.T, username string, objectID string, groups []models.Group, fakeFound bool, fakeError error) *testFakeCacheClient {
+	t.Helper()
+
 	if username == "" {
 		username = "username"
 	}
@@ -557,7 +565,7 @@ func newFakeCacheClient(username string, objectID string, groups []models.Group,
 		}
 	}
 
-	return &fakeCacheClient{
+	return &testFakeCacheClient{
 		fakeError: fakeError,
 		fakeFound: fakeFound,
 		fakeUser: models.User{
@@ -566,50 +574,69 @@ func newFakeCacheClient(username string, objectID string, groups []models.Group,
 			Groups:   groups,
 		},
 		fakeGroup: groups[0],
+		t:         t,
 	}
 }
 
-func (c *fakeCacheClient) GetUser(ctx context.Context, s string) (models.User, bool, error) {
+func (c *testFakeCacheClient) GetUser(ctx context.Context, s string) (models.User, bool, error) {
+	c.t.Helper()
+
 	return c.fakeUser, c.fakeFound, c.fakeError
 }
 
-func (c *fakeCacheClient) SetUser(ctx context.Context, s string, u models.User) error {
+func (c *testFakeCacheClient) SetUser(ctx context.Context, s string, u models.User) error {
+	c.t.Helper()
+
 	return c.fakeError
 }
 
-func (c *fakeCacheClient) GetGroup(ctx context.Context, s string) (models.Group, bool, error) {
+func (c *testFakeCacheClient) GetGroup(ctx context.Context, s string) (models.Group, bool, error) {
+	c.t.Helper()
+
 	return c.fakeGroup, c.fakeFound, c.fakeError
 }
 
-func (c *fakeCacheClient) SetGroup(ctx context.Context, s string, g models.Group) error {
+func (c *testFakeCacheClient) SetGroup(ctx context.Context, s string, g models.Group) error {
+	c.t.Helper()
+
 	return c.fakeError
 }
 
-type fakeHealthClient struct {
+type testFakeHealthClient struct {
 	ready      bool
 	readyError error
 	live       bool
 	liveError  error
+	t          *testing.T
 }
 
-func newFakeHealthClient(ready bool, readyError error, live bool, liveError error) health.ClientInterface {
-	return &fakeHealthClient{
+func newTestFakeHealthClient(t *testing.T, ready bool, readyError error, live bool, liveError error) health.ClientInterface {
+	t.Helper()
+
+	return &testFakeHealthClient{
 		ready,
 		readyError,
 		live,
 		liveError,
+		t,
 	}
 }
 
-func (client *fakeHealthClient) Ready(ctx context.Context) (bool, error) {
+func (client *testFakeHealthClient) Ready(ctx context.Context) (bool, error) {
+	client.t.Helper()
+
 	return client.ready, client.readyError
 }
 
-func (client *fakeHealthClient) Live(ctx context.Context) (bool, error) {
+func (client *testFakeHealthClient) Live(ctx context.Context) (bool, error) {
+	client.t.Helper()
+
 	return client.live, client.liveError
 }
 
-func getEnvOrSkip(t *testing.T, envVar string) string {
+func testGetEnvOrSkip(t *testing.T, envVar string) string {
+	t.Helper()
+
 	v := os.Getenv(envVar)
 	if v == "" {
 		t.Skipf("%s environment variable is empty, skipping.", envVar)
@@ -618,22 +645,18 @@ func getEnvOrSkip(t *testing.T, envVar string) string {
 	return v
 }
 
-func getAccessToken(ctx context.Context, tenantID, clientID, clientSecret, scope string) (*azcore.AccessToken, error) {
+func testGetAccessToken(t *testing.T, ctx context.Context, tenantID, clientID, clientSecret, scope string) *azcore.AccessToken {
+	t.Helper()
+
 	tokenFilePath := fmt.Sprintf("../../tmp/test-token-file_%s", clientID)
-	tokenFileExists := fileExists(tokenFilePath)
+	tokenFileExists := testFileExists(t, tokenFilePath)
 	token := &azcore.AccessToken{}
 
 	generateNewToken := true
 	if tokenFileExists {
-		fileContent, err := getFileContent(tokenFilePath)
-		if err != nil {
-			return nil, err
-		}
-
-		err = json.Unmarshal(fileContent, &token)
-		if err != nil {
-			return nil, err
-		}
+		fileContent := testGetFileContent(t, tokenFilePath)
+		err := json.Unmarshal(fileContent, &token)
+		require.NoError(t, err)
 
 		if token.ExpiresOn.After(time.Now().Add(-5 * time.Minute)) {
 			generateNewToken = false
@@ -642,48 +665,48 @@ func getAccessToken(ctx context.Context, tenantID, clientID, clientSecret, scope
 
 	if generateNewToken {
 		cred, err := azidentity.NewClientSecretCredential(tenantID, clientID, clientSecret, nil)
-		if err != nil {
-			return nil, err
-		}
+		require.NoError(t, err)
 
 		token, err := cred.GetToken(ctx, azpolicy.TokenRequestOptions{Scopes: []string{scope}})
-		if err != nil {
-			return nil, err
-		}
+		require.NoError(t, err)
 
 		fileContents, err := json.Marshal(&token)
-		if err != nil {
-			return nil, err
-		}
+		require.NoError(t, err)
 
 		err = os.WriteFile(tokenFilePath, fileContents, 0600)
-		if err != nil {
-			return nil, err
-		}
+		require.NoError(t, err)
 
-		return &token, nil
+		return &token
 	}
 
-	return token, nil
+	return token
 }
 
-func getFileContent(s string) ([]byte, error) {
+func testGetFileContent(t *testing.T, s string) []byte {
+	t.Helper()
+
 	file, err := os.Open(s)
-	if err != nil {
-		return nil, err
-	}
+	require.NoError(t, err)
 
 	defer file.Close()
 
 	bytes, err := io.ReadAll(file)
-	if err != nil {
-		return nil, err
-	}
+	require.NoError(t, err)
 
-	return bytes, nil
+	return bytes
 }
 
-func fileExists(s string) bool {
-	_, err := os.Stat(s)
-	return err == nil
+func testFileExists(t *testing.T, s string) bool {
+	t.Helper()
+
+	f, err := os.Stat(s)
+	if err != nil {
+		return false
+	}
+
+	if f.IsDir() {
+		return false
+	}
+
+	return true
 }

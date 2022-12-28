@@ -74,24 +74,24 @@ func TestNewTokens(t *testing.T) {
 }
 
 func TestGetToken(t *testing.T) {
-	tenantID := getEnvOrSkip(t, "TENANT_ID")
-	clientID := getEnvOrSkip(t, "TEST_USER_SP_CLIENT_ID")
-	clientSecret := getEnvOrSkip(t, "TEST_USER_SP_CLIENT_SECRET")
-	resource := getEnvOrSkip(t, "TEST_USER_SP_RESOURCE")
+	tenantID := testGetEnvOrSkip(t, "TENANT_ID")
+	clientID := testGetEnvOrSkip(t, "TEST_USER_SP_CLIENT_ID")
+	clientSecret := testGetEnvOrSkip(t, "TEST_USER_SP_CLIENT_SECRET")
+	resource := testGetEnvOrSkip(t, "TEST_USER_SP_RESOURCE")
 
-	restoreTenantID := tempChangeEnv("AZURE_TENANT_ID", tenantID)
+	restoreTenantID := testTempChangeEnv(t, "AZURE_TENANT_ID", tenantID)
 	defer restoreTenantID()
 
-	restoreClientID := tempChangeEnv("AZURE_CLIENT_ID", clientID)
+	restoreClientID := testTempChangeEnv(t, "AZURE_CLIENT_ID", clientID)
 	defer restoreClientID()
 
-	restoreClientSecret := tempChangeEnv("AZURE_CLIENT_SECRET", clientSecret)
+	restoreClientSecret := testTempChangeEnv(t, "AZURE_CLIENT_SECRET", clientSecret)
 	defer restoreClientSecret()
 
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	fakeHomeDir := "/home/test-user"
-	restoreHomeDir := tempChangeEnv("HOME", fakeHomeDir)
+	restoreHomeDir := testTempChangeEnv(t, "HOME", fakeHomeDir)
 	defer restoreHomeDir()
 
 	creds := defaultAzureCredentialOptions{
@@ -123,8 +123,7 @@ func TestGetToken(t *testing.T) {
 		Name:                "fake-cluster-1",
 	}
 
-	err = createCacheFile(fakeFile, fakeToken)
-	require.NoError(t, err)
+	testCreateCacheFile(t, fakeFile, fakeToken)
 
 	fakeTokens, err := NewTokens(ctx, fakeDir, creds)
 	require.NoError(t, err)
@@ -286,34 +285,34 @@ func TestTokenValid(t *testing.T) {
 	}
 }
 
-func tempChangeEnv(key, value string) func() {
+func testTempChangeEnv(t *testing.T, key, value string) func() {
+	t.Helper()
+
 	oldEnv := os.Getenv(key)
 	os.Setenv(key, value)
 	return func() { os.Setenv(key, oldEnv) }
 }
 
-func createCacheFile(path string, cachedTokens interface{}) error {
+func testCreateCacheFile(t *testing.T, path string, cachedTokens interface{}) {
+	t.Helper()
+
 	fileContents, err := json.Marshal(&cachedTokens)
-	if err != nil {
-		return err
-	}
+	require.NoError(t, err)
 
 	err = os.WriteFile(path, fileContents, 0600)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	require.NoError(t, err)
 }
 
-func deleteFile(t *testing.T, file string) {
+func testDeleteFile(t *testing.T, file string) {
+	t.Helper()
+
 	err := os.Remove(file)
-	if err != nil {
-		t.Errorf("Unable to delete file: %q", err)
-	}
+	require.NoError(t, err)
 }
 
-func getEnvOrSkip(t *testing.T, envVar string) string {
+func testGetEnvOrSkip(t *testing.T, envVar string) string {
+	t.Helper()
+
 	v := os.Getenv(envVar)
 	if v == "" {
 		t.Skipf("%s environment variable is empty, skipping.", envVar)

@@ -7,15 +7,15 @@ import (
 )
 
 func TestMarshalBinary(t *testing.T) {
-	userCases, groupCases := getUseCases()
+	testUserCases, testGroupCases := testGetUseCases(t)
 
-	for _, c := range userCases {
+	for _, c := range testUserCases {
 		response, err := c.MarshalBinary()
 		require.NoError(t, err)
 		require.Equal(t, c.expectedString, string(response))
 	}
 
-	for _, c := range groupCases {
+	for _, c := range testGroupCases {
 		response, err := c.MarshalBinary()
 		require.NoError(t, err)
 		require.Equal(t, c.expectedString, string(response))
@@ -23,16 +23,16 @@ func TestMarshalBinary(t *testing.T) {
 }
 
 func TestUnmarshalBinary(t *testing.T) {
-	userCases, groupCases := getUseCases()
+	testUserCases, testGroupCases := testGetUseCases(t)
 
-	for _, c := range userCases {
+	for _, c := range testUserCases {
 		user := User{}
 		err := user.UnmarshalBinary([]byte(c.expectedString))
 		require.NoError(t, err)
 		require.Equal(t, c.User, user)
 	}
 
-	for _, c := range groupCases {
+	for _, c := range testGroupCases {
 		group := Group{}
 		err := group.UnmarshalBinary([]byte(c.expectedString))
 		require.NoError(t, err)
@@ -40,18 +40,60 @@ func TestUnmarshalBinary(t *testing.T) {
 	}
 }
 
-type userCase struct {
+func TestGetGroupIdentifier(t *testing.T) {
+	cases := []struct {
+		groupIdentifierString   string
+		expectedGroupIdentifier GroupIdentifier
+		expectedErrContains     string
+	}{
+		{
+			groupIdentifierString:   "NAME",
+			expectedGroupIdentifier: NameGroupIdentifier,
+			expectedErrContains:     "",
+		},
+		{
+			groupIdentifierString:   "OBJECTID",
+			expectedGroupIdentifier: ObjectIDGroupIdentifier,
+			expectedErrContains:     "",
+		},
+		{
+			groupIdentifierString:   "",
+			expectedGroupIdentifier: "",
+			expectedErrContains:     "Unknown group identifier ''. Supported identifiers are: NAME or OBJECTID",
+		},
+		{
+			groupIdentifierString:   "DUMMY",
+			expectedGroupIdentifier: "",
+			expectedErrContains:     "Unknown group identifier 'DUMMY'. Supported identifiers are: NAME or OBJECTID",
+		},
+	}
+
+	for _, c := range cases {
+		resGroupIdentifier, err := GetGroupIdentifier(c.groupIdentifierString)
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+			continue
+		}
+
+		require.NoError(t, err)
+		require.Equal(t, c.expectedGroupIdentifier, resGroupIdentifier)
+	}
+}
+
+type testUserCase struct {
 	User
 	expectedString string
 }
 
-type groupCase struct {
+type testGroupCase struct {
 	Group
 	expectedString string
 }
 
-func getUseCases() ([]userCase, []groupCase) {
-	userCases := []userCase{
+func testGetUseCases(t *testing.T) ([]testUserCase, []testGroupCase) {
+	t.Helper()
+
+	testUserCases := []testUserCase{
 		{
 			User: User{
 				Username: "username",
@@ -104,7 +146,7 @@ func getUseCases() ([]userCase, []groupCase) {
 		},
 	}
 
-	groupCases := []groupCase{
+	testGroupCases := []testGroupCase{
 		{
 			Group: Group{
 				Name:     "test1",
@@ -114,45 +156,5 @@ func getUseCases() ([]userCase, []groupCase) {
 		},
 	}
 
-	return userCases, groupCases
-}
-
-func TestGetGroupIdentifier(t *testing.T) {
-	cases := []struct {
-		groupIdentifierString   string
-		expectedGroupIdentifier GroupIdentifier
-		expectedErrContains     string
-	}{
-		{
-			groupIdentifierString:   "NAME",
-			expectedGroupIdentifier: NameGroupIdentifier,
-			expectedErrContains:     "",
-		},
-		{
-			groupIdentifierString:   "OBJECTID",
-			expectedGroupIdentifier: ObjectIDGroupIdentifier,
-			expectedErrContains:     "",
-		},
-		{
-			groupIdentifierString:   "",
-			expectedGroupIdentifier: "",
-			expectedErrContains:     "Unknown group identifier ''. Supported identifiers are: NAME or OBJECTID",
-		},
-		{
-			groupIdentifierString:   "DUMMY",
-			expectedGroupIdentifier: "",
-			expectedErrContains:     "Unknown group identifier 'DUMMY'. Supported identifiers are: NAME or OBJECTID",
-		},
-	}
-
-	for _, c := range cases {
-		resGroupIdentifier, err := GetGroupIdentifier(c.groupIdentifierString)
-		if c.expectedErrContains != "" {
-			require.ErrorContains(t, err, c.expectedErrContains)
-			continue
-		}
-
-		require.NoError(t, err)
-		require.Equal(t, c.expectedGroupIdentifier, resGroupIdentifier)
-	}
+	return testUserCases, testGroupCases
 }

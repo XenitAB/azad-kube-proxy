@@ -100,18 +100,18 @@ func TestNewLoginClient(t *testing.T) {
 }
 
 func TestLogin(t *testing.T) {
-	tenantID := getEnvOrSkip(t, "TENANT_ID")
-	clientID := getEnvOrSkip(t, "TEST_USER_SP_CLIENT_ID")
-	clientSecret := getEnvOrSkip(t, "TEST_USER_SP_CLIENT_SECRET")
-	resource := getEnvOrSkip(t, "TEST_USER_SP_RESOURCE")
+	tenantID := testGetEnvOrSkip(t, "TENANT_ID")
+	clientID := testGetEnvOrSkip(t, "TEST_USER_SP_CLIENT_ID")
+	clientSecret := testGetEnvOrSkip(t, "TEST_USER_SP_CLIENT_SECRET")
+	resource := testGetEnvOrSkip(t, "TEST_USER_SP_RESOURCE")
 
-	restoreTenantID := tempChangeEnv("AZURE_TENANT_ID", tenantID)
+	restoreTenantID := testTempChangeEnv(t, "AZURE_TENANT_ID", tenantID)
 	defer restoreTenantID()
 
-	restoreClientID := tempChangeEnv("AZURE_CLIENT_ID", clientID)
+	restoreClientID := testTempChangeEnv(t, "AZURE_CLIENT_ID", clientID)
 	defer restoreClientID()
 
-	restoreClientSecret := tempChangeEnv("AZURE_CLIENT_SECRET", clientSecret)
+	restoreClientSecret := testTempChangeEnv(t, "AZURE_CLIENT_SECRET", clientSecret)
 	defer restoreClientSecret()
 
 	curDir, err := os.Getwd()
@@ -119,7 +119,7 @@ func TestLogin(t *testing.T) {
 		t.Errorf("Expected err to be nil: %q", err)
 	}
 	tokenCacheFile := fmt.Sprintf("%s/../../../tmp/%s", curDir, tokenCacheFileName)
-	defer deleteFile(t, tokenCacheFile)
+	defer testDeleteFile(t, tokenCacheFile)
 
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 	client := &LoginClient{

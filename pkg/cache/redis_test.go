@@ -15,24 +15,8 @@ import (
 )
 
 var (
-	redisTimeout = 5 * time.Minute
+	testRedisTimeout = 5 * time.Minute
 )
-
-type fakeErrorUser struct {
-	Username bool
-}
-
-func (i fakeErrorUser) MarshalBinary() ([]byte, error) {
-	return json.Marshal(i)
-}
-
-type fakeErrorGroup struct {
-	Name bool
-}
-
-func (i fakeErrorGroup) MarshalBinary() ([]byte, error) {
-	return json.Marshal(i)
-}
 
 func TestNewRedisCache(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
@@ -42,14 +26,14 @@ func TestNewRedisCache(t *testing.T) {
 
 	redisURL := fmt.Sprintf("redis://%s/0", redisServer.Addr())
 
-	_, err = NewRedisCache(ctx, redisURL, redisTimeout)
+	_, err = NewRedisCache(ctx, redisURL, testRedisTimeout)
 	require.NoError(t, err)
 
-	_, err = NewRedisCache(ctx, "", redisTimeout)
+	_, err = NewRedisCache(ctx, "", testRedisTimeout)
 	require.ErrorContains(t, err, "redis: invalid URL scheme: ")
 
 	redisServer.Close()
-	_, err = NewRedisCache(ctx, redisURL, redisTimeout)
+	_, err = NewRedisCache(ctx, redisURL, testRedisTimeout)
 	require.ErrorContains(t, err, "connect: connection refused")
 }
 
@@ -59,17 +43,17 @@ func TestRedisGetUser(t *testing.T) {
 	require.NoError(t, err)
 
 	redisURL := fmt.Sprintf("redis://%s/0", redisServer.Addr())
-	miniredisClient, err := getMiniredisClient(redisURL)
+	miniredisClient, err := testGetMiniredisClient(t, redisURL)
 	require.NoError(t, err)
 	defer redisServer.Close()
 
-	cache, err := NewRedisCache(ctx, redisURL, redisTimeout)
+	cache, err := NewRedisCache(ctx, redisURL, testRedisTimeout)
 	require.NoError(t, err)
 
-	cases, _ := getRedisCases()
+	cases, _ := testGetRedisCases(t)
 
 	for _, c := range cases {
-		err := miniredisClient.SetNX(ctx, c.Key, c.User, redisTimeout).Err()
+		err := miniredisClient.SetNX(ctx, c.Key, c.User, testRedisTimeout).Err()
 		require.NoError(t, err)
 		cacheRes, found, err := cache.GetUser(ctx, c.Key)
 		require.NoError(t, err)
@@ -82,10 +66,11 @@ func TestRedisGetUser(t *testing.T) {
 	require.False(t, found)
 
 	// Unmarshal error
-	fakeErrorUser := fakeErrorUser{
+	testFakeErrorUser := testFakeErrorUser{
 		Username: false,
+		t:        t,
 	}
-	err = miniredisClient.SetNX(ctx, "fake-error-user", fakeErrorUser, redisTimeout).Err()
+	err = miniredisClient.SetNX(ctx, "fake-error-user", testFakeErrorUser, testRedisTimeout).Err()
 	require.NoError(t, err)
 
 	_, _, err = cache.GetUser(ctx, "fake-error-user")
@@ -104,13 +89,13 @@ func TestRedisSetUser(t *testing.T) {
 	defer redisServer.Close()
 
 	redisURL := fmt.Sprintf("redis://%s/0", redisServer.Addr())
-	miniredisClient, err := getMiniredisClient(redisURL)
+	miniredisClient, err := testGetMiniredisClient(t, redisURL)
 	require.NoError(t, err)
 
-	cache, err := NewRedisCache(ctx, redisURL, redisTimeout)
+	cache, err := NewRedisCache(ctx, redisURL, testRedisTimeout)
 	require.NoError(t, err)
 
-	cases, _ := getRedisCases()
+	cases, _ := testGetRedisCases(t)
 
 	for _, c := range cases {
 		err := cache.SetUser(ctx, c.Key, c.User)
@@ -137,16 +122,16 @@ func TestRedisGetGroup(t *testing.T) {
 	defer redisServer.Close()
 
 	redisURL := fmt.Sprintf("redis://%s/0", redisServer.Addr())
-	miniredisClient, err := getMiniredisClient(redisURL)
+	miniredisClient, err := testGetMiniredisClient(t, redisURL)
 	require.NoError(t, err)
 
-	cache, err := NewRedisCache(ctx, redisURL, redisTimeout)
+	cache, err := NewRedisCache(ctx, redisURL, testRedisTimeout)
 	require.NoError(t, err)
 
-	_, cases := getRedisCases()
+	_, cases := testGetRedisCases(t)
 
 	for _, c := range cases {
-		err := miniredisClient.SetNX(ctx, c.Key, c.Group, redisTimeout).Err()
+		err := miniredisClient.SetNX(ctx, c.Key, c.Group, testRedisTimeout).Err()
 		require.NoError(t, err)
 		cacheRes, found, err := cache.GetGroup(ctx, c.Key)
 		require.NoError(t, err)
@@ -159,10 +144,11 @@ func TestRedisGetGroup(t *testing.T) {
 	require.False(t, found)
 
 	// Unmarshal error
-	fakeErrorGroup := fakeErrorGroup{
+	testFakeErrorGroup := testFakeErrorGroup{
 		Name: false,
+		t:    t,
 	}
-	err = miniredisClient.SetNX(ctx, "fake-error-group", fakeErrorGroup, redisTimeout).Err()
+	err = miniredisClient.SetNX(ctx, "fake-error-group", testFakeErrorGroup, testRedisTimeout).Err()
 	require.NoError(t, err)
 
 	_, _, err = cache.GetGroup(ctx, "fake-error-group")
@@ -181,13 +167,13 @@ func TestRedisSetGroup(t *testing.T) {
 	defer redisServer.Close()
 
 	redisURL := fmt.Sprintf("redis://%s/0", redisServer.Addr())
-	miniredisClient, err := getMiniredisClient(redisURL)
+	miniredisClient, err := testGetMiniredisClient(t, redisURL)
 	require.NoError(t, err)
 
-	cache, err := NewRedisCache(ctx, redisURL, redisTimeout)
+	cache, err := NewRedisCache(ctx, redisURL, testRedisTimeout)
 	require.NoError(t, err)
 
-	_, cases := getRedisCases()
+	_, cases := testGetRedisCases(t)
 
 	for _, c := range cases {
 		err := cache.SetGroup(ctx, c.Key, c.Group)
@@ -208,26 +194,50 @@ func TestRedisSetGroup(t *testing.T) {
 	require.ErrorContains(t, err, "connect: connection refused")
 }
 
-func getMiniredisClient(redisURL string) (*redis.Client, error) {
+func testGetMiniredisClient(t *testing.T, redisURL string) (*redis.Client, error) {
+	t.Helper()
+
 	opt, err := redis.ParseURL(redisURL)
-	if err != nil {
-		return nil, err
-	}
+	require.NoError(t, err)
 	return redis.NewClient(opt), err
 }
 
-type redisUserCase struct {
+type testFakeErrorUser struct {
+	Username bool
+	t        *testing.T
+}
+
+func (i testFakeErrorUser) MarshalBinary() ([]byte, error) {
+	i.t.Helper()
+
+	return json.Marshal(i)
+}
+
+type testFakeErrorGroup struct {
+	Name bool
+	t    *testing.T
+}
+
+func (i testFakeErrorGroup) MarshalBinary() ([]byte, error) {
+	i.t.Helper()
+
+	return json.Marshal(i)
+}
+
+type testRedisUserCase struct {
 	User models.User
 	Key  string
 }
 
-type redisGroupCase struct {
+type testRedisGroupCase struct {
 	Group models.Group
 	Key   string
 }
 
-func getRedisCases() ([]redisUserCase, []redisGroupCase) {
-	userCases := []redisUserCase{
+func testGetRedisCases(t *testing.T) ([]testRedisUserCase, []testRedisGroupCase) {
+	t.Helper()
+
+	userCases := []testRedisUserCase{
 		{
 			User: models.User{
 				Username: "user1",
@@ -275,7 +285,7 @@ func getRedisCases() ([]redisUserCase, []redisGroupCase) {
 		},
 	}
 
-	groupCases := []redisGroupCase{
+	groupCases := []testRedisGroupCase{
 		{
 			Group: models.Group{Name: "group1"},
 			Key:   "00000000-0000-0000-0000-000000000000",

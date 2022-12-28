@@ -81,7 +81,7 @@ func TestNewGenerateClient(t *testing.T) {
 			args:   []string{"fake-binary", "test", "--cluster-name=test", "--proxy-url=https://fake", "--resource=https://fake"},
 			expectedConfig: &GenerateClient{
 				clusterName: "test",
-				proxyURL:    getURL("https://fake"),
+				proxyURL:    testGetURL(t, "https://fake"),
 				resource:    "https://fake",
 			},
 			expectedErrContains: "",
@@ -111,7 +111,7 @@ func TestNewGenerateClient(t *testing.T) {
 func TestMergeGenerateClient(t *testing.T) {
 	client := &GenerateClient{
 		clusterName:        "test",
-		proxyURL:           getURL("https://www.google.com"),
+		proxyURL:           testGetURL(t, "https://www.google.com"),
 		resource:           "https://fake",
 		kubeConfig:         "/tmp/kubeconfig",
 		tokenCacheDir:      "/tmp/tokencache",
@@ -126,7 +126,7 @@ func TestMergeGenerateClient(t *testing.T) {
 
 	client.Merge(GenerateClient{
 		clusterName:        "test2",
-		proxyURL:           getURL("https://www.example.com"),
+		proxyURL:           testGetURL(t, "https://www.example.com"),
 		resource:           "https://fake2",
 		kubeConfig:         "/tmp2/kubeconfig",
 		tokenCacheDir:      "/tmp2/tokencache",
@@ -151,11 +151,11 @@ func TestGenerate(t *testing.T) {
 
 	tokenCacheDir := tmpDir
 	kubeConfigFile := fmt.Sprintf("%s/kubeconfig", tmpDir)
-	defer deleteFile(t, kubeConfigFile)
+	defer testDeleteFile(t, kubeConfigFile)
 
 	client := &GenerateClient{
 		clusterName:        "test",
-		proxyURL:           getURL("https://www.google.com"),
+		proxyURL:           testGetURL(t, "https://www.google.com"),
 		resource:           "https://fake",
 		kubeConfig:         kubeConfigFile,
 		tokenCacheDir:      tokenCacheDir,
@@ -185,7 +185,7 @@ func TestGenerate(t *testing.T) {
 			GenerateClient: client,
 			GenerateClientFunc: func(oldClient *GenerateClient) *GenerateClient {
 				client := oldClient
-				client.proxyURL = getURL("https://localhost:12345")
+				client.proxyURL = testGetURL(t, "https://localhost:12345")
 				client.overwrite = true
 				return client
 			},
@@ -214,7 +214,11 @@ func TestGenerate(t *testing.T) {
 	}
 }
 
-func getURL(s string) url.URL {
-	res, _ := url.Parse(s)
+func testGetURL(t *testing.T, s string) url.URL {
+	t.Helper()
+
+	res, err := url.Parse(s)
+	require.NoError(t, err)
+
 	return *res
 }

@@ -12,33 +12,16 @@ import (
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
 
-type fakeAzureClient struct {
-	fakeError error
-}
-
-// GetUserGroups ...
-func (client *fakeAzureClient) GetUserGroups(ctx context.Context, objectID string, userType models.UserType) ([]models.Group, error) {
-	return nil, client.fakeError
-}
-
-// StartSyncGroups ...
-func (client *fakeAzureClient) StartSyncGroups(ctx context.Context, syncInterval time.Duration) (*time.Ticker, chan bool, error) {
-	return nil, nil, nil
-}
-
-// Valid ...
-func (client *fakeAzureClient) Valid(ctx context.Context) bool {
-	return true
-}
-
 func TestGetUser(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 	config := config.Config{}
-	azureClient := &fakeAzureClient{
+	azureClient := &testFakeAzureClient{
 		fakeError: nil,
+		t:         t,
 	}
-	azureClientError := &fakeAzureClient{
+	azureClientError := &testFakeAzureClient{
 		fakeError: errors.New("Fake error"),
+		t:         t,
 	}
 
 	cases := []struct {
@@ -81,4 +64,30 @@ func TestGetUser(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, c.expectedUserType, user.Type)
 	}
+}
+
+type testFakeAzureClient struct {
+	fakeError error
+	t         *testing.T
+}
+
+// GetUserGroups ...
+func (client *testFakeAzureClient) GetUserGroups(ctx context.Context, objectID string, userType models.UserType) ([]models.Group, error) {
+	client.t.Helper()
+
+	return nil, client.fakeError
+}
+
+// StartSyncGroups ...
+func (client *testFakeAzureClient) StartSyncGroups(ctx context.Context, syncInterval time.Duration) (*time.Ticker, chan bool, error) {
+	client.t.Helper()
+
+	return nil, nil, nil
+}
+
+// Valid ...
+func (client *testFakeAzureClient) Valid(ctx context.Context) bool {
+	client.t.Helper()
+
+	return true
 }

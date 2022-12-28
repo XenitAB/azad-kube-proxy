@@ -9,7 +9,6 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
-	"log"
 	"math/big"
 	"net/http"
 	"os"
@@ -24,13 +23,12 @@ import (
 func TestGetCertificate(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
-	certPath, err := generateCertificateFile()
-	require.NoError(t, err)
+	certPath := testGenerateCertificateFile(t)
 
 	certPool, err := GetCertificate(ctx, certPath)
-
-	err = deleteFile(certPath)
 	require.NoError(t, err)
+
+	testDeleteFile(t, certPath)
 
 	// nolint:staticcheck
 	require.Len(t, certPool.Subjects(), 1)
@@ -41,13 +39,12 @@ func TestGetCertificate(t *testing.T) {
 
 func TestGetStringFromFile(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
-	filePath, expectedFileString, err := generateRandomFile()
-	require.NoError(t, err)
+	filePath, expectedFileString := testGenerateRandomFile(t)
 
 	fileString, err := GetStringFromFile(ctx, filePath)
-
-	err = deleteFile(filePath)
 	require.NoError(t, err)
+
+	testDeleteFile(t, filePath)
 	require.Equal(t, expectedFileString, fileString)
 
 	_, err = GetStringFromFile(ctx, fmt.Sprintf("%s-does-not-exist", filePath))
@@ -216,50 +213,6 @@ func TestGetBearerToken(t *testing.T) {
 	}
 }
 
-func generateCertificateFile() (string, error) {
-	timestamp := strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
-	filename := fmt.Sprintf("test-cert-%s.pem", timestamp)
-	priv, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	template := x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject: pkix.Name{
-			Organization: []string{"Testing"},
-		},
-		NotBefore: time.Now(),
-		NotAfter:  time.Now().Add(time.Hour * 24 * 180),
-
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		BasicConstraintsValid: true,
-	}
-
-	certBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
-	if err != nil {
-		return "", fmt.Errorf("Failed to create certificate: %v", err)
-	}
-
-	certOut, err := os.Create(filename)
-	if err != nil {
-		return "", fmt.Errorf("Failed to open %s for writing: %v", filename, err)
-	}
-
-	err = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
-	if err != nil {
-		return "", fmt.Errorf("Failed to write data to %s: %v", filename, err)
-	}
-
-	err = certOut.Close()
-	if err != nil {
-		return "", fmt.Errorf("Error closing %s: %v", filename, err)
-	}
-
-	return filename, nil
-}
-
 func TestStripWebSocketBearer(t *testing.T) {
 	cases := []struct {
 		input  string
@@ -375,24 +328,58 @@ func TestSliceContains(t *testing.T) {
 	}
 }
 
-func generateRandomFile() (string, string, error) {
+func testGenerateCertificateFile(t *testing.T) string {
+	t.Helper()
+
+	timestamp := strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
+	filename := fmt.Sprintf("test-cert-%s.pem", timestamp)
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			Organization: []string{"Testing"},
+		},
+		NotBefore: time.Now(),
+		NotAfter:  time.Now().Add(time.Hour * 24 * 180),
+
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+	}
+
+	certBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	require.NoError(t, err)
+
+	certOut, err := os.Create(filename)
+	require.NoError(t, err)
+
+	err = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
+	require.NoError(t, err)
+
+	err = certOut.Close()
+	require.NoError(t, err)
+
+	return filename
+}
+
+func testGenerateRandomFile(t *testing.T) (string, string) {
+	t.Helper()
+
 	timestamp := strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
 	filename := fmt.Sprintf("test-random-%s.pem", timestamp)
 	content := []byte(timestamp)
 
 	err := os.WriteFile(filename, content, 0600)
-	if err != nil {
-		return "", "", fmt.Errorf("Failed to create %s: %v", filename, err)
-	}
+	require.NoError(t, err)
 
-	return filename, timestamp, nil
+	return filename, timestamp
 }
 
-func deleteFile(file string) error {
-	err := os.Remove(file)
-	if err != nil {
-		return fmt.Errorf("Unable to delete file %s: %v", file, err)
-	}
+func testDeleteFile(t *testing.T, file string) {
+	t.Helper()
 
-	return nil
+	err := os.Remove(file)
+	require.NoError(t, err)
 }

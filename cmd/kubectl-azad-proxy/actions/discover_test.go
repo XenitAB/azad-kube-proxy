@@ -15,7 +15,7 @@ func TestNewDiscoverClient(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 	client := &DiscoverClient{}
 
-	restoreAzureCLIAuth := tempChangeEnv("EXCLUDE_AZURE_CLI_AUTH", "true")
+	restoreAzureCLIAuth := testTempChangeEnv(t, "EXCLUDE_AZURE_CLI_AUTH", "true")
 	defer restoreAzureCLIAuth()
 
 	app := &cli.App{
@@ -108,10 +108,10 @@ func TestNewDiscoverClient(t *testing.T) {
 }
 
 func TestDiscover(t *testing.T) {
-	tenantID := getEnvOrSkip(t, "TENANT_ID")
-	clientID := getEnvOrSkip(t, "CLIENT_ID")
-	clientSecret := getEnvOrSkip(t, "CLIENT_SECRET")
-	resource := getEnvOrSkip(t, "TEST_USER_SP_RESOURCE")
+	tenantID := testGetEnvOrSkip(t, "TENANT_ID")
+	clientID := testGetEnvOrSkip(t, "CLIENT_ID")
+	clientSecret := testGetEnvOrSkip(t, "CLIENT_SECRET")
+	resource := testGetEnvOrSkip(t, "TEST_USER_SP_RESOURCE")
 
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
@@ -181,9 +181,9 @@ func TestGetDiscoverData(t *testing.T) {
 		{
 			clusterApps: []hamiltonMsgraph.Application{
 				{
-					DisplayName:    toStringPtr("fake"),
-					IdentifierUris: toStringArrayPtr([]string{"https://fake"}),
-					Tags:           toStringArrayPtr([]string{"azad-kube-proxy"}),
+					DisplayName:    testToPtr(t, "fake"),
+					IdentifierUris: testToPtr(t, []string{"https://fake"}),
+					Tags:           testToPtr(t, []string{"azad-kube-proxy"}),
 				},
 			},
 			expectedOutput: []discover{
@@ -197,14 +197,14 @@ func TestGetDiscoverData(t *testing.T) {
 		{
 			clusterApps: []hamiltonMsgraph.Application{
 				{
-					DisplayName:    toStringPtr("fake"),
-					IdentifierUris: toStringArrayPtr([]string{"https://fake"}),
-					Tags:           toStringArrayPtr([]string{"azad-kube-proxy"}),
+					DisplayName:    testToPtr(t, "fake"),
+					IdentifierUris: testToPtr(t, []string{"https://fake"}),
+					Tags:           testToPtr(t, []string{"azad-kube-proxy"}),
 				},
 				{
-					DisplayName:    toStringPtr("fake2"),
-					IdentifierUris: toStringArrayPtr([]string{"https://fake2"}),
-					Tags:           toStringArrayPtr([]string{"azad-kube-proxy"}),
+					DisplayName:    testToPtr(t, "fake2"),
+					IdentifierUris: testToPtr(t, []string{"https://fake2"}),
+					Tags:           testToPtr(t, []string{"azad-kube-proxy"}),
 				},
 			},
 			expectedOutput: []discover{
@@ -223,9 +223,9 @@ func TestGetDiscoverData(t *testing.T) {
 		{
 			clusterApps: []hamiltonMsgraph.Application{
 				{
-					DisplayName:    toStringPtr("fake"),
-					IdentifierUris: toStringArrayPtr([]string{"https://fake"}),
-					Tags:           toStringArrayPtr([]string{"azad-kube-proxy", "cluster_name:newfake"}),
+					DisplayName:    testToPtr(t, "fake"),
+					IdentifierUris: testToPtr(t, []string{"https://fake"}),
+					Tags:           testToPtr(t, []string{"azad-kube-proxy", "cluster_name:newfake"}),
 				},
 			},
 			expectedOutput: []discover{
@@ -239,14 +239,14 @@ func TestGetDiscoverData(t *testing.T) {
 		{
 			clusterApps: []hamiltonMsgraph.Application{
 				{
-					DisplayName:    toStringPtr("fake"),
-					IdentifierUris: toStringArrayPtr([]string{"https://fake"}),
-					Tags:           toStringArrayPtr([]string{"azad-kube-proxy", "proxy_url:https://newfake"}),
+					DisplayName:    testToPtr(t, "fake"),
+					IdentifierUris: testToPtr(t, []string{"https://fake"}),
+					Tags:           testToPtr(t, []string{"azad-kube-proxy", "proxy_url:https://newfake"}),
 				},
 				{
-					DisplayName:    toStringPtr("fake"),
-					IdentifierUris: toStringArrayPtr([]string{"https://fake"}),
-					Tags:           toStringArrayPtr([]string{"azad-kube-proxy", "cluster_name:newfake2", "proxy_url:https://newfake2"}),
+					DisplayName:    testToPtr(t, "fake"),
+					IdentifierUris: testToPtr(t, []string{"https://fake"}),
+					Tags:           testToPtr(t, []string{"azad-kube-proxy", "cluster_name:newfake2", "proxy_url:https://newfake2"}),
 				},
 			},
 			expectedOutput: []discover{
@@ -265,9 +265,9 @@ func TestGetDiscoverData(t *testing.T) {
 		{
 			clusterApps: []hamiltonMsgraph.Application{
 				{
-					DisplayName:    toStringPtr("fake"),
-					IdentifierUris: toStringArrayPtr([]string{"https://fake"}),
-					Tags:           toStringArrayPtr([]string{"azad-kube-proxy", "fake"}),
+					DisplayName:    testToPtr(t, "fake"),
+					IdentifierUris: testToPtr(t, []string{"https://fake"}),
+					Tags:           testToPtr(t, []string{"azad-kube-proxy", "fake"}),
 				},
 			},
 			expectedOutput: []discover{
@@ -290,10 +290,8 @@ func TestGetDiscoverData(t *testing.T) {
 	}
 }
 
-func toStringPtr(s string) *string {
-	return &s
-}
+func testToPtr[T any](t *testing.T, s T) *T {
+	t.Helper()
 
-func toStringArrayPtr(s []string) *[]string {
 	return &s
 }

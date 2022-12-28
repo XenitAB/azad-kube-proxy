@@ -45,7 +45,7 @@ func TestNewHealthClient(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		validator := &fakeValidator{}
+		validator := &testFakeValidator{t}
 		_, err := NewHealthClient(ctx, c.config, validator)
 		if c.expectedErrContains != "" {
 			require.ErrorContains(t, err, c.expectedErrContains)
@@ -117,7 +117,7 @@ func TestReady(t *testing.T) {
 func TestLive(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
-	validator := &fakeValidator{}
+	validator := &testFakeValidator{t}
 	fakeConfig := config.Config{
 		KubernetesConfig: config.KubernetesConfig{
 			ValidateCertificate: false,
@@ -134,9 +134,13 @@ func TestLive(t *testing.T) {
 	require.True(t, live)
 }
 
-type fakeValidator struct{}
+type testFakeValidator struct {
+	t *testing.T
+}
 
 // Valid ...
-func (client *fakeValidator) Valid(ctx context.Context) bool {
+func (client *testFakeValidator) Valid(ctx context.Context) bool {
+	client.t.Helper()
+
 	return true
 }

@@ -9,7 +9,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"log"
 	"math/big"
 	"os"
 	"strconv"
@@ -38,7 +37,7 @@ func TestNewConfig(t *testing.T) {
 	}
 
 	for _, envVar := range envVarsToClear {
-		restore := tempUnsetEnv(envVar)
+		restore := testTempUnsetEnv(t, envVar)
 		defer restore()
 	}
 
@@ -57,14 +56,13 @@ func TestNewConfig(t *testing.T) {
 	}
 
 	// Fake certificate
-	certPath, err := generateCertificateFile()
-	require.NoError(t, err)
-	defer deleteFile(t, certPath)
+	certPath := testGenerateCertificateFile(t)
+	defer testDeleteFile(t, certPath)
 
 	// Fake token
-	tokenPath, _, err := generateRandomFile()
+	tokenPath, _, err := testGenerateRandomFile(t)
 	require.NoError(t, err)
-	defer deleteFile(t, tokenPath)
+	defer testDeleteFile(t, tokenPath)
 
 	baseArgs := []string{"fake-bin", fmt.Sprintf("--kubernetes-api-ca-cert-path=%s", certPath), fmt.Sprintf("--kubernetes-api-token-path=%s", tokenPath)}
 	baseWorkingArgs := append(baseArgs, "--client-id=00000000-0000-0000-0000-000000000000", "--client-secret=supersecret", "--tenant-id=00000000-0000-0000-0000-000000000000")
@@ -236,54 +234,10 @@ func TestNewConfig(t *testing.T) {
 	}
 }
 
-func generateCertificateFile() (string, error) {
-	timestamp := strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
-	filename := fmt.Sprintf("test-cert-%s.pem", timestamp)
-	priv, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	template := x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject: pkix.Name{
-			Organization: []string{"Testing"},
-		},
-		NotBefore: time.Now(),
-		NotAfter:  time.Now().Add(time.Hour * 24 * 180),
-
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		BasicConstraintsValid: true,
-	}
-
-	certBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
-	if err != nil {
-		return "", fmt.Errorf("Failed to create certificate: %v", err)
-	}
-
-	certOut, err := os.Create(filename)
-	if err != nil {
-		return "", fmt.Errorf("Failed to open %s for writing: %v", filename, err)
-	}
-
-	err = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
-	if err != nil {
-		return "", fmt.Errorf("Failed to write data to %s: %v", filename, err)
-	}
-
-	err = certOut.Close()
-	if err != nil {
-		return "", fmt.Errorf("Error closing %s: %v", filename, err)
-	}
-
-	return filename, nil
-}
-
 func TestConfigValidate(t *testing.T) {
-	randomFile, _, err := generateRandomFile()
+	randomFile, _, err := testGenerateRandomFile(t)
 	require.NoError(t, err)
-	defer deleteFile(t, randomFile)
+	defer testDeleteFile(t, randomFile)
 
 	cases := []struct {
 		config              Config
@@ -344,27 +298,65 @@ func TestConfigValidate(t *testing.T) {
 	}
 }
 
-func generateRandomFile() (string, string, error) {
+func testGenerateCertificateFile(t *testing.T) string {
+	t.Helper()
+
+	timestamp := strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
+	filename := fmt.Sprintf("test-cert-%s.pem", timestamp)
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			Organization: []string{"Testing"},
+		},
+		NotBefore: time.Now(),
+		NotAfter:  time.Now().Add(time.Hour * 24 * 180),
+
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+	}
+
+	certBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	require.NoError(t, err)
+
+	certOut, err := os.Create(filename)
+	require.NoError(t, err)
+
+	err = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
+	require.NoError(t, err)
+
+	err = certOut.Close()
+	require.NoError(t, err)
+
+	return filename
+}
+
+func testGenerateRandomFile(t *testing.T) (string, string, error) {
+	t.Helper()
+
 	timestamp := strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
 	filename := fmt.Sprintf("test-random-%s.pem", timestamp)
 	content := []byte(timestamp)
 
 	err := os.WriteFile(filename, content, 0600)
-	if err != nil {
-		return "", "", fmt.Errorf("Failed to create %s: %v", filename, err)
-	}
+	require.NoError(t, err)
 
 	return filename, timestamp, nil
 }
 
-func deleteFile(t *testing.T, file string) {
+func testDeleteFile(t *testing.T, file string) {
+	t.Helper()
+
 	err := os.Remove(file)
-	if err != nil {
-		t.Errorf("Unable to delete file: %q", err)
-	}
+	require.NoError(t, err)
 }
 
-func tempUnsetEnv(key string) func() {
+func testTempUnsetEnv(t *testing.T, key string) func() {
+	t.Helper()
+
 	oldEnv := os.Getenv(key)
 	os.Unsetenv(key)
 	return func() { os.Setenv(key, oldEnv) }
