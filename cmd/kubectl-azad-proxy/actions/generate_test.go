@@ -91,20 +91,20 @@ func TestNewGenerateClient(t *testing.T) {
 	}
 
 	for _, c := range cases {
+		client = &GenerateClient{}
 		c.cliApp.Writer = &c.outBuffer
 		c.cliApp.ErrWriter = &c.errBuffer
 		err := c.cliApp.Run(c.args)
 		if c.expectedErrContains != "" {
 			require.ErrorContains(t, err, c.expectedErrContains)
-		} else {
-			require.NoError(t, err)
-			require.Equal(t, c.expectedConfig.clusterName, client.clusterName)
-			require.Equal(t, c.expectedConfig.proxyURL.Host, client.proxyURL.Host)
-			require.Equal(t, c.expectedConfig.proxyURL.Scheme, client.proxyURL.Scheme)
-			require.Equal(t, c.expectedConfig.resource, client.resource)
+			continue
 		}
 
-		client = &GenerateClient{}
+		require.NoError(t, err)
+		require.Equal(t, c.expectedConfig.clusterName, client.clusterName)
+		require.Equal(t, c.expectedConfig.proxyURL.Host, client.proxyURL.Host)
+		require.Equal(t, c.expectedConfig.proxyURL.Scheme, client.proxyURL.Scheme)
+		require.Equal(t, c.expectedConfig.resource, client.resource)
 	}
 }
 

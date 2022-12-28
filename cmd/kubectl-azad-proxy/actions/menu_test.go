@@ -44,9 +44,7 @@ func TestNewMenuClient(t *testing.T) {
 	app.Writer = &bytes.Buffer{}
 	app.ErrWriter = &bytes.Buffer{}
 	err = app.Run([]string{"fake-binary", "test"})
-	if err != nil {
-		t.Errorf("Expected err to be nil: %q", err)
-	}
+	require.NoError(t, err)
 }
 
 func TestMenu(t *testing.T) {
@@ -122,14 +120,14 @@ func TestMenu(t *testing.T) {
 		},
 	}
 
-	for idx, c := range cases {
+	for _, c := range cases {
 		err := c.menuClient.Menu(ctx)
-		if err != nil && !c.expectedErr {
-			t.Errorf("Expected err (%d) to be nil: %q", idx, err)
+		if c.expectedErr {
+			require.Error(t, err)
+			continue
 		}
-		if err == nil && c.expectedErr {
-			t.Errorf("Expected err (%d) not to be nil", idx)
-		}
+
+		require.NoError(t, err)
 	}
 }
 
@@ -237,9 +235,7 @@ func TestMergeFlags(t *testing.T) {
 
 	for _, c := range cases {
 		flags := mergeFlags(c.a, c.b)
-		if len(flags) != c.expectedLength {
-			t.Errorf("Expected flags length to be '%d' but was: %d", c.expectedLength, len(flags))
-		}
+		require.Len(t, flags, c.expectedLength)
 	}
 }
 
@@ -303,9 +299,7 @@ func TestUnrequireFlags(t *testing.T) {
 	for _, c := range cases {
 		flags := unrequireFlags(c.a)
 		for _, flag := range flags {
-			if flag.(*cli.StringFlag).Required {
-				t.Errorf("Expected flag to be 'false' but was 'true'")
-			}
+			require.False(t, flag.(*cli.StringFlag).Required)
 		}
 	}
 }

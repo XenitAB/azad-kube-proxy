@@ -92,18 +92,18 @@ func TestNewDiscoverClient(t *testing.T) {
 	}
 
 	for _, c := range cases {
+		client = &DiscoverClient{}
 		c.cliApp.Writer = &c.outBuffer
 		c.cliApp.ErrWriter = &c.errBuffer
 		err := c.cliApp.Run(c.args)
 
 		if c.expectedErrContains != "" {
 			require.ErrorContains(t, err, c.expectedErrContains)
-		} else {
-			require.NoError(t, err)
-			require.Equal(t, c.expectedConfig.outputType, client.outputType)
+			continue
 		}
 
-		client = &DiscoverClient{}
+		require.NoError(t, err)
+		require.Equal(t, c.expectedConfig.outputType, client.outputType)
 	}
 }
 

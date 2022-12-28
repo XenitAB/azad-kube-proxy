@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -125,32 +124,24 @@ func TestGetToken(t *testing.T) {
 	}
 
 	err = createCacheFile(fakeFile, fakeToken)
-	if err != nil {
-		t.Errorf("Expected err to be nil: %q", err)
-	}
+	require.NoError(t, err)
 
 	fakeTokens, err := NewTokens(ctx, fakeDir, creds)
-	if err != nil {
-		t.Errorf("Expected err to be nil: %q", err)
-	}
+	require.NoError(t, err)
 
 	realDir := fmt.Sprintf("%s/real", tmpDir)
 	err = os.Mkdir(realDir, 0700)
 	require.NoError(t, err)
 
 	realTokens, err := NewTokens(ctx, realDir, creds)
-	if err != nil {
-		t.Errorf("Expected err to be nil: %q", err)
-	}
+	require.NoError(t, err)
 
 	realFalseDir := fmt.Sprintf("%s/realfalse", tmpDir)
 	err = os.Mkdir(realFalseDir, 0700)
 	require.NoError(t, err)
 
 	realFalseTokens, err := NewTokens(ctx, realFalseDir, credsFalse)
-	if err != nil {
-		t.Errorf("Expected err to be nil: %q", err)
-	}
+	require.NoError(t, err)
 
 	cases := []struct {
 		tokens              TokensInterface
@@ -180,31 +171,15 @@ func TestGetToken(t *testing.T) {
 
 	for _, c := range cases {
 		token, err := c.tokens.GetToken(ctx, c.clusterName, c.resource)
-		if err != nil && c.expectedErrContains == "" {
-			t.Errorf("Expected err to be nil: %q", err)
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+			continue
 		}
 
-		if err == nil && c.expectedErrContains != "" {
-			t.Errorf("Expected err to contain '%s' but was nil", c.expectedErrContains)
-		}
-
-		if err != nil && c.expectedErrContains != "" {
-			if !strings.Contains(err.Error(), c.expectedErrContains) {
-				t.Errorf("Expected err to contain '%s' but was: %q", c.expectedErrContains, err)
-			}
-		}
-
-		if c.expectedErrContains == "" {
-			if token.Name != c.clusterName {
-				t.Errorf("Expected token.Name to be '%s' but was: %s", c.clusterName, token.Name)
-			}
-			if token.Resource != c.resource {
-				t.Errorf("Expected token.Resource to be '%s' but was: %s", c.resource, token.Resource)
-			}
-			if len(token.Token) == 0 {
-				t.Errorf("Expected token.Token to be larger than 0")
-			}
-		}
+		require.NoError(t, err)
+		require.Equal(t, c.clusterName, token.Name)
+		require.Equal(t, c.resource, token.Resource)
+		require.NotEmpty(t, token.Token)
 	}
 }
 
@@ -265,15 +240,13 @@ func TestTokenExpired(t *testing.T) {
 		},
 	}
 
-	for idx, c := range cases {
+	for _, c := range cases {
 		token := Token{
 			Token:               "fake-token",
 			ExpirationTimestamp: c.expirationTimestamp,
 		}
 
-		if token.expired(c.expiryDelta, c.timeNow) != c.expired {
-			t.Errorf("Expected iteration %d of token.expired() to be '%t'", idx+1, c.expired)
-		}
+		require.Equal(t, c.expired, token.expired(c.expiryDelta, c.timeNow))
 	}
 }
 
@@ -308,10 +281,8 @@ func TestTokenValid(t *testing.T) {
 		},
 	}
 
-	for idx, c := range cases {
-		if c.token.Valid() != c.valid {
-			t.Errorf("Expected iteration %d of token.Valid() to be '%t'", idx+1, c.valid)
-		}
+	for _, c := range cases {
+		require.Equal(t, c.valid, c.token.Valid())
 	}
 }
 

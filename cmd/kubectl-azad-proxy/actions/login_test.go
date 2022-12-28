@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -84,32 +83,19 @@ func TestNewLoginClient(t *testing.T) {
 	}
 
 	for _, c := range cases {
+		client = &LoginClient{}
 		c.cliApp.Writer = &c.outBuffer
 		c.cliApp.ErrWriter = &c.errBuffer
 		err := c.cliApp.Run(c.args)
-		if err != nil && c.expectedErrContains == "" {
-			t.Errorf("Expected err to be nil: %q", err)
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+			continue
 		}
 
-		if err == nil && c.expectedErrContains != "" {
-			t.Errorf("Expected err to contain '%s' but was nil", c.expectedErrContains)
-		}
+		require.NoError(t, err)
+		require.Equal(t, c.expectedConfig.clusterName, client.clusterName)
+		require.Equal(t, c.expectedConfig.resource, client.resource)
 
-		if err != nil && c.expectedErrContains != "" {
-			if !strings.Contains(err.Error(), c.expectedErrContains) {
-				t.Errorf("Expected err to contain '%s' but was: %q", c.expectedErrContains, err)
-			}
-		}
-
-		if c.expectedErrContains == "" {
-			if client.clusterName != c.expectedConfig.clusterName {
-				t.Errorf("Expected client.clusterName to be '%s' but was: %s", c.expectedConfig.clusterName, client.clusterName)
-			}
-			if client.resource != c.expectedConfig.resource {
-				t.Errorf("Expected client.resource to be '%s' but was: %s", c.expectedConfig.resource, client.resource)
-			}
-		}
-		client = &LoginClient{}
 	}
 }
 
@@ -178,35 +164,18 @@ func TestLogin(t *testing.T) {
 
 	for _, c := range cases {
 		rawRes, err := c.LoginClient.Login(ctx)
-		if err != nil && c.expectedErrContains == "" {
-			t.Errorf("Expected err to be nil: %q", err)
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+			continue
 		}
 
-		if err == nil && c.expectedErrContains != "" {
-			t.Errorf("Expected err to contain '%s' but was nil", c.expectedErrContains)
-		}
+		require.NoError(t, err)
 
-		if err != nil && c.expectedErrContains != "" {
-			if !strings.Contains(err.Error(), c.expectedErrContains) {
-				t.Errorf("Expected err to contain '%s' but was: %q", c.expectedErrContains, err)
-			}
-		}
-
-		if c.expectedErrContains == "" {
-			tokenRes := &k8sclientauth.ExecCredential{}
-			err = json.Unmarshal([]byte(rawRes), &tokenRes)
-			if err != nil && c.expectedErrContains == "" {
-				t.Errorf("Expected err to be nil: %q", err)
-			}
-
-			if tokenRes.APIVersion != "client.authentication.k8s.io/v1beta1" {
-				t.Errorf("Expected tokenRes.APIVersion to be '%s' but was: %s", "client.authentication.k8s.io/v1beta1", tokenRes.APIVersion)
-			}
-
-			if tokenRes.Kind != "ExecCredential" {
-				t.Errorf("Expected tokenRes.Kind to be '%s' but was: %s", "ExecCredential", tokenRes.Kind)
-			}
-		}
+		tokenRes := &k8sclientauth.ExecCredential{}
+		err = json.Unmarshal([]byte(rawRes), &tokenRes)
+		require.NoError(t, err)
+		require.Equal(t, "client.authentication.k8s.io/v1beta1", tokenRes.APIVersion)
+		require.Equal(t, "ExecCredential", tokenRes.Kind)
 	}
 }
 
