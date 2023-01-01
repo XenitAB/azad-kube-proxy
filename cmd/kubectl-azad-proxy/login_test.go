@@ -17,7 +17,7 @@ import (
 
 func TestNewLoginClient(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
-	client := &LoginClient{}
+	globalClient := &LoginClient{}
 
 	loginFlags, err := loginFlags(ctx)
 	require.NoError(t, err)
@@ -32,10 +32,12 @@ func TestNewLoginClient(t *testing.T) {
 				Usage:   "test",
 				Flags:   loginFlags,
 				Action: func(c *cli.Context) error {
-					_, err := newLoginClient(ctx, c)
+					client, err := newLoginClient(ctx, c)
 					if err != nil {
 						return err
 					}
+
+					globalClient = client
 
 					return nil
 				},
@@ -81,7 +83,7 @@ func TestNewLoginClient(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		client = &LoginClient{}
+		globalClient = &LoginClient{}
 		c.cliApp.Writer = &c.outBuffer
 		c.cliApp.ErrWriter = &c.errBuffer
 		err := c.cliApp.Run(c.args)
@@ -91,8 +93,8 @@ func TestNewLoginClient(t *testing.T) {
 		}
 
 		require.NoError(t, err)
-		require.Equal(t, c.expectedConfig.clusterName, client.clusterName)
-		require.Equal(t, c.expectedConfig.resource, client.resource)
+		require.Equal(t, c.expectedConfig.clusterName, globalClient.clusterName)
+		require.Equal(t, c.expectedConfig.resource, globalClient.resource)
 
 	}
 }

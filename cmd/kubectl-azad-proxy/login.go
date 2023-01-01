@@ -20,11 +20,6 @@ type LoginClient struct {
 	defaultAzureCredentialOptions defaultAzureCredentialOptions
 }
 
-// LoginInterface ...
-type LoginInterface interface {
-	Login(ctx context.Context) (string, error)
-}
-
 func newLoginClient(ctx context.Context, c *cli.Context) (*LoginClient, error) {
 	tokenCacheDir := getTokenCacheDirectory(c.String("token-cache-dir"), c.String("kubeconfig"))
 	return &LoginClient{

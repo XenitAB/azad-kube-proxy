@@ -15,10 +15,6 @@ type MenuClient struct {
 	promptClient   promptInterface
 }
 
-type MenuInterface interface {
-	Menu(ctx context.Context) error
-}
-
 func newMenuClient(ctx context.Context, c *cli.Context) (*MenuClient, error) {
 	discoverClient, err := newDiscoverClient(ctx, c)
 	if err != nil {
