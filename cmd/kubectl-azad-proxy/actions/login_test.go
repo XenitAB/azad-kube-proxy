@@ -32,12 +32,10 @@ func TestNewLoginClient(t *testing.T) {
 				Usage:   "test",
 				Flags:   loginFlags,
 				Action: func(c *cli.Context) error {
-					ci, err := NewLoginClient(ctx, c)
+					_, err := NewLoginClient(ctx, c)
 					if err != nil {
 						return err
 					}
-
-					client = ci.(*LoginClient)
 
 					return nil
 				},

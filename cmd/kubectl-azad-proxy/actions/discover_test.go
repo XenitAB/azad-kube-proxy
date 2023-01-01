@@ -28,12 +28,10 @@ func TestNewDiscoverClient(t *testing.T) {
 				Usage:   "test",
 				Flags:   DiscoverFlags(ctx),
 				Action: func(c *cli.Context) error {
-					ci, err := NewDiscoverClient(ctx, c)
+					_, err := NewDiscoverClient(ctx, c)
 					if err != nil {
 						return err
 					}
-
-					client = ci.(*DiscoverClient)
 
 					return nil
 				},

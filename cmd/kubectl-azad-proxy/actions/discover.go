@@ -54,7 +54,7 @@ type DiscoverInterface interface {
 }
 
 // NewDiscoverClient ...
-func NewDiscoverClient(ctx context.Context, c *cli.Context) (DiscoverInterface, error) {
+func NewDiscoverClient(ctx context.Context, c *cli.Context) (*DiscoverClient, error) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	var output outputType

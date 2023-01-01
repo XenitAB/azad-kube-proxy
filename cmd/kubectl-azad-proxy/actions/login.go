@@ -26,7 +26,7 @@ type LoginInterface interface {
 }
 
 // NewLoginClient ...
-func NewLoginClient(ctx context.Context, c *cli.Context) (LoginInterface, error) {
+func NewLoginClient(ctx context.Context, c *cli.Context) (*LoginClient, error) {
 	tokenCacheDir := getTokenCacheDirectory(c.String("token-cache-dir"), c.String("kubeconfig"))
 	return &LoginClient{
 		clusterName:   c.String("cluster-name"),

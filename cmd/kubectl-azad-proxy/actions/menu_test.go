@@ -353,6 +353,11 @@ type testFakeGenerateClient struct {
 	t         *testing.T
 }
 
+type testGenerateInterface interface {
+	Generate(ctx context.Context) error
+	Merge(new GenerateClient)
+}
+
 func newTestFakeGenerateClient(t *testing.T, fakeError error) GenerateInterface {
 	t.Helper()
 

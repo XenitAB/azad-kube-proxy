@@ -21,7 +21,7 @@ type MenuInterface interface {
 }
 
 // NewMenuClient ...
-func NewMenuClient(ctx context.Context, c *cli.Context) (MenuInterface, error) {
+func NewMenuClient(ctx context.Context, c *cli.Context) (*MenuClient, error) {
 	discoverClient, err := NewDiscoverClient(ctx, c)
 	if err != nil {
 		return nil, err

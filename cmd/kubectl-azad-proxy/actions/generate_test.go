@@ -31,12 +31,10 @@ func TestNewGenerateClient(t *testing.T) {
 				Usage:   "test",
 				Flags:   generateFlags,
 				Action: func(c *cli.Context) error {
-					ci, err := NewGenerateClient(ctx, c)
+					_, err := NewGenerateClient(ctx, c)
 					if err != nil {
 						return err
 					}
-
-					client = ci.(*GenerateClient)
 
 					return nil
 				},

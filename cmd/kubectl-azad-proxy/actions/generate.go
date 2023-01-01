@@ -38,7 +38,7 @@ type GenerateInterface interface {
 }
 
 // NewGenerateClient ...
-func NewGenerateClient(ctx context.Context, c *cli.Context) (GenerateInterface, error) {
+func NewGenerateClient(ctx context.Context, c *cli.Context) (*GenerateClient, error) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	proxyURL, err := url.Parse(c.String("proxy-url"))
