@@ -18,7 +18,7 @@ jobs:
       - name: Get GitHub Tag
         id: get_tag
         run: |
-          echo "::set-output name=tag::${GITHUB_REF#refs/tags/}"
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
       - name: Update Helm chart version and verify no changes
         env:
           GITHUB_TAG: ${{ steps.get_tag.outputs.tag }}
