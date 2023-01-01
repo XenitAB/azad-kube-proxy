@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -114,18 +113,15 @@ func TestLogin(t *testing.T) {
 	restoreClientSecret := testTempChangeEnv(t, "AZURE_CLIENT_SECRET", clientSecret)
 	defer restoreClientSecret()
 
-	curDir, err := os.Getwd()
-	if err != nil {
-		t.Errorf("Expected err to be nil: %q", err)
-	}
-	tokenCacheFile := fmt.Sprintf("%s/../../../tmp/%s", curDir, tokenCacheFileName)
-	defer testDeleteFile(t, tokenCacheFile)
+	tmpDir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
 
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 	client := &LoginClient{
 		clusterName:   "test",
 		resource:      resource,
-		tokenCacheDir: filepath.Dir(tokenCacheFile),
+		tokenCacheDir: tmpDir,
 		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
 			excludeAzureCLICredential:    true,
 			excludeEnvironmentCredential: false,
@@ -133,14 +129,14 @@ func TestLogin(t *testing.T) {
 		},
 	}
 
-	tmpDir, err := os.MkdirTemp("", "")
+	errTmpDir, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
 	clientErr := &LoginClient{
 		clusterName:   "test",
 		resource:      resource,
-		tokenCacheDir: tmpDir,
+		tokenCacheDir: errTmpDir,
 		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
 			excludeAzureCLICredential:    true,
 			excludeEnvironmentCredential: true,
