@@ -1,4 +1,4 @@
-package actions
+package main
 
 import (
 	"context"
@@ -26,7 +26,7 @@ func TestNewTokens(t *testing.T) {
 		require.NoError(t, err)
 		defer os.RemoveAll(tmpDir)
 
-		_, err = NewTokens(ctx, tmpDir, opts)
+		_, err = newTokens(ctx, tmpDir, opts)
 		require.NoError(t, err)
 	})
 
@@ -42,7 +42,7 @@ func TestNewTokens(t *testing.T) {
 		err = os.Chmod(tmpFilePath, 0000)
 		require.NoError(t, err)
 
-		_, err = NewTokens(ctx, tmpDir, opts)
+		_, err = newTokens(ctx, tmpDir, opts)
 		require.ErrorContains(t, err, "Token cache error: ")
 	})
 
@@ -55,7 +55,7 @@ func TestNewTokens(t *testing.T) {
 		err = os.WriteFile(tmpFilePath, []byte("[]"), 0600)
 		require.NoError(t, err)
 
-		_, err = NewTokens(ctx, tmpDir, opts)
+		_, err = newTokens(ctx, tmpDir, opts)
 		require.ErrorContains(t, err, "Token cache error: ")
 	})
 
@@ -68,7 +68,7 @@ func TestNewTokens(t *testing.T) {
 		err = os.WriteFile(tmpFilePath, []byte("{}"), 0600)
 		require.NoError(t, err)
 
-		_, err = NewTokens(ctx, tmpDir, opts)
+		_, err = newTokens(ctx, tmpDir, opts)
 		require.NoError(t, err)
 	})
 }
@@ -125,21 +125,21 @@ func TestGetToken(t *testing.T) {
 
 	testCreateCacheFile(t, fakeFile, fakeToken)
 
-	fakeTokens, err := NewTokens(ctx, fakeDir, creds)
+	fakeTokens, err := newTokens(ctx, fakeDir, creds)
 	require.NoError(t, err)
 
 	realDir := fmt.Sprintf("%s/real", tmpDir)
 	err = os.Mkdir(realDir, 0700)
 	require.NoError(t, err)
 
-	realTokens, err := NewTokens(ctx, realDir, creds)
+	realTokens, err := newTokens(ctx, realDir, creds)
 	require.NoError(t, err)
 
 	realFalseDir := fmt.Sprintf("%s/realfalse", tmpDir)
 	err = os.Mkdir(realFalseDir, 0700)
 	require.NoError(t, err)
 
-	realFalseTokens, err := NewTokens(ctx, realFalseDir, credsFalse)
+	realFalseTokens, err := newTokens(ctx, realFalseDir, credsFalse)
 	require.NoError(t, err)
 
 	cases := []struct {

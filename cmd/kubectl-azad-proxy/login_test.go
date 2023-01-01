@@ -1,4 +1,4 @@
-package actions
+package main
 
 import (
 	"bytes"
@@ -19,7 +19,7 @@ func TestNewLoginClient(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 	client := &LoginClient{}
 
-	loginFlags, err := LoginFlags(ctx)
+	loginFlags, err := loginFlags(ctx)
 	require.NoError(t, err)
 
 	app := &cli.App{
@@ -32,7 +32,7 @@ func TestNewLoginClient(t *testing.T) {
 				Usage:   "test",
 				Flags:   loginFlags,
 				Action: func(c *cli.Context) error {
-					_, err := NewLoginClient(ctx, c)
+					_, err := newLoginClient(ctx, c)
 					if err != nil {
 						return err
 					}

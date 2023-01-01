@@ -1,4 +1,4 @@
-package actions
+package main
 
 import (
 	"bytes"
@@ -9,7 +9,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v2"
-	"github.com/xenitab/azad-kube-proxy/cmd/kubectl-azad-proxy/customerrors"
 )
 
 func TestNewMenuClient(t *testing.T) {
@@ -18,7 +17,7 @@ func TestNewMenuClient(t *testing.T) {
 	restoreAzureCLIAuth := testTempChangeEnv(t, "EXCLUDE_AZURE_CLI_AUTH", "true")
 	defer restoreAzureCLIAuth()
 
-	menuFlags, err := MenuFlags(ctx)
+	menuFlags, err := menuFlags(ctx)
 	require.NoError(t, err)
 
 	app := &cli.App{
@@ -31,7 +30,7 @@ func TestNewMenuClient(t *testing.T) {
 				Usage:   "test",
 				Flags:   menuFlags,
 				Action: func(c *cli.Context) error {
-					_, err := NewMenuClient(ctx, c)
+					_, err := newMenuClient(ctx, c)
 					if err != nil {
 						return err
 					}
@@ -65,7 +64,7 @@ func TestMenu(t *testing.T) {
 		{
 			menuClient: &MenuClient{
 				discoverClient: newTestFakeDiscoverClient(t, nil),
-				generateClient: newTestFakeGenerateClient(t, customerrors.New(customerrors.ErrorTypeOverwriteConfig, fmt.Errorf("Fake error"))),
+				generateClient: newTestFakeGenerateClient(t, newCustomError(errorTypeOverwriteConfig, fmt.Errorf("Fake error"))),
 				promptClient:   newtestFakePromptClient(t, true, nil, nil),
 			},
 			expectedErr: false,
@@ -73,7 +72,7 @@ func TestMenu(t *testing.T) {
 		{
 			menuClient: &MenuClient{
 				discoverClient: newTestFakeDiscoverClient(t, nil),
-				generateClient: newTestFakeGenerateClient(t, customerrors.New(customerrors.ErrorTypeUnknown, fmt.Errorf("Fake error"))),
+				generateClient: newTestFakeGenerateClient(t, newCustomError(errorTypeUnknown, fmt.Errorf("Fake error"))),
 				promptClient:   newtestFakePromptClient(t, true, nil, nil),
 			},
 			expectedErr: true,
@@ -105,7 +104,7 @@ func TestMenu(t *testing.T) {
 		{
 			menuClient: &MenuClient{
 				discoverClient: newTestFakeDiscoverClient(t, nil),
-				generateClient: newTestFakeGenerateClient(t, customerrors.New(customerrors.ErrorTypeOverwriteConfig, fmt.Errorf("Fake error"))),
+				generateClient: newTestFakeGenerateClient(t, newCustomError(errorTypeOverwriteConfig, fmt.Errorf("Fake error"))),
 				promptClient:   newtestFakePromptClient(t, true, nil, fmt.Errorf("Fake error")),
 			},
 			expectedErr: true,
@@ -113,7 +112,7 @@ func TestMenu(t *testing.T) {
 		{
 			menuClient: &MenuClient{
 				discoverClient: newTestFakeDiscoverClient(t, nil),
-				generateClient: newTestFakeGenerateClient(t, customerrors.New(customerrors.ErrorTypeOverwriteConfig, fmt.Errorf("Fake error"))),
+				generateClient: newTestFakeGenerateClient(t, newCustomError(errorTypeOverwriteConfig, fmt.Errorf("Fake error"))),
 				promptClient:   newtestFakePromptClient(t, false, nil, nil),
 			},
 			expectedErr: false,
@@ -371,7 +370,7 @@ func newTestFakeGenerateClient(t *testing.T, fakeError error) GenerateInterface 
 func (client *testFakeGenerateClient) Generate(ctx context.Context) error {
 	client.t.Helper()
 
-	if customerrors.To(client.fakeError).ErrorType == customerrors.ErrorTypeOverwriteConfig {
+	if toCustomError(client.fakeError).errorType == errorTypeOverwriteConfig {
 		if !client.overwrite {
 			return client.fakeError
 		}

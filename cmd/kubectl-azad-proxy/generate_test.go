@@ -1,4 +1,4 @@
-package actions
+package main
 
 import (
 	"bytes"
@@ -18,7 +18,7 @@ func TestNewGenerateClient(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 	client := &GenerateClient{}
 
-	generateFlags, err := GenerateFlags(ctx)
+	generateFlags, err := generateFlags(ctx)
 	require.NoError(t, err)
 
 	app := &cli.App{
@@ -31,7 +31,7 @@ func TestNewGenerateClient(t *testing.T) {
 				Usage:   "test",
 				Flags:   generateFlags,
 				Action: func(c *cli.Context) error {
-					_, err := NewGenerateClient(ctx, c)
+					_, err := newGenerateClient(ctx, c)
 					if err != nil {
 						return err
 					}

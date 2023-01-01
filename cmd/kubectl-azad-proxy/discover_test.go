@@ -1,4 +1,4 @@
-package actions
+package main
 
 import (
 	"bytes"
@@ -26,9 +26,9 @@ func TestNewDiscoverClient(t *testing.T) {
 				Name:    "test",
 				Aliases: []string{"t"},
 				Usage:   "test",
-				Flags:   DiscoverFlags(ctx),
+				Flags:   discoverFlags(ctx),
 				Action: func(c *cli.Context) error {
-					_, err := NewDiscoverClient(ctx, c)
+					_, err := newDiscoverClient(ctx, c)
 					if err != nil {
 						return err
 					}
