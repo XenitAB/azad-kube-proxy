@@ -9,7 +9,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	"github.com/xenitab/azad-kube-proxy/pkg/cache"
-	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
 
@@ -19,7 +18,7 @@ func TestNewAzureClient(t *testing.T) {
 	tenantID := testGetEnvOrSkip(t, "TENANT_ID")
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
-	memCache, err := cache.NewCache(ctx, models.MemoryCacheEngine, config.Config{})
+	memCache, err := cache.NewMemoryCache(5 * time.Minute)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -81,7 +80,7 @@ func TestValid(t *testing.T) {
 	graphFilter := ""
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
-	memCache, err := cache.NewCache(ctx, models.MemoryCacheEngine, config.Config{})
+	memCache, err := cache.NewMemoryCache(5 * time.Minute)
 	require.NoError(t, err)
 
 	azureClient, err := NewAzureClient(ctx, clientID, clientSecret, tenantID, graphFilter, memCache)
@@ -112,7 +111,7 @@ func TestGetUserGroups(t *testing.T) {
 	graphFilter := ""
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
-	memCache, err := cache.NewCache(ctx, models.MemoryCacheEngine, config.Config{})
+	memCache, err := cache.NewMemoryCache(5 * time.Minute)
 	require.NoError(t, err)
 
 	azureClient, err := NewAzureClient(ctx, clientID, clientSecret, tenantID, graphFilter, memCache)
@@ -166,7 +165,7 @@ func TestStartSyncGroups(t *testing.T) {
 	graphFilter := ""
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
-	memCache, err := cache.NewCache(ctx, models.MemoryCacheEngine, config.Config{})
+	memCache, err := cache.NewMemoryCache(5 * time.Minute)
 	require.NoError(t, err)
 
 	azureClient, err := NewAzureClient(ctx, clientID, clientSecret, tenantID, graphFilter, memCache)

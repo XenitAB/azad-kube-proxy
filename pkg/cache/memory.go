@@ -14,9 +14,9 @@ type MemoryCache struct {
 }
 
 // NewMemoryCache ...
-func NewMemoryCache(defaultExpiration, cleanupInterval time.Duration) (*MemoryCache, error) {
+func NewMemoryCache(expirationInterval time.Duration) (*MemoryCache, error) {
 	return &MemoryCache{
-		CacheClient: gocache.New(defaultExpiration, cleanupInterval),
+		CacheClient: gocache.New(expirationInterval, 2*expirationInterval),
 	}, nil
 }
 

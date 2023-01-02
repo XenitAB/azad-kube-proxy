@@ -25,11 +25,6 @@ podEnv:
         key: TENANT_ID
   - name: AZURE_AD_GROUP_PREFIX
     value: ""
-  # Use these environment variables to enable redis (needed together with the flags)
-  # - name: CACHE_ENGINE
-  #   value: REDIS
-  # - name: REDIS_URI
-  #   value: redis://redis:6379/0
 
 secret:
   create: false

@@ -144,22 +144,6 @@ func TestNewConfig(t *testing.T) {
 			errBuffer:           bytes.Buffer{},
 		},
 		{
-			cliApp:              app,
-			args:                append(baseWorkingArgs, "--cache-engine=FAKE"),
-			expectedConfig:      Config{},
-			expectedErrContains: "Unknown cache engine type 'FAKE'.",
-			outBuffer:           bytes.Buffer{},
-			errBuffer:           bytes.Buffer{},
-		},
-		{
-			cliApp:              app,
-			args:                append(baseWorkingArgs, "--cache-engine=FAKE"),
-			expectedConfig:      Config{},
-			expectedErrContains: "Unknown cache engine type 'FAKE'.",
-			outBuffer:           bytes.Buffer{},
-			errBuffer:           bytes.Buffer{},
-		},
-		{
 			cliApp: app,
 			args:   append(baseWorkingArgs, "--kubernetes-api-tls=false"),
 			expectedConfig: Config{
@@ -275,7 +259,6 @@ func TestConfigValidate(t *testing.T) {
 		c.config.ClientSecret = "00000000-0000-0000-0000-000000000000"
 		c.config.ListenerAddress = "0.0.0.0:8080"
 		c.config.MetricsListenerAddress = "0.0.0.0:8081"
-		c.config.RedisURI = "redis://127.0.0.1:6379/0"
 		c.config.AzureADMaxGroupCount = 50
 		err := c.config.Validate()
 		require.ErrorContains(t, err, c.expectedErrContains)

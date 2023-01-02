@@ -12,13 +12,13 @@ import (
 )
 
 func TestNewMemoryCache(t *testing.T) {
-	_, err := NewMemoryCache(5*time.Minute, 10*time.Minute)
+	_, err := NewMemoryCache(5 * time.Minute)
 	require.NoError(t, err)
 }
 
 func TestMemoryGetUser(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
-	cache, err := NewMemoryCache(5*time.Minute, 10*time.Minute)
+	cache, err := NewMemoryCache(5 * time.Minute)
 	require.NoError(t, err)
 
 	cases, _ := testGetMemoryCases(t)
@@ -37,7 +37,7 @@ func TestMemoryGetUser(t *testing.T) {
 
 func TestMemorySetUser(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
-	cache, err := NewMemoryCache(5*time.Minute, 10*time.Minute)
+	cache, err := NewMemoryCache(5 * time.Minute)
 	require.NoError(t, err)
 
 	cases, _ := testGetMemoryCases(t)
@@ -54,7 +54,7 @@ func TestMemorySetUser(t *testing.T) {
 
 func TestMemoryGetGroup(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
-	cache, err := NewMemoryCache(5*time.Minute, 10*time.Minute)
+	cache, err := NewMemoryCache(5 * time.Minute)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
@@ -76,7 +76,7 @@ func TestMemoryGetGroup(t *testing.T) {
 
 func TestMemorySetGroup(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
-	cache, err := NewMemoryCache(5*time.Minute, 10*time.Minute)
+	cache, err := NewMemoryCache(5 * time.Minute)
 	if err != nil {
 		t.Errorf("Expected err to be nil but it was %q", err)
 	}
