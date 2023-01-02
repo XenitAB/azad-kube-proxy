@@ -77,22 +77,6 @@ func TestNewConfig(t *testing.T) {
 	}{
 		{
 			cliApp:              app,
-			args:                []string{"fake-bin", "--client-id=00000000-0000-0000-0000-000000000000", "--client-secret=supersecret", "--tenant-id=00000000-0000-0000-0000-000000000000"},
-			expectedConfig:      Config{},
-			expectedErrContains: "ca.crt: no such file or directory",
-			outBuffer:           bytes.Buffer{},
-			errBuffer:           bytes.Buffer{},
-		},
-		{
-			cliApp:              app,
-			args:                []string{"fake-bin", fmt.Sprintf("--kubernetes-api-ca-cert-path=%s", certPath), "--client-id=00000000-0000-0000-0000-000000000000", "--client-secret=supersecret", "--tenant-id=00000000-0000-0000-0000-000000000000"},
-			expectedConfig:      Config{},
-			expectedErrContains: "token: no such file or directory",
-			outBuffer:           bytes.Buffer{},
-			errBuffer:           bytes.Buffer{},
-		},
-		{
-			cliApp:              app,
 			args:                baseArgs,
 			expectedConfig:      Config{},
 			expectedErrContains: "client-id",

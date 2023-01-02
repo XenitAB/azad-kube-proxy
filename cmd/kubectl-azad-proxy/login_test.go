@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -214,6 +215,6 @@ func TestGetTokenCacheDirectory(t *testing.T) {
 	for i, c := range cases {
 		t.Logf("Test #%d: %s", i, c.testDescription)
 		result := getTokenCacheDirectory(c.tokenCacheDir, c.kubeConfig)
-		require.Equal(t, c.expectedResult, result)
+		require.Equal(t, filepath.Clean(c.expectedResult), result)
 	}
 }

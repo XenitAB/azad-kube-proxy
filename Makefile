@@ -39,7 +39,11 @@ vet:
 .PHONY: test 
 .SILENT: test
 test:
-	mkdir -p tmp
+ifeq ($(OS),Windows_NT)
+	pwsh -C "[void](New-Item -Path tmp -Type Directory -Force)"
+else
+	$(shell mkdir -p tmp)
+endif
 	go test -timeout 1m ./... -cover
 
 .PHONY: cover
@@ -56,12 +60,12 @@ run:
 .PHONY: run-plugin
 .SILENT: run-plugin
 run-plugin:
-	go run cmd/kubectl-azad-proxy/main.go
+	go run ./cmd/kubectl-azad-proxy/
 
 .PHONY: debug
 .SILENT: debug
 debug:
-	dlv debug cmd/azad-kube-proxy/main.go --listen=:40000 --headless=true --api-version=2 --log -- --client-id="${CLIENT_ID}" --client-secret="${CLIENT_SECRET}" --tenant-id="${TENANT_ID}" --azure-ad-group-prefix="${AZURE_AD_GROUP_PREFIX}" --kubernetes-api-host="${KUBERNETES_API_HOST}" --kubernetes-api-port="${KUBERNETES_API_PORT}" --kubernetes-api-ca-cert-path="${KUBERNETES_API_CA_CERT_PATH}" --kubernetes-api-token-path="${KUBERNETES_API_TOKEN_PATH}" --tls-enabled="${TLS_ENABLED}" --tls-certificate-path="${TLS_CERTIFICATE_PATH}" --tls-key-path="${TLS_KEY_PATH}" --port="${PORT}"
+	dlv debug ./cmd/azad-kube-proxy/main.go --listen=:40000 --headless=true --api-version=2 --log -- --client-id="${CLIENT_ID}" --client-secret="${CLIENT_SECRET}" --tenant-id="${TENANT_ID}" --azure-ad-group-prefix="${AZURE_AD_GROUP_PREFIX}" --kubernetes-api-host="${KUBERNETES_API_HOST}" --kubernetes-api-port="${KUBERNETES_API_PORT}" --kubernetes-api-ca-cert-path="${KUBERNETES_API_CA_CERT_PATH}" --kubernetes-api-token-path="${KUBERNETES_API_TOKEN_PATH}" --tls-enabled="${TLS_ENABLED}" --tls-certificate-path="${TLS_CERTIFICATE_PATH}" --tls-key-path="${TLS_KEY_PATH}" --port="${PORT}"
 
 .PHONY: token
 .SILENT: token
@@ -71,9 +75,9 @@ token:
 .PHONY: build
 .SILENT: build
 build:
-	CGO_ENABLED=0 go build -ldflags "-w -s -X main.Version=$(VERSION) -X main.Revision=$(REVISION) -X main.Created=$(CREATED)" -o bin/azad-kube-proxy cmd/azad-kube-proxy/main.go
+	CGO_ENABLED=0 go build -ldflags "-w -s -X main.Version=$(VERSION) -X main.Revision=$(REVISION) -X main.Created=$(CREATED)" -o bin/azad-kube-proxy ./cmd/azad-kube-proxy/main.go
 
 .PHONY: build-plugin
 .SILENT: build-plugin
 build-plugin:
-	go build -o bin/kubectl-azad_proxy cmd/kubectl-azad-proxy/main.go
+	go build -o bin/kubectl-azad_proxy ./cmd/kubectl-azad-proxy/
