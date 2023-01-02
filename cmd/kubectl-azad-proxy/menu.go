@@ -1,4 +1,4 @@
-package actions
+package main
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/manifoldco/promptui"
 	"github.com/urfave/cli/v2"
-	"github.com/xenitab/azad-kube-proxy/cmd/kubectl-azad-proxy/customerrors"
 )
 
 type MenuClient struct {
@@ -16,18 +15,13 @@ type MenuClient struct {
 	promptClient   promptInterface
 }
 
-type MenuInterface interface {
-	Menu(ctx context.Context) error
-}
-
-// NewMenuClient ...
-func NewMenuClient(ctx context.Context, c *cli.Context) (MenuInterface, error) {
-	discoverClient, err := NewDiscoverClient(ctx, c)
+func newMenuClient(ctx context.Context, c *cli.Context) (*MenuClient, error) {
+	discoverClient, err := newDiscoverClient(ctx, c)
 	if err != nil {
 		return nil, err
 	}
 
-	generateClient, err := NewGenerateClient(ctx, c)
+	generateClient, err := newGenerateClient(ctx, c)
 	if err != nil {
 		return nil, err
 	}
@@ -41,14 +35,13 @@ func NewMenuClient(ctx context.Context, c *cli.Context) (MenuInterface, error) {
 	}, nil
 }
 
-// MenuFlags ...
-func MenuFlags(ctx context.Context) ([]cli.Flag, error) {
-	generateFlags, err := GenerateFlags(ctx)
+func menuFlags(ctx context.Context) ([]cli.Flag, error) {
+	generateFlags, err := generateFlags(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	flags := mergeFlags(DiscoverFlags(ctx), generateFlags)
+	flags := mergeFlags(discoverFlags(ctx), generateFlags)
 	flags = unrequireFlags(flags)
 
 	return flags, nil
@@ -68,13 +61,13 @@ func (client *MenuClient) Menu(ctx context.Context) error {
 	cluster, err := client.promptClient.selectCluster(apps)
 	if err != nil {
 		log.V(1).Info("Unable to menu prompt", "error", err.Error())
-		return customerrors.New(customerrors.ErrorTypeMenu, err)
+		return newCustomError(errorTypeMenu, err)
 	}
 
 	proxyURL, err := url.Parse(cluster.ProxyURL)
 	if err != nil {
 		log.V(1).Info("Unable to parse Proxy URL", "error", err.Error())
-		return customerrors.New(customerrors.ErrorTypeMenu, err)
+		return newCustomError(errorTypeMenu, err)
 	}
 
 	// Update the GenerateClient based on the selected cluster (overwrite = false)
@@ -88,11 +81,11 @@ func (client *MenuClient) Menu(ctx context.Context) error {
 	err = client.generateClient.Generate(ctx)
 
 	// If the config already exists inside of KubeConfig, ask user if it should be overwritten
-	if customerrors.To(err).ErrorType == customerrors.ErrorTypeOverwriteConfig {
+	if toCustomError(err).errorType == errorTypeOverwriteConfig {
 		overwrite, err := client.promptClient.overwriteConfig()
 		if err != nil {
 			log.V(1).Info("Unable to menu prompt", "error", err.Error())
-			return customerrors.New(customerrors.ErrorTypeMenu, err)
+			return newCustomError(errorTypeMenu, err)
 		}
 
 		// If user chose not to overwrite, exit

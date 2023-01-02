@@ -9,8 +9,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"github.com/xenitab/azad-kube-proxy/cmd/kubectl-azad-proxy/actions"
-	"github.com/xenitab/azad-kube-proxy/cmd/kubectl-azad-proxy/customerrors"
 	"github.com/xenitab/azad-kube-proxy/pkg/util"
 )
 
@@ -35,8 +33,8 @@ func main() {
 
 	err := run(ctx)
 	if err != nil {
-		customErr := customerrors.To(err)
-		log.Error(customErr, "Application returned error", "ErrorType", customErr.ErrorType)
+		customErr := toCustomError(err)
+		log.Error(customErr, "Application returned error", "errorType", customErr.errorType)
 		os.Exit(1)
 	}
 }
@@ -54,17 +52,17 @@ func run(ctx context.Context) error {
 		},
 	}
 
-	generateFlags, err := actions.GenerateFlags(ctx)
+	generateFlags, err := generateFlags(ctx)
 	if err != nil {
 		return err
 	}
 
-	loginFlags, err := actions.LoginFlags(ctx)
+	loginFlags, err := loginFlags(ctx)
 	if err != nil {
 		return err
 	}
 
-	menuFlags, err := actions.MenuFlags(ctx)
+	menuFlags, err := menuFlags(ctx)
 	if err != nil {
 		return err
 	}
@@ -81,7 +79,7 @@ func run(ctx context.Context) error {
 				Usage:   "Generate kubeconfig",
 				Flags:   append(generateFlags, globalFlags...),
 				Action: func(c *cli.Context) error {
-					client, err := actions.NewGenerateClient(ctx, c)
+					client, err := newGenerateClient(ctx, c)
 					if err != nil {
 						return err
 					}
@@ -94,7 +92,7 @@ func run(ctx context.Context) error {
 				Usage:   "Login to Azure AD app and return token",
 				Flags:   append(loginFlags, globalFlags...),
 				Action: func(c *cli.Context) error {
-					client, err := actions.NewLoginClient(ctx, c)
+					client, err := newLoginClient(ctx, c)
 					if err != nil {
 						return err
 					}
@@ -112,9 +110,9 @@ func run(ctx context.Context) error {
 				Name:    "discover",
 				Aliases: []string{"d"},
 				Usage:   "Discovery for the azad-kube-proxy enabled apps and their configuration",
-				Flags:   append(actions.DiscoverFlags(ctx), globalFlags...),
+				Flags:   append(discoverFlags(ctx), globalFlags...),
 				Action: func(c *cli.Context) error {
-					client, err := actions.NewDiscoverClient(ctx, c)
+					client, err := newDiscoverClient(ctx, c)
 					if err != nil {
 						return err
 					}
@@ -134,7 +132,7 @@ func run(ctx context.Context) error {
 				Usage:   "Menu for the azad-kube-proxy configuration",
 				Flags:   append(menuFlags, globalFlags...),
 				Action: func(c *cli.Context) error {
-					client, err := actions.NewMenuClient(ctx, c)
+					client, err := newMenuClient(ctx, c)
 					if err != nil {
 						return err
 					}

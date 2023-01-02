@@ -1,4 +1,4 @@
-package actions
+package main
 
 import (
 	"context"
@@ -20,13 +20,7 @@ type LoginClient struct {
 	defaultAzureCredentialOptions defaultAzureCredentialOptions
 }
 
-// LoginInterface ...
-type LoginInterface interface {
-	Login(ctx context.Context) (string, error)
-}
-
-// NewLoginClient ...
-func NewLoginClient(ctx context.Context, c *cli.Context) (LoginInterface, error) {
+func newLoginClient(ctx context.Context, c *cli.Context) (*LoginClient, error) {
 	tokenCacheDir := getTokenCacheDirectory(c.String("token-cache-dir"), c.String("kubeconfig"))
 	return &LoginClient{
 		clusterName:   c.String("cluster-name"),
@@ -58,8 +52,7 @@ func getTokenCacheDirectory(tokenCacheDir, kubeConfig string) string {
 	return filepath.Clean(fmt.Sprintf("%s/.kube", userHomeDir))
 }
 
-// LoginFlags ...
-func LoginFlags(ctx context.Context) ([]cli.Flag, error) {
+func loginFlags(ctx context.Context) ([]cli.Flag, error) {
 	osUserHomeDir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
@@ -113,7 +106,7 @@ func LoginFlags(ctx context.Context) ([]cli.Flag, error) {
 
 // Login ...
 func (client *LoginClient) Login(ctx context.Context) (string, error) {
-	tokens, err := NewTokens(ctx, client.tokenCacheDir, client.defaultAzureCredentialOptions)
+	tokens, err := newTokens(ctx, client.tokenCacheDir, client.defaultAzureCredentialOptions)
 	if err != nil {
 		return "", err
 	}

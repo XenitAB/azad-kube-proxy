@@ -1,4 +1,4 @@
-package actions
+package main
 
 import (
 	"context"
@@ -14,7 +14,6 @@ import (
 	azpolicy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/go-logr/logr"
-	"github.com/xenitab/azad-kube-proxy/cmd/kubectl-azad-proxy/customerrors"
 )
 
 type defaultAzureCredentialOptions struct {
@@ -64,8 +63,7 @@ type Tokens struct {
 // nolint: gosec
 const tokenCacheFileName = "azad-proxy.json"
 
-// NewTokens returns a TokensInterface or error
-func NewTokens(ctx context.Context, tokenCacheDir string, defaultAzureCredentialOptions defaultAzureCredentialOptions) (TokensInterface, error) {
+func newTokens(ctx context.Context, tokenCacheDir string, defaultAzureCredentialOptions defaultAzureCredentialOptions) (TokensInterface, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	tokenCacheFilePath := filepath.Clean(fmt.Sprintf("%s/%s", tokenCacheDir, tokenCacheFileName))
 
@@ -83,13 +81,13 @@ func NewTokens(ctx context.Context, tokenCacheDir string, defaultAzureCredential
 	fileContent, err := getFileContent(tokenCacheFilePath)
 	if err != nil {
 		log.V(1).Info("Unable to get file content", "error", err.Error(), "path", tokenCacheFilePath)
-		return nil, customerrors.New(customerrors.ErrorTypeTokenCache, err)
+		return nil, newCustomError(errorTypeTokenCache, err)
 	}
 
 	err = json.Unmarshal(fileContent, &t.cachedTokens)
 	if err != nil {
 		log.V(1).Info("Unable to unmarshal cachedTokens", "error", err.Error())
-		return nil, customerrors.New(customerrors.ErrorTypeTokenCache, err)
+		return nil, newCustomError(errorTypeTokenCache, err)
 	}
 
 	return t, nil
@@ -121,7 +119,7 @@ func (t Tokens) GetToken(ctx context.Context, name string, resource string) (Tok
 		azureToken, err := getAccessToken(ctx, resource, t.defaultAzureCredentialOptions)
 		if err != nil {
 			log.V(1).Info("Unable to get access token", "error", err.Error(), "resource", resource)
-			return Token{}, customerrors.New(customerrors.ErrorTypeAuthentication, err)
+			return Token{}, newCustomError(errorTypeAuthentication, err)
 		}
 
 		token = Token{
@@ -133,7 +131,7 @@ func (t Tokens) GetToken(ctx context.Context, name string, resource string) (Tok
 
 		err = t.SetToken(ctx, name, token)
 		if err != nil {
-			return Token{}, customerrors.New(customerrors.ErrorTypeAuthentication, err)
+			return Token{}, newCustomError(errorTypeAuthentication, err)
 		}
 
 		return token, nil
@@ -151,13 +149,13 @@ func (t Tokens) SetToken(ctx context.Context, name string, token Token) error {
 	fileContents, err := json.Marshal(&t.cachedTokens)
 	if err != nil {
 		log.V(1).Info("Unable to marshal cachedTokens", "error", err.Error(), "name", name)
-		return customerrors.New(customerrors.ErrorTypeTokenCache, err)
+		return newCustomError(errorTypeTokenCache, err)
 	}
 
 	err = os.WriteFile(t.tokenCacheFilePath, fileContents, 0600)
 	if err != nil {
 		log.V(1).Info("Unable to write token cache file", "error", err.Error(), "path", t.tokenCacheFilePath)
-		return customerrors.New(customerrors.ErrorTypeTokenCache, err)
+		return newCustomError(errorTypeTokenCache, err)
 	}
 
 	return nil

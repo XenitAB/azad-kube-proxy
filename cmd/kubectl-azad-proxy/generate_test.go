@@ -1,4 +1,4 @@
-package actions
+package main
 
 import (
 	"bytes"
@@ -16,9 +16,9 @@ import (
 
 func TestNewGenerateClient(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
-	client := &GenerateClient{}
+	globalClient := &GenerateClient{}
 
-	generateFlags, err := GenerateFlags(ctx)
+	generateFlags, err := generateFlags(ctx)
 	require.NoError(t, err)
 
 	app := &cli.App{
@@ -31,12 +31,12 @@ func TestNewGenerateClient(t *testing.T) {
 				Usage:   "test",
 				Flags:   generateFlags,
 				Action: func(c *cli.Context) error {
-					ci, err := NewGenerateClient(ctx, c)
+					client, err := newGenerateClient(ctx, c)
 					if err != nil {
 						return err
 					}
 
-					client = ci.(*GenerateClient)
+					globalClient = client
 
 					return nil
 				},
@@ -91,7 +91,7 @@ func TestNewGenerateClient(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		client = &GenerateClient{}
+		globalClient = &GenerateClient{}
 		c.cliApp.Writer = &c.outBuffer
 		c.cliApp.ErrWriter = &c.errBuffer
 		err := c.cliApp.Run(c.args)
@@ -101,10 +101,10 @@ func TestNewGenerateClient(t *testing.T) {
 		}
 
 		require.NoError(t, err)
-		require.Equal(t, c.expectedConfig.clusterName, client.clusterName)
-		require.Equal(t, c.expectedConfig.proxyURL.Host, client.proxyURL.Host)
-		require.Equal(t, c.expectedConfig.proxyURL.Scheme, client.proxyURL.Scheme)
-		require.Equal(t, c.expectedConfig.resource, client.resource)
+		require.Equal(t, c.expectedConfig.clusterName, globalClient.clusterName)
+		require.Equal(t, c.expectedConfig.proxyURL.Host, globalClient.proxyURL.Host)
+		require.Equal(t, c.expectedConfig.proxyURL.Scheme, globalClient.proxyURL.Scheme)
+		require.Equal(t, c.expectedConfig.resource, globalClient.resource)
 	}
 }
 

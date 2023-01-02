@@ -1,4 +1,4 @@
-package actions
+package main
 
 import (
 	"bytes"
@@ -17,9 +17,9 @@ import (
 
 func TestNewLoginClient(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
-	client := &LoginClient{}
+	globalClient := &LoginClient{}
 
-	loginFlags, err := LoginFlags(ctx)
+	loginFlags, err := loginFlags(ctx)
 	require.NoError(t, err)
 
 	app := &cli.App{
@@ -32,12 +32,12 @@ func TestNewLoginClient(t *testing.T) {
 				Usage:   "test",
 				Flags:   loginFlags,
 				Action: func(c *cli.Context) error {
-					ci, err := NewLoginClient(ctx, c)
+					client, err := newLoginClient(ctx, c)
 					if err != nil {
 						return err
 					}
 
-					client = ci.(*LoginClient)
+					globalClient = client
 
 					return nil
 				},
@@ -83,7 +83,7 @@ func TestNewLoginClient(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		client = &LoginClient{}
+		globalClient = &LoginClient{}
 		c.cliApp.Writer = &c.outBuffer
 		c.cliApp.ErrWriter = &c.errBuffer
 		err := c.cliApp.Run(c.args)
@@ -93,8 +93,8 @@ func TestNewLoginClient(t *testing.T) {
 		}
 
 		require.NoError(t, err)
-		require.Equal(t, c.expectedConfig.clusterName, client.clusterName)
-		require.Equal(t, c.expectedConfig.resource, client.resource)
+		require.Equal(t, c.expectedConfig.clusterName, globalClient.clusterName)
+		require.Equal(t, c.expectedConfig.resource, globalClient.resource)
 
 	}
 }
@@ -114,18 +114,15 @@ func TestLogin(t *testing.T) {
 	restoreClientSecret := testTempChangeEnv(t, "AZURE_CLIENT_SECRET", clientSecret)
 	defer restoreClientSecret()
 
-	curDir, err := os.Getwd()
-	if err != nil {
-		t.Errorf("Expected err to be nil: %q", err)
-	}
-	tokenCacheFile := fmt.Sprintf("%s/../../../tmp/%s", curDir, tokenCacheFileName)
-	defer testDeleteFile(t, tokenCacheFile)
+	tmpDir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
 
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 	client := &LoginClient{
 		clusterName:   "test",
 		resource:      resource,
-		tokenCacheDir: filepath.Dir(tokenCacheFile),
+		tokenCacheDir: tmpDir,
 		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
 			excludeAzureCLICredential:    true,
 			excludeEnvironmentCredential: false,
@@ -133,14 +130,14 @@ func TestLogin(t *testing.T) {
 		},
 	}
 
-	tmpDir, err := os.MkdirTemp("", "")
+	errTmpDir, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
 	clientErr := &LoginClient{
 		clusterName:   "test",
 		resource:      resource,
-		tokenCacheDir: tmpDir,
+		tokenCacheDir: errTmpDir,
 		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
 			excludeAzureCLICredential:    true,
 			excludeEnvironmentCredential: true,
@@ -218,6 +215,6 @@ func TestGetTokenCacheDirectory(t *testing.T) {
 	for i, c := range cases {
 		t.Logf("Test #%d: %s", i, c.testDescription)
 		result := getTokenCacheDirectory(c.tokenCacheDir, c.kubeConfig)
-		require.Equal(t, c.expectedResult, result)
+		require.Equal(t, filepath.Clean(c.expectedResult), result)
 	}
 }

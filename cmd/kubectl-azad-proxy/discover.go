@@ -1,4 +1,4 @@
-package actions
+package main
 
 import (
 	"context"
@@ -16,7 +16,6 @@ import (
 	hamiltonOdata "github.com/manicminer/hamilton/odata"
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli/v2"
-	"github.com/xenitab/azad-kube-proxy/cmd/kubectl-azad-proxy/customerrors"
 )
 
 const (
@@ -36,7 +35,6 @@ type discover struct {
 	ProxyURL    string `json:"proxy_url"`
 }
 
-// DiscoverClient ...
 type DiscoverClient struct {
 	outputType
 	tenantID               string
@@ -53,8 +51,7 @@ type DiscoverInterface interface {
 	Run(ctx context.Context) ([]discover, error)
 }
 
-// NewDiscoverClient ...
-func NewDiscoverClient(ctx context.Context, c *cli.Context) (DiscoverInterface, error) {
+func newDiscoverClient(ctx context.Context, c *cli.Context) (*DiscoverClient, error) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	var output outputType
@@ -75,14 +72,14 @@ func NewDiscoverClient(ctx context.Context, c *cli.Context) (DiscoverInterface, 
 		cliConfig, err := hamiltonAuth.NewAzureCliConfig(hamiltonEnvironments.MsGraphGlobal, "")
 		if err != nil {
 			log.V(1).Info("Unable to create CliConfig", "error", err.Error())
-			return nil, customerrors.New(customerrors.ErrorTypeAuthentication, err)
+			return nil, newCustomError(errorTypeAuthentication, err)
 		}
 
 		tenantID = cliConfig.TenantID
 		if tenantID == "" {
 			err := fmt.Errorf("No tenantID could be extracted from Azure CLI authentication")
 			log.V(1).Info("No tenantID", "error", err.Error())
-			return nil, customerrors.New(customerrors.ErrorTypeAuthentication, err)
+			return nil, newCustomError(errorTypeAuthentication, err)
 		}
 	}
 
@@ -98,7 +95,7 @@ func NewDiscoverClient(ctx context.Context, c *cli.Context) (DiscoverInterface, 
 }
 
 // DiscoverFlags ...
-func DiscoverFlags(ctx context.Context) []cli.Flag {
+func discoverFlags(ctx context.Context) []cli.Flag {
 	return []cli.Flag{
 		&cli.StringFlag{
 			Name:     "output",
@@ -198,7 +195,7 @@ func (client *DiscoverClient) Run(ctx context.Context) ([]discover, error) {
 	authorizer, err := authConfig.NewAuthorizer(ctx, hamiltonEnvironments.MsGraphGlobal)
 	if err != nil {
 		log.V(1).Info("Unable to create authorizer", "error", err.Error())
-		return []discover{}, customerrors.New(customerrors.ErrorTypeAuthentication, err)
+		return []discover{}, newCustomError(errorTypeAuthentication, err)
 	}
 
 	appsClient := hamiltonMsgraph.NewApplicationsClient(client.tenantID)
@@ -216,7 +213,7 @@ func (client *DiscoverClient) Run(ctx context.Context) ([]discover, error) {
 			return client.trySubscriptionsDiscovery(ctx)
 		}
 		log.V(1).Info("Unable to to list Azure AD applications", "error", err.Error(), "responseCode", resCode)
-		return []discover{}, customerrors.New(customerrors.ErrorTypeAuthorization, err)
+		return []discover{}, newCustomError(errorTypeAuthorization, err)
 	}
 
 	discoverData := getDiscoverData(*clusterApps)
@@ -229,12 +226,12 @@ func (client *DiscoverClient) trySubscriptionsDiscovery(ctx context.Context) ([]
 
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
-		return nil, customerrors.New(customerrors.ErrorTypeAuthorization, err)
+		return nil, newCustomError(errorTypeAuthorization, err)
 	}
 
 	subscriptionClient, err := armsubscriptions.NewClient(cred, nil)
 	if err != nil {
-		return nil, customerrors.New(customerrors.ErrorTypeAuthorization, err)
+		return nil, newCustomError(errorTypeAuthorization, err)
 	}
 
 	subscriptionsIds := []string{}
@@ -242,7 +239,7 @@ func (client *DiscoverClient) trySubscriptionsDiscovery(ctx context.Context) ([]
 	for pager.More() {
 		nextResult, err := pager.NextPage(ctx)
 		if err != nil {
-			return nil, customerrors.New(customerrors.ErrorTypeAuthorization, err)
+			return nil, newCustomError(errorTypeAuthorization, err)
 		}
 		for _, v := range nextResult.Value {
 			if v.SubscriptionID == nil {
@@ -260,7 +257,7 @@ func (client *DiscoverClient) trySubscriptionsDiscovery(ctx context.Context) ([]
 		}
 	}
 
-	return nil, customerrors.New(customerrors.ErrorTypeAuthentication, fmt.Errorf("unable to find any clusters on any subscriptions"))
+	return nil, newCustomError(errorTypeAuthentication, fmt.Errorf("unable to find any clusters on any subscriptions"))
 }
 
 func (client *DiscoverClient) trySubscriptionDiscovery(ctx context.Context, cred *azidentity.DefaultAzureCredential, subscriptionId string) ([]discover, error) {

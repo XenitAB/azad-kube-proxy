@@ -1,4 +1,4 @@
-package actions
+package main
 
 import (
 	"bytes"
@@ -13,7 +13,7 @@ import (
 
 func TestNewDiscoverClient(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
-	client := &DiscoverClient{}
+	globalClient := &DiscoverClient{}
 
 	restoreAzureCLIAuth := testTempChangeEnv(t, "EXCLUDE_AZURE_CLI_AUTH", "true")
 	defer restoreAzureCLIAuth()
@@ -26,14 +26,14 @@ func TestNewDiscoverClient(t *testing.T) {
 				Name:    "test",
 				Aliases: []string{"t"},
 				Usage:   "test",
-				Flags:   DiscoverFlags(ctx),
+				Flags:   discoverFlags(ctx),
 				Action: func(c *cli.Context) error {
-					ci, err := NewDiscoverClient(ctx, c)
+					client, err := newDiscoverClient(ctx, c)
 					if err != nil {
 						return err
 					}
 
-					client = ci.(*DiscoverClient)
+					globalClient = client
 
 					return nil
 				},
@@ -92,7 +92,7 @@ func TestNewDiscoverClient(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		client = &DiscoverClient{}
+		globalClient = &DiscoverClient{}
 		c.cliApp.Writer = &c.outBuffer
 		c.cliApp.ErrWriter = &c.errBuffer
 		err := c.cliApp.Run(c.args)
@@ -103,7 +103,7 @@ func TestNewDiscoverClient(t *testing.T) {
 		}
 
 		require.NoError(t, err)
-		require.Equal(t, c.expectedConfig.outputType, client.outputType)
+		require.Equal(t, c.expectedConfig.outputType, globalClient.outputType)
 	}
 }
 
