@@ -163,7 +163,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 
 	token := testGetAccessToken(t, ctx, tenantID, spClientID, spClientSecret, fmt.Sprintf("%s/.default", spResource))
 
-	memCacheClient, err := cache.NewMemoryCache(5*time.Minute, 10*time.Minute)
+	memCacheClient, err := cache.NewMemoryCache(5 * time.Minute)
 	require.NoError(t, err)
 	testFakeCacheClient := newTestFakeCacheClient(t, "", "", nil, false, nil)
 	testFakeUserClient := newTestFakeUserClient(t, "", "", nil, nil)
@@ -180,7 +180,6 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 		ClientID:             clientID,
 		ClientSecret:         clientSecret,
 		TenantID:             tenantID,
-		CacheEngine:          models.MemoryCacheEngine,
 		AzureADMaxGroupCount: testFakeMaxGroups,
 		GroupIdentifier:      models.NameGroupIdentifier,
 		KubernetesConfig: config.KubernetesConfig{

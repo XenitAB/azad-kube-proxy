@@ -47,7 +47,7 @@ type Client struct {
 
 // NewProxyClient ...
 func NewProxyClient(ctx context.Context, config config.Config) (ClientInterface, error) {
-	cacheClient, err := cache.NewCache(ctx, config.CacheEngine, config)
+	cacheClient, err := cache.NewMemoryCache(config.GroupSyncInterval)
 	if err != nil {
 		return nil, err
 	}
