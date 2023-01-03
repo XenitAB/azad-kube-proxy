@@ -8,7 +8,6 @@ import (
 	"github.com/bombsimon/logrusr/v2"
 	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
 	"github.com/xenitab/azad-kube-proxy/pkg/util"
 )
 
@@ -40,113 +39,21 @@ func main() {
 }
 
 func run(ctx context.Context) error {
-	cli.VersionPrinter = func(c *cli.Context) {
-		fmt.Printf("version=%s revision=%s created=%s\n", c.App.Version, Revision, Created)
-	}
-
-	globalFlags := []cli.Flag{
-		&cli.BoolFlag{
-			Name:  "debug",
-			Usage: "Should debugging be enabled?",
-			Value: false,
-		},
-	}
-
-	generateFlags, err := generateFlags(ctx)
+	cfg, err := newConfig(os.Args[1:])
 	if err != nil {
 		return err
 	}
 
-	loginFlags, err := loginFlags(ctx)
-	if err != nil {
-		return err
+	switch {
+	case cfg.Discover != nil:
+		return runDiscover(ctx, *cfg.Discover, cfg.authConfig)
+	case cfg.Generate != nil:
+		return runGenerate(ctx, *cfg.Generate, cfg.authConfig)
+	case cfg.Login != nil:
+		return runLogin(ctx, *cfg.Login, cfg.authConfig)
+	case cfg.Menu != nil:
+		return runMenu(ctx, *cfg.Menu, cfg.authConfig)
 	}
 
-	menuFlags, err := menuFlags(ctx)
-	if err != nil {
-		return err
-	}
-
-	app := &cli.App{
-		Name:    "kubectl-azad-proxy",
-		Usage:   "kubectl plugin for azad-kube-proxy",
-		Version: Version,
-		Flags:   globalFlags,
-		Commands: []*cli.Command{
-			{
-				Name:    "generate",
-				Aliases: []string{"g"},
-				Usage:   "Generate kubeconfig",
-				Flags:   append(generateFlags, globalFlags...),
-				Action: func(c *cli.Context) error {
-					client, err := newGenerateClient(ctx, c)
-					if err != nil {
-						return err
-					}
-					return client.Generate(ctx)
-				},
-			},
-			{
-				Name:    "login",
-				Aliases: []string{"l"},
-				Usage:   "Login to Azure AD app and return token",
-				Flags:   append(loginFlags, globalFlags...),
-				Action: func(c *cli.Context) error {
-					client, err := newLoginClient(ctx, c)
-					if err != nil {
-						return err
-					}
-
-					output, err := client.Login(ctx)
-					if err != nil {
-						return err
-					}
-
-					fmt.Print(output)
-					return nil
-				},
-			},
-			{
-				Name:    "discover",
-				Aliases: []string{"d"},
-				Usage:   "Discovery for the azad-kube-proxy enabled apps and their configuration",
-				Flags:   append(discoverFlags(ctx), globalFlags...),
-				Action: func(c *cli.Context) error {
-					client, err := newDiscoverClient(ctx, c)
-					if err != nil {
-						return err
-					}
-
-					output, err := client.Discover(ctx)
-					if err != nil {
-						return err
-					}
-
-					fmt.Print(output)
-					return nil
-				},
-			},
-			{
-				Name:    "menu",
-				Aliases: []string{"m"},
-				Usage:   "Menu for the azad-kube-proxy configuration",
-				Flags:   append(menuFlags, globalFlags...),
-				Action: func(c *cli.Context) error {
-					client, err := newMenuClient(ctx, c)
-					if err != nil {
-						return err
-					}
-
-					return client.Menu(ctx)
-				},
-			},
-		},
-	}
-
-	err = app.Run(os.Args)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return fmt.Errorf("unknown error")
 }

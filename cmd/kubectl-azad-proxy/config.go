@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/alexflint/go-arg"
 )
 
@@ -44,6 +46,12 @@ type menuConfig struct {
 	TLSInsecureSkipVerify bool   `arg:"--tls-insecure-skip-verify,env:TLS_INSECURE_SKIP_VERIFY" default:"false" help:"Should the proxy url server certificate validation be skipped?"`
 }
 
+type authConfig struct {
+	excludeAzureCLIAuth    bool
+	excludeEnvironmentAuth bool
+	excludeMSIAuth         bool
+}
+
 type config struct {
 	Discover *discoverConfig `arg:"subcommand:discover"`
 	Generate *generateConfig `arg:"subcommand:generate"`
@@ -55,13 +63,34 @@ type config struct {
 	ExcludeAzureCLIAuth    bool `arg:"--exclude-azure-cli-auth,env:EXCLUDE_AZURE_CLI_AUTH" default:"false" help:"Should Azure CLI be excluded from the authentication?"`
 	ExcludeEnvironmentAuth bool `arg:"--exclude-environment-auth,env:EXCLUDE_ENVIRONMENT_AUTH" default:"true" help:"Should environment be excluded from the authentication?"`
 	ExcludeMSIAuth         bool `arg:"--exclude-msi-auth,env:EXCLUDE_MSI_AUTH" default:"true" help:"Should MSI be excluded from the authentication?"`
+
+	authConfig authConfig
 }
 
-func newConfig() (config, error) {
+func (config) Version() string {
+	return fmt.Sprintf("version=%s revision=%s created=%s\n", Version, Revision, Created)
+}
+
+func newConfig(args []string) (config, error) {
 	cfg := config{}
-	err := arg.Parse(&cfg)
+	parser, err := arg.NewParser(arg.Config{
+		Program:   "azad-proxy kubectl plugin",
+		IgnoreEnv: false,
+	}, &cfg)
 	if err != nil {
 		return config{}, err
 	}
+
+	err = parser.Parse(args)
+	if err != nil {
+		return config{}, err
+	}
+
+	cfg.authConfig = authConfig{
+		excludeAzureCLIAuth:    cfg.ExcludeAzureCLIAuth,
+		excludeEnvironmentAuth: cfg.ExcludeEnvironmentAuth,
+		excludeMSIAuth:         cfg.ExcludeMSIAuth,
+	}
+
 	return cfg, err
 }
