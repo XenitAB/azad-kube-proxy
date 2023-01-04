@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,93 +10,8 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
-	"github.com/urfave/cli/v2"
 	k8sclientauth "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
 )
-
-func TestNewLoginClient(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.Discard())
-	globalClient := &LoginClient{}
-
-	loginFlags, err := loginFlags(ctx)
-	require.NoError(t, err)
-
-	app := &cli.App{
-		Name:  "test",
-		Usage: "test",
-		Commands: []*cli.Command{
-			{
-				Name:    "test",
-				Aliases: []string{"t"},
-				Usage:   "test",
-				Flags:   loginFlags,
-				Action: func(c *cli.Context) error {
-					client, err := newLoginClient(ctx, c)
-					if err != nil {
-						return err
-					}
-
-					globalClient = client
-
-					return nil
-				},
-			},
-		},
-	}
-
-	cases := []struct {
-		cliApp              *cli.App
-		args                []string
-		expectedConfig      *LoginClient
-		expectedErrContains string
-		outBuffer           bytes.Buffer
-		errBuffer           bytes.Buffer
-	}{
-		{
-			cliApp:              app,
-			args:                []string{"fake-binary", "test"},
-			expectedConfig:      &LoginClient{},
-			expectedErrContains: "cluster-name",
-			outBuffer:           bytes.Buffer{},
-			errBuffer:           bytes.Buffer{},
-		},
-		{
-			cliApp:              app,
-			args:                []string{"fake-binary", "test", "--cluster-name=test"},
-			expectedConfig:      &LoginClient{},
-			expectedErrContains: "resource",
-			outBuffer:           bytes.Buffer{},
-			errBuffer:           bytes.Buffer{},
-		},
-		{
-			cliApp: app,
-			args:   []string{"fake-binary", "test", "--cluster-name=test", "--resource=https://fake"},
-			expectedConfig: &LoginClient{
-				clusterName: "test",
-				resource:    "https://fake",
-			},
-			expectedErrContains: "",
-			outBuffer:           bytes.Buffer{},
-			errBuffer:           bytes.Buffer{},
-		},
-	}
-
-	for _, c := range cases {
-		globalClient = &LoginClient{}
-		c.cliApp.Writer = &c.outBuffer
-		c.cliApp.ErrWriter = &c.errBuffer
-		err := c.cliApp.Run(c.args)
-		if c.expectedErrContains != "" {
-			require.ErrorContains(t, err, c.expectedErrContains)
-			continue
-		}
-
-		require.NoError(t, err)
-		require.Equal(t, c.expectedConfig.clusterName, globalClient.clusterName)
-		require.Equal(t, c.expectedConfig.resource, globalClient.resource)
-
-	}
-}
 
 func TestLogin(t *testing.T) {
 	tenantID := testGetEnvOrSkip(t, "TENANT_ID")

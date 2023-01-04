@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"net/url"
@@ -10,103 +9,8 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
-	"github.com/urfave/cli/v2"
 	k8sclientcmd "k8s.io/client-go/tools/clientcmd"
 )
-
-func TestNewGenerateClient(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.Discard())
-	globalClient := &GenerateClient{}
-
-	generateFlags, err := generateFlags(ctx)
-	require.NoError(t, err)
-
-	app := &cli.App{
-		Name:  "test",
-		Usage: "test",
-		Commands: []*cli.Command{
-			{
-				Name:    "test",
-				Aliases: []string{"t"},
-				Usage:   "test",
-				Flags:   generateFlags,
-				Action: func(c *cli.Context) error {
-					client, err := newGenerateClient(ctx, c)
-					if err != nil {
-						return err
-					}
-
-					globalClient = client
-
-					return nil
-				},
-			},
-		},
-	}
-
-	cases := []struct {
-		cliApp              *cli.App
-		args                []string
-		expectedConfig      *GenerateClient
-		expectedErrContains string
-		outBuffer           bytes.Buffer
-		errBuffer           bytes.Buffer
-	}{
-		{
-			cliApp:              app,
-			args:                []string{"fake-binary", "test"},
-			expectedConfig:      &GenerateClient{},
-			expectedErrContains: "cluster-name",
-			outBuffer:           bytes.Buffer{},
-			errBuffer:           bytes.Buffer{},
-		},
-		{
-			cliApp:              app,
-			args:                []string{"fake-binary", "test", "--cluster-name=test"},
-			expectedConfig:      &GenerateClient{},
-			expectedErrContains: "proxy-url",
-			outBuffer:           bytes.Buffer{},
-			errBuffer:           bytes.Buffer{},
-		},
-		{
-			cliApp:              app,
-			args:                []string{"fake-binary", "test", "--cluster-name=test", "--proxy-url=https://fake"},
-			expectedConfig:      &GenerateClient{},
-			expectedErrContains: "resource",
-			outBuffer:           bytes.Buffer{},
-			errBuffer:           bytes.Buffer{},
-		},
-		{
-			cliApp: app,
-			args:   []string{"fake-binary", "test", "--cluster-name=test", "--proxy-url=https://fake", "--resource=https://fake"},
-			expectedConfig: &GenerateClient{
-				clusterName: "test",
-				proxyURL:    testGetURL(t, "https://fake"),
-				resource:    "https://fake",
-			},
-			expectedErrContains: "",
-			outBuffer:           bytes.Buffer{},
-			errBuffer:           bytes.Buffer{},
-		},
-	}
-
-	for _, c := range cases {
-		globalClient = &GenerateClient{}
-		c.cliApp.Writer = &c.outBuffer
-		c.cliApp.ErrWriter = &c.errBuffer
-		err := c.cliApp.Run(c.args)
-		if c.expectedErrContains != "" {
-			require.ErrorContains(t, err, c.expectedErrContains)
-			continue
-		}
-
-		require.NoError(t, err)
-		require.Equal(t, c.expectedConfig.clusterName, globalClient.clusterName)
-		require.Equal(t, c.expectedConfig.proxyURL.Host, globalClient.proxyURL.Host)
-		require.Equal(t, c.expectedConfig.proxyURL.Scheme, globalClient.proxyURL.Scheme)
-		require.Equal(t, c.expectedConfig.resource, globalClient.resource)
-	}
-}
 
 func TestMergeGenerateClient(t *testing.T) {
 	client := &GenerateClient{

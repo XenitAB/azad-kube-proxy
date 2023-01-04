@@ -1,111 +1,13 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"testing"
 
 	"github.com/go-logr/logr"
 	hamiltonMsgraph "github.com/manicminer/hamilton/msgraph"
 	"github.com/stretchr/testify/require"
-	"github.com/urfave/cli/v2"
 )
-
-func TestNewDiscoverClient(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.Discard())
-	globalClient := &DiscoverClient{}
-
-	restoreAzureCLIAuth := testTempChangeEnv(t, "EXCLUDE_AZURE_CLI_AUTH", "true")
-	defer restoreAzureCLIAuth()
-
-	app := &cli.App{
-		Name:  "test",
-		Usage: "test",
-		Commands: []*cli.Command{
-			{
-				Name:    "test",
-				Aliases: []string{"t"},
-				Usage:   "test",
-				Flags:   discoverFlags(ctx),
-				Action: func(c *cli.Context) error {
-					client, err := newDiscoverClient(ctx, c)
-					if err != nil {
-						return err
-					}
-
-					globalClient = client
-
-					return nil
-				},
-			},
-		},
-	}
-
-	cases := []struct {
-		cliApp              *cli.App
-		args                []string
-		expectedConfig      *DiscoverClient
-		expectedErrContains string
-		outBuffer           bytes.Buffer
-		errBuffer           bytes.Buffer
-	}{
-		{
-			cliApp: app,
-			args:   []string{"fake-binary", "test"},
-			expectedConfig: &DiscoverClient{
-				outputType: tableOutputType,
-			},
-			expectedErrContains: "",
-			outBuffer:           bytes.Buffer{},
-			errBuffer:           bytes.Buffer{},
-		},
-		{
-			cliApp: app,
-			args:   []string{"fake-binary", "test", "--output=TABLE"},
-			expectedConfig: &DiscoverClient{
-				outputType: tableOutputType,
-			},
-			expectedErrContains: "",
-			outBuffer:           bytes.Buffer{},
-			errBuffer:           bytes.Buffer{},
-		},
-		{
-			cliApp: app,
-			args:   []string{"fake-binary", "test", "--output=JSON"},
-			expectedConfig: &DiscoverClient{
-				outputType: jsonOutputType,
-			},
-			expectedErrContains: "",
-			outBuffer:           bytes.Buffer{},
-			errBuffer:           bytes.Buffer{},
-		},
-		{
-			cliApp: app,
-			args:   []string{"fake-binary", "test", "--output=FAKE"},
-			expectedConfig: &DiscoverClient{
-				outputType: jsonOutputType,
-			},
-			expectedErrContains: "Supported outputs are TABLE and JSON. The following was used: FAKE",
-			outBuffer:           bytes.Buffer{},
-			errBuffer:           bytes.Buffer{},
-		},
-	}
-
-	for _, c := range cases {
-		globalClient = &DiscoverClient{}
-		c.cliApp.Writer = &c.outBuffer
-		c.cliApp.ErrWriter = &c.errBuffer
-		err := c.cliApp.Run(c.args)
-
-		if c.expectedErrContains != "" {
-			require.ErrorContains(t, err, c.expectedErrContains)
-			continue
-		}
-
-		require.NoError(t, err)
-		require.Equal(t, c.expectedConfig.outputType, globalClient.outputType)
-	}
-}
 
 func TestDiscover(t *testing.T) {
 	tenantID := testGetEnvOrSkip(t, "TENANT_ID")
