@@ -13,6 +13,10 @@ linters:
 linters-settings:
   gocyclo:
     min-complexity: 20
+  exhaustruct:
+    include:
+      - '.*\.discoverConfig'
+      - '.*\.generateConfig'
 
 issues:
   exclude-rules:
