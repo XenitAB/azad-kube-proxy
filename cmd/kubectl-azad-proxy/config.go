@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/alexflint/go-arg"
 )
@@ -84,6 +85,11 @@ func newConfig(args []string) (config, error) {
 	err = parser.Parse(args)
 	if err != nil {
 		return config{}, err
+	}
+
+	if parser.Subcommand() == nil {
+		parser.WriteHelp(os.Stdout)
+		return config{}, fmt.Errorf("no valid subcommand provided")
 	}
 
 	cfg.authConfig = authConfig{
