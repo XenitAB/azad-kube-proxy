@@ -8,7 +8,6 @@ import (
 	"github.com/bombsimon/logrusr/v2"
 	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
-	"github.com/xenitab/azad-kube-proxy/pkg/util"
 )
 
 var (
@@ -23,14 +22,19 @@ var (
 )
 
 func main() {
+	cfg, err := newConfig(os.Args[1:])
+	if err != nil {
+		os.Exit(1)
+	}
+
 	logrusLog := logrus.New()
-	if util.SliceContains(os.Args, "--debug") || util.SliceContains(os.Args, "-debug") {
+	if cfg.Debug {
 		logrusLog.Level = 10
 	}
 	log := logrusr.New(logrusLog)
 	ctx := logr.NewContext(context.Background(), log)
 
-	err := run(ctx)
+	err = run(ctx, cfg)
 	if err != nil {
 		customErr := toCustomError(err)
 		log.Error(customErr, "Application returned error", "errorType", customErr.errorType)
@@ -38,12 +42,7 @@ func main() {
 	}
 }
 
-func run(ctx context.Context) error {
-	cfg, err := newConfig(os.Args[1:])
-	if err != nil {
-		return err
-	}
-
+func run(ctx context.Context, cfg config) error {
 	switch {
 	case cfg.Discover != nil:
 		return runDiscover(ctx, os.Stdout, *cfg.Discover, cfg.authConfig)
@@ -55,5 +54,5 @@ func run(ctx context.Context) error {
 		return runMenu(ctx, *cfg.Menu, cfg.authConfig)
 	}
 
-	return fmt.Errorf("unknown error")
+	return fmt.Errorf("unknown error, no subcommand executed")
 }
