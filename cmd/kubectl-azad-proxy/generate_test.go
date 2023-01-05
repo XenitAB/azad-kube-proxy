@@ -45,6 +45,9 @@ func TestRunGenerate(t *testing.T) {
 	}
 	err = runGenerate(ctx, cfg, authCfg)
 	require.NoError(t, err)
+
+	require.ErrorContains(t, runGenerate(ctx, generateConfig{}, authConfig{}), "Unable to load file")
+	require.ErrorContains(t, runGenerate(ctx, generateConfig{ProxyURL: "$#%~!-_"}, authConfig{}), "invalid URL escape")
 }
 
 func TestGenerate(t *testing.T) {
