@@ -16,6 +16,7 @@ func TestRunMenu(t *testing.T) {
 	tenantID := testGetEnvOrSkip(t, "TENANT_ID")
 	clientID := testGetEnvOrSkip(t, "CLIENT_ID")
 	clientSecret := testGetEnvOrSkip(t, "CLIENT_SECRET")
+	resource := testGetEnvOrSkip(t, "TEST_USER_SP_RESOURCE")
 
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
@@ -38,7 +39,7 @@ func TestRunMenu(t *testing.T) {
 		AzureClientSecret:     clientSecret,
 		ClusterName:           "ze-cluster",
 		ProxyURL:              srv.URL,
-		Resource:              "ze-resource",
+		Resource:              resource,
 		KubeConfig:            kubeConfigFile,
 		TokenCacheDir:         tokenCacheDir,
 		Overwrite:             false,
