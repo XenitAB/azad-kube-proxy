@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"testing"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDiscover(t *testing.T) {
+func TestRunDiscover(t *testing.T) {
 	tenantID := testGetEnvOrSkip(t, "TENANT_ID")
 	clientID := testGetEnvOrSkip(t, "CLIENT_ID")
 	clientSecret := testGetEnvOrSkip(t, "CLIENT_SECRET")
@@ -18,45 +19,52 @@ func TestDiscover(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
 	cases := []struct {
-		DiscoverClient         *DiscoverClient
+		cfg                    discoverConfig
+		authCfg                authConfig
 		expectedOutputContains string
 		expectedErrContains    string
 	}{
 		{
-			DiscoverClient: &DiscoverClient{
-				outputType:             tableOutputType,
-				tenantID:               tenantID,
-				clientID:               clientID,
-				clientSecret:           clientSecret,
-				enableClientSecretAuth: true,
-				enableAzureCliToken:    false,
-				enableMsiAuth:          false,
+			cfg: discoverConfig{
+				Output:            "TABLE",
+				AzureTenantID:     tenantID,
+				AzureClientID:     clientID,
+				AzureClientSecret: clientSecret,
+			},
+			authCfg: authConfig{
+				excludeAzureCLIAuth:    true,
+				excludeEnvironmentAuth: false,
+				excludeMSIAuth:         true,
 			},
 			expectedOutputContains: resource,
 			expectedErrContains:    "",
 		},
 		{
-			DiscoverClient: &DiscoverClient{
-				outputType:             jsonOutputType,
-				tenantID:               tenantID,
-				clientID:               clientID,
-				clientSecret:           clientSecret,
-				enableClientSecretAuth: true,
-				enableAzureCliToken:    false,
-				enableMsiAuth:          false,
+			cfg: discoverConfig{
+				Output:            "JSON",
+				AzureTenantID:     tenantID,
+				AzureClientID:     clientID,
+				AzureClientSecret: clientSecret,
+			},
+			authCfg: authConfig{
+				excludeAzureCLIAuth:    true,
+				excludeEnvironmentAuth: false,
+				excludeMSIAuth:         true,
 			},
 			expectedOutputContains: resource,
 			expectedErrContains:    "",
 		},
 		{
-			DiscoverClient: &DiscoverClient{
-				outputType:             jsonOutputType,
-				tenantID:               tenantID,
-				clientID:               clientID,
-				clientSecret:           clientSecret,
-				enableClientSecretAuth: false,
-				enableAzureCliToken:    false,
-				enableMsiAuth:          false,
+			cfg: discoverConfig{
+				Output:            "JSON",
+				AzureTenantID:     tenantID,
+				AzureClientID:     clientID,
+				AzureClientSecret: clientSecret,
+			},
+			authCfg: authConfig{
+				excludeAzureCLIAuth:    true,
+				excludeEnvironmentAuth: true,
+				excludeMSIAuth:         true,
 			},
 			expectedOutputContains: "",
 			expectedErrContains:    "Authentication error: Please validate that you are logged on using the correct credentials",
@@ -64,14 +72,15 @@ func TestDiscover(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		rawRes, err := c.DiscoverClient.Discover(ctx)
+		buffer := &bytes.Buffer{}
+		err := runDiscover(ctx, buffer, c.cfg, c.authCfg)
 		if c.expectedErrContains != "" {
 			require.ErrorContains(t, err, c.expectedErrContains)
 			continue
 		}
 
 		require.NoError(t, err)
-		require.Contains(t, rawRes, c.expectedOutputContains)
+		require.Contains(t, buffer.String(), c.expectedOutputContains)
 	}
 }
 

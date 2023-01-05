@@ -46,7 +46,7 @@ func run(ctx context.Context) error {
 
 	switch {
 	case cfg.Discover != nil:
-		return runDiscover(ctx, *cfg.Discover, cfg.authConfig)
+		return runDiscover(ctx, os.Stdout, *cfg.Discover, cfg.authConfig)
 	case cfg.Generate != nil:
 		return runGenerate(ctx, *cfg.Generate, cfg.authConfig)
 	case cfg.Login != nil:

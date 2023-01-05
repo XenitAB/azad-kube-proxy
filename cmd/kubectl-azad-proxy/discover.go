@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
@@ -49,7 +50,7 @@ type DiscoverInterface interface {
 	Run(ctx context.Context) ([]discover, error)
 }
 
-func runDiscover(ctx context.Context, cfg discoverConfig, authCfg authConfig) error {
+func runDiscover(ctx context.Context, writer io.Writer, cfg discoverConfig, authCfg authConfig) error {
 	client, err := newDiscoverClient(ctx, cfg, authCfg)
 	if err != nil {
 		return err
@@ -60,7 +61,7 @@ func runDiscover(ctx context.Context, cfg discoverConfig, authCfg authConfig) er
 		return err
 	}
 
-	fmt.Print(output)
+	fmt.Fprint(writer, output)
 
 	return nil
 }
