@@ -303,13 +303,6 @@ func testCreateCacheFile(t *testing.T, path string, cachedTokens interface{}) {
 	require.NoError(t, err)
 }
 
-func testDeleteFile(t *testing.T, file string) {
-	t.Helper()
-
-	err := os.Remove(file)
-	require.NoError(t, err)
-}
-
 func testGetEnvOrSkip(t *testing.T, envVar string) string {
 	t.Helper()
 

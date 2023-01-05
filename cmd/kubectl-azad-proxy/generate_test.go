@@ -1,146 +1,53 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"testing"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
-	"github.com/urfave/cli/v2"
 	k8sclientcmd "k8s.io/client-go/tools/clientcmd"
 )
 
-func TestNewGenerateClient(t *testing.T) {
+func TestRunGenerate(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
-	globalClient := &GenerateClient{}
 
-	generateFlags, err := generateFlags(ctx)
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	}))
+	defer srv.Close()
+
+	tmpDir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	tokenCacheDir := tmpDir
+	kubeConfigFile := fmt.Sprintf("%s/kubeconfig", tmpDir)
+
+	cfg := generateConfig{
+		ClusterName:           "ze-cluster",
+		ProxyURL:              srv.URL,
+		Resource:              "ze-resource",
+		KubeConfig:            kubeConfigFile,
+		TokenCacheDir:         tokenCacheDir,
+		Overwrite:             false,
+		TLSInsecureSkipVerify: true,
+	}
+	authCfg := authConfig{
+		excludeAzureCLIAuth:    false,
+		excludeEnvironmentAuth: true,
+		excludeMSIAuth:         true,
+	}
+	err = runGenerate(ctx, cfg, authCfg)
 	require.NoError(t, err)
 
-	app := &cli.App{
-		Name:  "test",
-		Usage: "test",
-		Commands: []*cli.Command{
-			{
-				Name:    "test",
-				Aliases: []string{"t"},
-				Usage:   "test",
-				Flags:   generateFlags,
-				Action: func(c *cli.Context) error {
-					client, err := newGenerateClient(ctx, c)
-					if err != nil {
-						return err
-					}
-
-					globalClient = client
-
-					return nil
-				},
-			},
-		},
-	}
-
-	cases := []struct {
-		cliApp              *cli.App
-		args                []string
-		expectedConfig      *GenerateClient
-		expectedErrContains string
-		outBuffer           bytes.Buffer
-		errBuffer           bytes.Buffer
-	}{
-		{
-			cliApp:              app,
-			args:                []string{"fake-binary", "test"},
-			expectedConfig:      &GenerateClient{},
-			expectedErrContains: "cluster-name",
-			outBuffer:           bytes.Buffer{},
-			errBuffer:           bytes.Buffer{},
-		},
-		{
-			cliApp:              app,
-			args:                []string{"fake-binary", "test", "--cluster-name=test"},
-			expectedConfig:      &GenerateClient{},
-			expectedErrContains: "proxy-url",
-			outBuffer:           bytes.Buffer{},
-			errBuffer:           bytes.Buffer{},
-		},
-		{
-			cliApp:              app,
-			args:                []string{"fake-binary", "test", "--cluster-name=test", "--proxy-url=https://fake"},
-			expectedConfig:      &GenerateClient{},
-			expectedErrContains: "resource",
-			outBuffer:           bytes.Buffer{},
-			errBuffer:           bytes.Buffer{},
-		},
-		{
-			cliApp: app,
-			args:   []string{"fake-binary", "test", "--cluster-name=test", "--proxy-url=https://fake", "--resource=https://fake"},
-			expectedConfig: &GenerateClient{
-				clusterName: "test",
-				proxyURL:    testGetURL(t, "https://fake"),
-				resource:    "https://fake",
-			},
-			expectedErrContains: "",
-			outBuffer:           bytes.Buffer{},
-			errBuffer:           bytes.Buffer{},
-		},
-	}
-
-	for _, c := range cases {
-		globalClient = &GenerateClient{}
-		c.cliApp.Writer = &c.outBuffer
-		c.cliApp.ErrWriter = &c.errBuffer
-		err := c.cliApp.Run(c.args)
-		if c.expectedErrContains != "" {
-			require.ErrorContains(t, err, c.expectedErrContains)
-			continue
-		}
-
-		require.NoError(t, err)
-		require.Equal(t, c.expectedConfig.clusterName, globalClient.clusterName)
-		require.Equal(t, c.expectedConfig.proxyURL.Host, globalClient.proxyURL.Host)
-		require.Equal(t, c.expectedConfig.proxyURL.Scheme, globalClient.proxyURL.Scheme)
-		require.Equal(t, c.expectedConfig.resource, globalClient.resource)
-	}
-}
-
-func TestMergeGenerateClient(t *testing.T) {
-	client := &GenerateClient{
-		clusterName:        "test",
-		proxyURL:           testGetURL(t, "https://www.google.com"),
-		resource:           "https://fake",
-		kubeConfig:         "/tmp/kubeconfig",
-		tokenCacheDir:      "/tmp/tokencache",
-		overwrite:          false,
-		insecureSkipVerify: false,
-		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
-			excludeAzureCLICredential:    false,
-			excludeEnvironmentCredential: false,
-			excludeMSICredential:         false,
-		},
-	}
-
-	client.Merge(GenerateClient{
-		clusterName:        "test2",
-		proxyURL:           testGetURL(t, "https://www.example.com"),
-		resource:           "https://fake2",
-		kubeConfig:         "/tmp2/kubeconfig",
-		tokenCacheDir:      "/tmp2/tokencache",
-		overwrite:          true,
-		insecureSkipVerify: true,
-	})
-
-	require.Equal(t, "test2", client.clusterName)
-	require.Equal(t, "https://www.example.com", client.proxyURL.String())
-	require.Equal(t, "https://fake2", client.resource)
-	require.Equal(t, "/tmp2/kubeconfig", client.kubeConfig)
-	require.Equal(t, "/tmp2/tokencache", client.tokenCacheDir)
-	require.Equal(t, true, client.overwrite)
-	require.Equal(t, true, client.insecureSkipVerify)
+	require.ErrorContains(t, runGenerate(ctx, generateConfig{}, authConfig{}), "Unable to load file")
+	require.ErrorContains(t, runGenerate(ctx, generateConfig{ProxyURL: "$#%~!-_"}, authConfig{}), "invalid URL escape")
 }
 
 func TestGenerate(t *testing.T) {
@@ -148,10 +55,10 @@ func TestGenerate(t *testing.T) {
 
 	tmpDir, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
 
 	tokenCacheDir := tmpDir
 	kubeConfigFile := fmt.Sprintf("%s/kubeconfig", tmpDir)
-	defer testDeleteFile(t, kubeConfigFile)
 
 	client := &GenerateClient{
 		clusterName:        "test",
@@ -212,6 +119,41 @@ func TestGenerate(t *testing.T) {
 		require.NotEmpty(t, kubeCfg.Clusters[c.GenerateClient.clusterName].CertificateAuthorityData)
 
 	}
+}
+
+func TestMergeGenerateClient(t *testing.T) {
+	client := &GenerateClient{
+		clusterName:        "test",
+		proxyURL:           testGetURL(t, "https://www.google.com"),
+		resource:           "https://fake",
+		kubeConfig:         "/tmp/kubeconfig",
+		tokenCacheDir:      "/tmp/tokencache",
+		overwrite:          false,
+		insecureSkipVerify: false,
+		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
+			excludeAzureCLICredential:    false,
+			excludeEnvironmentCredential: false,
+			excludeMSICredential:         false,
+		},
+	}
+
+	client.Merge(GenerateClient{
+		clusterName:        "test2",
+		proxyURL:           testGetURL(t, "https://www.example.com"),
+		resource:           "https://fake2",
+		kubeConfig:         "/tmp2/kubeconfig",
+		tokenCacheDir:      "/tmp2/tokencache",
+		overwrite:          true,
+		insecureSkipVerify: true,
+	})
+
+	require.Equal(t, "test2", client.clusterName)
+	require.Equal(t, "https://www.example.com", client.proxyURL.String())
+	require.Equal(t, "https://fake2", client.resource)
+	require.Equal(t, "/tmp2/kubeconfig", client.kubeConfig)
+	require.Equal(t, "/tmp2/tokencache", client.tokenCacheDir)
+	require.Equal(t, true, client.overwrite)
+	require.Equal(t, true, client.insecureSkipVerify)
 }
 
 func testGetURL(t *testing.T, s string) url.URL {

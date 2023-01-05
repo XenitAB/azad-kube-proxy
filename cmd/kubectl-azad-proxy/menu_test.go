@@ -1,49 +1,59 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
-	"github.com/urfave/cli/v2"
 )
 
-func TestNewMenuClient(t *testing.T) {
+func TestRunMenu(t *testing.T) {
+	tenantID := testGetEnvOrSkip(t, "TENANT_ID")
+	clientID := testGetEnvOrSkip(t, "CLIENT_ID")
+	clientSecret := testGetEnvOrSkip(t, "CLIENT_SECRET")
+	resource := testGetEnvOrSkip(t, "TEST_USER_SP_RESOURCE")
+
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
-	restoreAzureCLIAuth := testTempChangeEnv(t, "EXCLUDE_AZURE_CLI_AUTH", "true")
-	defer restoreAzureCLIAuth()
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	}))
+	defer srv.Close()
 
-	menuFlags, err := menuFlags(ctx)
+	tmpDir, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
 
-	app := &cli.App{
-		Name:  "test",
-		Usage: "test",
-		Commands: []*cli.Command{
-			{
-				Name:    "test",
-				Aliases: []string{"t"},
-				Usage:   "test",
-				Flags:   menuFlags,
-				Action: func(c *cli.Context) error {
-					_, err := newMenuClient(ctx, c)
-					if err != nil {
-						return err
-					}
-					return nil
-				},
-			},
-		},
+	tokenCacheDir := tmpDir
+	kubeConfigFile := fmt.Sprintf("%s/kubeconfig", tmpDir)
+
+	cfg := menuConfig{
+		Output:                "JSON",
+		AzureTenantID:         tenantID,
+		AzureClientID:         clientID,
+		AzureClientSecret:     clientSecret,
+		ClusterName:           "ze-cluster",
+		ProxyURL:              srv.URL,
+		Resource:              resource,
+		KubeConfig:            kubeConfigFile,
+		TokenCacheDir:         tokenCacheDir,
+		Overwrite:             false,
+		TLSInsecureSkipVerify: true,
 	}
 
-	app.Writer = &bytes.Buffer{}
-	app.ErrWriter = &bytes.Buffer{}
-	err = app.Run([]string{"fake-binary", "test"})
-	require.NoError(t, err)
+	authCfg := authConfig{
+		excludeAzureCLIAuth:    true,
+		excludeEnvironmentAuth: false,
+		excludeMSIAuth:         true,
+	}
+
+	err = runMenu(ctx, cfg, authCfg, newtestFakePromptClient(t, true, nil, nil))
+	require.Error(t, err)
 }
 
 func TestMenu(t *testing.T) {
@@ -127,179 +137,6 @@ func TestMenu(t *testing.T) {
 		}
 
 		require.NoError(t, err)
-	}
-}
-
-func TestMergeFlags(t *testing.T) {
-	cases := []struct {
-		a              []cli.Flag
-		b              []cli.Flag
-		expectedLength int
-	}{
-		{
-			a:              []cli.Flag{},
-			b:              []cli.Flag{},
-			expectedLength: 0,
-		},
-		{
-			a: []cli.Flag{
-				&cli.StringFlag{
-					Name: "flag1",
-				},
-			},
-			b: []cli.Flag{
-				&cli.StringFlag{
-					Name: "flag2",
-				},
-			},
-			expectedLength: 2,
-		},
-		{
-			a: []cli.Flag{
-				&cli.StringFlag{
-					Name: "flag1",
-				},
-			},
-			b: []cli.Flag{
-				&cli.StringFlag{
-					Name: "flag1",
-				},
-			},
-			expectedLength: 1,
-		},
-		{
-			a: []cli.Flag{
-				&cli.StringFlag{
-					Name: "flag1",
-				},
-				&cli.StringFlag{
-					Name: "flag2",
-				},
-			},
-			b: []cli.Flag{
-				&cli.StringFlag{
-					Name: "flag1",
-				},
-				&cli.StringFlag{
-					Name: "flag2",
-				},
-			},
-			expectedLength: 2,
-		},
-		{
-			a: []cli.Flag{
-				&cli.StringFlag{
-					Name: "flag1",
-				},
-				&cli.StringFlag{
-					Name: "flag2",
-				},
-			},
-			b: []cli.Flag{
-				&cli.StringFlag{
-					Name: "flag1",
-				},
-				&cli.StringFlag{
-					Name: "flag2",
-				},
-				&cli.StringFlag{
-					Name: "flag3",
-				},
-			},
-			expectedLength: 3,
-		},
-		{
-			a: []cli.Flag{
-				&cli.StringFlag{
-					Name: "flag1",
-				},
-				&cli.StringFlag{
-					Name: "flag2",
-				},
-				&cli.StringFlag{
-					Name: "flag3",
-				},
-			},
-			b: []cli.Flag{
-				&cli.StringFlag{
-					Name: "flag1",
-				},
-				&cli.StringFlag{
-					Name: "flag2",
-				},
-			},
-			expectedLength: 3,
-		},
-	}
-
-	for _, c := range cases {
-		flags := mergeFlags(c.a, c.b)
-		require.Len(t, flags, c.expectedLength)
-	}
-}
-
-func TestUnrequireFlags(t *testing.T) {
-	cases := []struct {
-		a []cli.Flag
-	}{
-		{
-			a: []cli.Flag{},
-		},
-		{
-			a: []cli.Flag{
-				&cli.StringFlag{
-					Name:     "flag1",
-					Required: true,
-				},
-			},
-		},
-		{
-			a: []cli.Flag{
-				&cli.StringFlag{
-					Name:     "flag1",
-					Required: true,
-				},
-				&cli.StringFlag{
-					Name:     "flag2",
-					Required: true,
-				},
-			},
-		},
-		{
-			a: []cli.Flag{
-				&cli.StringFlag{
-					Name:     "flag1",
-					Required: true,
-				},
-				&cli.StringFlag{
-					Name:     "flag2",
-					Required: false,
-				},
-			},
-		},
-		{
-			a: []cli.Flag{
-				&cli.StringFlag{
-					Name:     "flag1",
-					Required: false,
-				},
-				&cli.StringFlag{
-					Name:     "flag2",
-					Required: false,
-				},
-				&cli.StringFlag{
-					Name:     "flag3",
-					Required: true,
-				},
-			},
-		},
-	}
-
-	for _, c := range cases {
-		flags := unrequireFlags(c.a)
-		for _, flag := range flags {
-			require.False(t, flag.(*cli.StringFlag).Required)
-		}
 	}
 }
 

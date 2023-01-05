@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
@@ -15,7 +16,6 @@ import (
 	hamiltonMsgraph "github.com/manicminer/hamilton/msgraph"
 	hamiltonOdata "github.com/manicminer/hamilton/odata"
 	"github.com/olekukonko/tablewriter"
-	"github.com/urfave/cli/v2"
 )
 
 const (
@@ -45,29 +45,44 @@ type DiscoverClient struct {
 	enableMsiAuth          bool
 }
 
-// DiscoverInterface ...
 type DiscoverInterface interface {
 	Discover(ctx context.Context) (string, error)
 	Run(ctx context.Context) ([]discover, error)
 }
 
-func newDiscoverClient(ctx context.Context, c *cli.Context) (*DiscoverClient, error) {
+func runDiscover(ctx context.Context, writer io.Writer, cfg discoverConfig, authCfg authConfig) error {
+	client, err := newDiscoverClient(ctx, cfg, authCfg)
+	if err != nil {
+		return err
+	}
+
+	output, err := client.Run(ctx)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprint(writer, output)
+
+	return nil
+}
+
+func newDiscoverClient(ctx context.Context, cfg discoverConfig, authCfg authConfig) (*DiscoverClient, error) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	var output outputType
-	switch strings.ToUpper(c.String("output")) {
+	switch strings.ToUpper(cfg.Output) {
 	case "TABLE":
 		output = tableOutputType
 	case "JSON":
 		output = jsonOutputType
 	default:
-		err := fmt.Errorf("Supported outputs are TABLE and JSON. The following was used: %s", c.String("output"))
+		err := fmt.Errorf("Supported outputs are TABLE and JSON. The following was used: %s", cfg.Output)
 		log.V(1).Info("Unsupported output", "error", err.Error())
 		return nil, err
 	}
 
-	enableAzureCliToken := !c.Bool("exclude-azure-cli-auth")
-	tenantID := c.String("tenant-id")
+	enableAzureCliToken := !authCfg.excludeAzureCLIAuth
+	tenantID := cfg.AzureTenantID
 	if tenantID == "" && enableAzureCliToken {
 		cliConfig, err := hamiltonAuth.NewAzureCliConfig(hamiltonEnvironments.MsGraphGlobal, "")
 		if err != nil {
@@ -86,74 +101,14 @@ func newDiscoverClient(ctx context.Context, c *cli.Context) (*DiscoverClient, er
 	return &DiscoverClient{
 		outputType:             output,
 		tenantID:               tenantID,
-		clientID:               c.String("client-id"),
-		clientSecret:           c.String("client-secret"),
-		enableClientSecretAuth: !c.Bool("exclude-environment-auth"),
+		clientID:               cfg.AzureClientID,
+		clientSecret:           cfg.AzureClientSecret,
+		enableClientSecretAuth: !authCfg.excludeEnvironmentAuth,
 		enableAzureCliToken:    enableAzureCliToken,
-		enableMsiAuth:          !c.Bool("exclude-msi-auth"),
+		enableMsiAuth:          !authCfg.excludeMSIAuth,
 	}, nil
 }
 
-// DiscoverFlags ...
-func discoverFlags(ctx context.Context) []cli.Flag {
-	return []cli.Flag{
-		&cli.StringFlag{
-			Name:     "output",
-			Usage:    "How to output the data",
-			EnvVars:  []string{"OUTPUT"},
-			Value:    "TABLE",
-			Required: false,
-		},
-		&cli.StringFlag{
-			Name:     "auth-method",
-			Usage:    "Authentication method to use.",
-			EnvVars:  []string{"AUTH_METHOD"},
-			Value:    "CLI",
-			Required: false,
-		},
-		&cli.StringFlag{
-			Name:     "tenant-id",
-			Usage:    "Azure Tenant ID used with ENV auth",
-			EnvVars:  []string{"AZURE_TENANT_ID"},
-			Value:    "",
-			Required: false,
-		},
-		&cli.StringFlag{
-			Name:     "client-id",
-			Usage:    "Azure Client ID used with ENV auth",
-			EnvVars:  []string{"AZURE_CLIENT_ID"},
-			Value:    "",
-			Required: false,
-		},
-		&cli.StringFlag{
-			Name:     "client-secret",
-			Usage:    "Azure Client Secret used with ENV auth",
-			EnvVars:  []string{"AZURE_CLIENT_SECRET"},
-			Value:    "",
-			Required: false,
-		},
-		&cli.BoolFlag{
-			Name:    "exclude-azure-cli-auth",
-			Usage:   "Should Azure CLI be excluded from the authentication?",
-			EnvVars: []string{"EXCLUDE_AZURE_CLI_AUTH"},
-			Value:   false,
-		},
-		&cli.BoolFlag{
-			Name:    "exclude-environment-auth",
-			Usage:   "Should environment be excluded from the authentication?",
-			EnvVars: []string{"EXCLUDE_ENVIRONMENT_AUTH"},
-			Value:   true,
-		},
-		&cli.BoolFlag{
-			Name:    "exclude-msi-auth",
-			Usage:   "Should MSI be excluded from the authentication?",
-			EnvVars: []string{"EXCLUDE_MSI_AUTH"},
-			Value:   true,
-		},
-	}
-}
-
-// Discover ...
 func (client *DiscoverClient) Discover(ctx context.Context) (string, error) {
 	log := logr.FromContextOrDiscard(ctx)
 

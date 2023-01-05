@@ -6,7 +6,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/manifoldco/promptui"
-	"github.com/urfave/cli/v2"
 )
 
 type MenuClient struct {
@@ -15,36 +14,46 @@ type MenuClient struct {
 	promptClient   promptInterface
 }
 
-func newMenuClient(ctx context.Context, c *cli.Context) (*MenuClient, error) {
-	discoverClient, err := newDiscoverClient(ctx, c)
+func runMenu(ctx context.Context, cfg menuConfig, authCfg authConfig, promptClient promptInterface) error {
+	client, err := newMenuClient(ctx, cfg, authCfg, promptClient)
+	if err != nil {
+		return err
+	}
+
+	return client.Menu(ctx)
+}
+
+func newMenuClient(ctx context.Context, cfg menuConfig, authCfg authConfig, promptClient promptInterface) (*MenuClient, error) {
+	discoverCfg := discoverConfig{
+		Output:            cfg.Output,
+		AzureTenantID:     cfg.AzureTenantID,
+		AzureClientID:     cfg.AzureClientID,
+		AzureClientSecret: cfg.AzureClientSecret,
+	}
+	discoverClient, err := newDiscoverClient(ctx, discoverCfg, authCfg)
 	if err != nil {
 		return nil, err
 	}
 
-	generateClient, err := newGenerateClient(ctx, c)
+	generateCfg := generateConfig{
+		ClusterName:           cfg.ClusterName,
+		ProxyURL:              cfg.ProxyURL,
+		Resource:              cfg.Resource,
+		KubeConfig:            cfg.KubeConfig,
+		TokenCacheDir:         cfg.TokenCacheDir,
+		Overwrite:             cfg.Overwrite,
+		TLSInsecureSkipVerify: cfg.TLSInsecureSkipVerify,
+	}
+	generateClient, err := newGenerateClient(ctx, generateCfg, authCfg)
 	if err != nil {
 		return nil, err
 	}
-
-	promptClient := newPromptClient()
 
 	return &MenuClient{
 		discoverClient,
 		generateClient,
 		promptClient,
 	}, nil
-}
-
-func menuFlags(ctx context.Context) ([]cli.Flag, error) {
-	generateFlags, err := generateFlags(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	flags := mergeFlags(discoverFlags(ctx), generateFlags)
-	flags = unrequireFlags(flags)
-
-	return flags, nil
 }
 
 // Menu ...
@@ -114,58 +123,6 @@ func (client *MenuClient) Menu(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-// unrequireFlags takes a []cli.Flag array 'f' and sets Required to false in all flags
-func unrequireFlags(f []cli.Flag) []cli.Flag {
-	flags := f
-	for _, flag := range flags {
-		switch flag := flag.(type) {
-		case *cli.StringFlag:
-			flag.Required = false
-		case *cli.BoolFlag:
-			flag.Required = false
-		}
-	}
-
-	return flags
-}
-
-// mergeFlags taks two arrays ('a' and 'b') and removes any duplicates (based on the name) and outputs a merged array
-func mergeFlags(a []cli.Flag, b []cli.Flag) []cli.Flag {
-	flags := a
-
-	for _, bFlag := range b {
-		if !duplicateFlag(flags, bFlag) {
-			flags = append(flags, bFlag)
-		}
-	}
-
-	return flags
-}
-
-// duplicateFlag identified is the flag 'b' (based on the name) exists in the array 'a'
-func duplicateFlag(a []cli.Flag, b cli.Flag) bool {
-	duplicate := false
-
-	for _, aFlag := range a {
-		for _, aFlagName := range aFlag.Names() {
-			for _, bFlagName := range b.Names() {
-				if aFlagName == bFlagName {
-					duplicate = true
-					break
-				}
-			}
-			if duplicate {
-				break
-			}
-		}
-		if duplicate {
-			break
-		}
-	}
-
-	return duplicate
 }
 
 type promptClient struct{}

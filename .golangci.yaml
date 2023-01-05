@@ -8,13 +8,19 @@ linters:
     - misspell
     - gosec
     - thelper
+    - exhaustruct
 
 linters-settings:
   gocyclo:
     min-complexity: 20
+  exhaustruct:
+    include:
+      - '.*\.discoverConfig'
+      - '.*\.generateConfig'
 
 issues:
   exclude-rules:
     - path: _test\.go
       linters:
         - gocyclo
+        - exhaustruct

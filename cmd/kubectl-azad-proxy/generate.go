@@ -13,12 +13,10 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/urfave/cli/v2"
 	k8sclientcmd "k8s.io/client-go/tools/clientcmd"
 	k8sclientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-// GenerateClient ...
 type GenerateClient struct {
 	clusterName                   string
 	proxyURL                      url.URL
@@ -30,110 +28,47 @@ type GenerateClient struct {
 	defaultAzureCredentialOptions defaultAzureCredentialOptions
 }
 
-// GenerateInterface ...
 type GenerateInterface interface {
 	Generate(ctx context.Context) error
 	Merge(new GenerateClient)
 }
 
-func newGenerateClient(ctx context.Context, c *cli.Context) (*GenerateClient, error) {
+func runGenerate(ctx context.Context, cfg generateConfig, authCfg authConfig) error {
+	client, err := newGenerateClient(ctx, cfg, authCfg)
+	if err != nil {
+		return err
+	}
+
+	return client.Generate(ctx)
+}
+
+func newGenerateClient(ctx context.Context, cfg generateConfig, authCfg authConfig) (*GenerateClient, error) {
 	log := logr.FromContextOrDiscard(ctx)
 
-	proxyURL, err := url.Parse(c.String("proxy-url"))
+	proxyURL, err := url.Parse(cfg.ProxyURL)
 	if err != nil {
 		log.V(1).Info("Unable to parse proxy-url", "error", err.Error())
 		return nil, err
 	}
 
-	tokenCacheDir := getTokenCacheDirectory(c.String("token-cache-dir"), c.String("kubeconfig"))
+	tokenCacheDir := getTokenCacheDirectory(cfg.TokenCacheDir, cfg.KubeConfig)
 
 	return &GenerateClient{
-		clusterName:        c.String("cluster-name"),
+		clusterName:        cfg.ClusterName,
 		proxyURL:           *proxyURL,
-		resource:           c.String("resource"),
-		kubeConfig:         filepath.Clean(c.String("kubeconfig")),
+		resource:           cfg.Resource,
+		kubeConfig:         filepath.Clean(cfg.KubeConfig),
 		tokenCacheDir:      tokenCacheDir,
-		overwrite:          c.Bool("overwrite"),
-		insecureSkipVerify: c.Bool("tls-insecure-skip-verify"),
+		overwrite:          cfg.Overwrite,
+		insecureSkipVerify: cfg.TLSInsecureSkipVerify,
 		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
-			excludeAzureCLICredential:    c.Bool("exclude-azure-cli-auth"),
-			excludeEnvironmentCredential: c.Bool("exclude-environment-auth"),
-			excludeMSICredential:         c.Bool("exclude-msi-auth"),
+			excludeAzureCLICredential:    authCfg.excludeAzureCLIAuth,
+			excludeEnvironmentCredential: authCfg.excludeEnvironmentAuth,
+			excludeMSICredential:         authCfg.excludeMSIAuth,
 		},
 	}, nil
 }
 
-func generateFlags(ctx context.Context) ([]cli.Flag, error) {
-	osUserHomeDir, err := os.UserHomeDir()
-	if err != nil {
-		return nil, err
-	}
-
-	return []cli.Flag{
-		&cli.StringFlag{
-			Name:     "cluster-name",
-			Usage:    "The name of the Kubernetes cluster / context",
-			EnvVars:  []string{"CLUSTER_NAME"},
-			Required: true,
-		},
-		&cli.StringFlag{
-			Name:     "proxy-url",
-			Usage:    "The proxy url for azad-kube-proxy",
-			EnvVars:  []string{"PROXY_URL"},
-			Required: true,
-		},
-		&cli.StringFlag{
-			Name:     "resource",
-			Usage:    "The Azure AD App URI / resource",
-			EnvVars:  []string{"RESOURCE"},
-			Required: true,
-		},
-		&cli.StringFlag{
-			Name:     "kubeconfig",
-			Usage:    "The path of the Kubernetes Config",
-			EnvVars:  []string{"KUBECONFIG"},
-			Value:    fmt.Sprintf("%s/.kube/config", osUserHomeDir),
-			Required: false,
-		},
-		&cli.StringFlag{
-			Name:    "token-cache-dir",
-			Usage:   "The directory to where the tokens are cached, defaults to the same as KUBECONFIG",
-			EnvVars: []string{"TOKEN_CACHE_DIR"},
-		},
-		&cli.BoolFlag{
-			Name:    "overwrite",
-			Usage:   "If the cluster already exists in the kubeconfig, should it be overwritten?",
-			EnvVars: []string{"OVERWRITE_KUBECONFIG"},
-			Value:   false,
-		},
-		&cli.BoolFlag{
-			Name:    "tls-insecure-skip-verify",
-			Usage:   "Should the proxy url server certificate validation be skipped?",
-			EnvVars: []string{"TLS_INSECURE_SKIP_VERIFY"},
-			Value:   false,
-		},
-		&cli.BoolFlag{
-			Name:    "exclude-azure-cli-auth",
-			Usage:   "Should Azure CLI be excluded from the authentication?",
-			EnvVars: []string{"EXCLUDE_AZURE_CLI_AUTH"},
-			Value:   false,
-		},
-		&cli.BoolFlag{
-			Name:    "exclude-environment-auth",
-			Usage:   "Should environment be excluded from the authentication?",
-			EnvVars: []string{"EXCLUDE_ENVIRONMENT_AUTH"},
-			Value:   true,
-		},
-		&cli.BoolFlag{
-			Name:    "exclude-msi-auth",
-			Usage:   "Should MSI be excluded from the authentication?",
-			EnvVars: []string{"EXCLUDE_MSI_AUTH"},
-			Value:   true,
-		},
-	}, nil
-}
-
-// Generate ...
 func (client *GenerateClient) Generate(ctx context.Context) error {
 	log := logr.FromContextOrDiscard(ctx)
 
