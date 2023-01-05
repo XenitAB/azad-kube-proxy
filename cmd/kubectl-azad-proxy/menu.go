@@ -14,8 +14,8 @@ type MenuClient struct {
 	promptClient   promptInterface
 }
 
-func runMenu(ctx context.Context, cfg menuConfig, authCfg authConfig) error {
-	client, err := newMenuClient(ctx, cfg, authCfg)
+func runMenu(ctx context.Context, cfg menuConfig, authCfg authConfig, promptClient promptInterface) error {
+	client, err := newMenuClient(ctx, cfg, authCfg, promptClient)
 	if err != nil {
 		return err
 	}
@@ -23,7 +23,7 @@ func runMenu(ctx context.Context, cfg menuConfig, authCfg authConfig) error {
 	return client.Menu(ctx)
 }
 
-func newMenuClient(ctx context.Context, cfg menuConfig, authCfg authConfig) (*MenuClient, error) {
+func newMenuClient(ctx context.Context, cfg menuConfig, authCfg authConfig, promptClient promptInterface) (*MenuClient, error) {
 	discoverCfg := discoverConfig{
 		Output:            cfg.Output,
 		AzureTenantID:     cfg.AzureTenantID,
@@ -48,8 +48,6 @@ func newMenuClient(ctx context.Context, cfg menuConfig, authCfg authConfig) (*Me
 	if err != nil {
 		return nil, err
 	}
-
-	promptClient := newPromptClient()
 
 	return &MenuClient{
 		discoverClient,

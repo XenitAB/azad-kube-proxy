@@ -3,11 +3,57 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 )
+
+func TestRunMenu(t *testing.T) {
+	tenantID := testGetEnvOrSkip(t, "TENANT_ID")
+	clientID := testGetEnvOrSkip(t, "CLIENT_ID")
+	clientSecret := testGetEnvOrSkip(t, "CLIENT_SECRET")
+
+	ctx := logr.NewContext(context.Background(), logr.Discard())
+
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	}))
+	defer srv.Close()
+
+	tmpDir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	tokenCacheDir := tmpDir
+	kubeConfigFile := fmt.Sprintf("%s/kubeconfig", tmpDir)
+
+	cfg := menuConfig{
+		Output:                "JSON",
+		AzureTenantID:         tenantID,
+		AzureClientID:         clientID,
+		AzureClientSecret:     clientSecret,
+		ClusterName:           "ze-cluster",
+		ProxyURL:              srv.URL,
+		Resource:              "ze-resource",
+		KubeConfig:            kubeConfigFile,
+		TokenCacheDir:         tokenCacheDir,
+		Overwrite:             false,
+		TLSInsecureSkipVerify: true,
+	}
+
+	authCfg := authConfig{
+		excludeAzureCLIAuth:    true,
+		excludeEnvironmentAuth: false,
+		excludeMSIAuth:         true,
+	}
+
+	err = runMenu(ctx, cfg, authCfg, newtestFakePromptClient(t, true, nil, nil))
+	require.NoError(t, err)
+}
 
 func TestMenu(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())

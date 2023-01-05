@@ -51,7 +51,7 @@ func run(ctx context.Context, cfg config) error {
 	case cfg.Login != nil:
 		return runLogin(ctx, os.Stdout, *cfg.Login, cfg.authConfig)
 	case cfg.Menu != nil:
-		return runMenu(ctx, *cfg.Menu, cfg.authConfig)
+		return runMenu(ctx, *cfg.Menu, cfg.authConfig, newPromptClient())
 	}
 
 	return fmt.Errorf("unknown error, no subcommand executed")
