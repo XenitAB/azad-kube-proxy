@@ -50,7 +50,7 @@ func run(ctx context.Context) error {
 	case cfg.Generate != nil:
 		return runGenerate(ctx, *cfg.Generate, cfg.authConfig)
 	case cfg.Login != nil:
-		return runLogin(ctx, *cfg.Login, cfg.authConfig)
+		return runLogin(ctx, os.Stdout, *cfg.Login, cfg.authConfig)
 	case cfg.Menu != nil:
 		return runMenu(ctx, *cfg.Menu, cfg.authConfig)
 	}

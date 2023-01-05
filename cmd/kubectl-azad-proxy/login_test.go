@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -13,7 +14,7 @@ import (
 	k8sclientauth "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
 )
 
-func TestLogin(t *testing.T) {
+func TestRunLogin(t *testing.T) {
 	tenantID := testGetEnvOrSkip(t, "TENANT_ID")
 	clientID := testGetEnvOrSkip(t, "TEST_USER_SP_CLIENT_ID")
 	clientSecret := testGetEnvOrSkip(t, "TEST_USER_SP_CLIENT_SECRET")
@@ -28,53 +29,53 @@ func TestLogin(t *testing.T) {
 	restoreClientSecret := testTempChangeEnv(t, "AZURE_CLIENT_SECRET", clientSecret)
 	defer restoreClientSecret()
 
+	ctx := logr.NewContext(context.Background(), logr.Discard())
+
 	tmpDir, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	ctx := logr.NewContext(context.Background(), logr.Discard())
-	client := &LoginClient{
-		clusterName:   "test",
-		resource:      resource,
-		tokenCacheDir: tmpDir,
-		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
-			excludeAzureCLICredential:    true,
-			excludeEnvironmentCredential: false,
-			excludeMSICredential:         true,
-		},
-	}
-
 	errTmpDir, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
-
-	clientErr := &LoginClient{
-		clusterName:   "test",
-		resource:      resource,
-		tokenCacheDir: errTmpDir,
-		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
-			excludeAzureCLICredential:    true,
-			excludeEnvironmentCredential: true,
-			excludeMSICredential:         true,
-		},
-	}
+	defer os.RemoveAll(errTmpDir)
 
 	cases := []struct {
-		LoginClient         *LoginClient
+		cfg                 loginConfig
+		authCfg             authConfig
 		expectedErrContains string
 	}{
 		{
-			LoginClient:         client,
+			cfg: loginConfig{
+				ClusterName:   "test",
+				Resource:      resource,
+				TokenCacheDir: tmpDir,
+			},
+			authCfg: authConfig{
+
+				excludeAzureCLIAuth:    true,
+				excludeEnvironmentAuth: false,
+				excludeMSIAuth:         true,
+			},
 			expectedErrContains: "",
 		},
 		{
-			LoginClient:         clientErr,
+			cfg: loginConfig{
+				ClusterName:   "test",
+				Resource:      resource,
+				TokenCacheDir: errTmpDir,
+			},
+			authCfg: authConfig{
+				excludeAzureCLIAuth:    true,
+				excludeEnvironmentAuth: true,
+				excludeMSIAuth:         true,
+			},
 			expectedErrContains: "Authentication error:",
 		},
 	}
 
 	for _, c := range cases {
-		rawRes, err := c.LoginClient.Login(ctx)
+		buffer := &bytes.Buffer{}
+		err := runLogin(ctx, buffer, c.cfg, c.authCfg)
 		if c.expectedErrContains != "" {
 			require.ErrorContains(t, err, c.expectedErrContains)
 			continue
@@ -83,7 +84,7 @@ func TestLogin(t *testing.T) {
 		require.NoError(t, err)
 
 		tokenRes := &k8sclientauth.ExecCredential{}
-		err = json.Unmarshal([]byte(rawRes), &tokenRes)
+		err = json.Unmarshal([]byte(buffer.Bytes()), &tokenRes)
 		require.NoError(t, err)
 		require.Equal(t, "client.authentication.k8s.io/v1beta1", tokenRes.APIVersion)
 		require.Equal(t, "ExecCredential", tokenRes.Kind)

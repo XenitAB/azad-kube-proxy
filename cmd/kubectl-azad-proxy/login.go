@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -19,7 +20,7 @@ type LoginClient struct {
 	defaultAzureCredentialOptions defaultAzureCredentialOptions
 }
 
-func runLogin(ctx context.Context, cfg loginConfig, authCfg authConfig) error {
+func runLogin(ctx context.Context, writer io.Writer, cfg loginConfig, authCfg authConfig) error {
 	client := newLoginClient(ctx, cfg, authCfg)
 
 	output, err := client.Login(ctx)
@@ -27,7 +28,7 @@ func runLogin(ctx context.Context, cfg loginConfig, authCfg authConfig) error {
 		return err
 	}
 
-	fmt.Print(output)
+	fmt.Fprint(writer, output)
 
 	return nil
 }
