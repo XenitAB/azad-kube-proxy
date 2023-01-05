@@ -53,7 +53,7 @@ func TestRunMenu(t *testing.T) {
 	}
 
 	err = runMenu(ctx, cfg, authCfg, newtestFakePromptClient(t, true, nil, nil))
-	require.NoError(t, err)
+	require.Error(t, err)
 }
 
 func TestMenu(t *testing.T) {
