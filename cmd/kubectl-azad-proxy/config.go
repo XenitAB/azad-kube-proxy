@@ -9,7 +9,6 @@ import (
 
 type discoverConfig struct {
 	Output            string `arg:"--output,env:OUTPUT" default:"TABLE" help:"How to output the data"`
-	AuthMethod        string `arg:"--auth-method,env:AUTH_METHOD" default:"CLI" help:"Authentication method to use."`
 	AzureTenantID     string `arg:"--tenant-id,env:AZURE_TENANT_ID" help:"Azure Tenant ID used with ENV auth"`
 	AzureClientID     string `arg:"--client-id,env:AZURE_CLIENT_ID" help:"Azure Client ID used with ENV auth"`
 	AzureClientSecret string `arg:"--client-secret,env:AZURE_CLIENT_SECRET" help:"Azure Client Secret used with ENV auth"`
@@ -34,7 +33,6 @@ type loginConfig struct {
 
 type menuConfig struct {
 	Output                string `arg:"--output,env:OUTPUT" default:"TABLE" help:"How to output the data"`
-	AuthMethod            string `arg:"--auth-method,env:AUTH_METHOD" default:"CLI" help:"Authentication method to use."`
 	AzureTenantID         string `arg:"--tenant-id,env:AZURE_TENANT_ID" help:"Azure Tenant ID used with ENV auth"`
 	AzureClientID         string `arg:"--client-id,env:AZURE_CLIENT_ID" help:"Azure Client ID used with ENV auth"`
 	AzureClientSecret     string `arg:"--client-secret,env:AZURE_CLIENT_SECRET" help:"Azure Client Secret used with ENV auth"`

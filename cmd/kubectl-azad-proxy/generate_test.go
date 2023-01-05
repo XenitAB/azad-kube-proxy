@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"testing"
@@ -12,39 +14,37 @@ import (
 	k8sclientcmd "k8s.io/client-go/tools/clientcmd"
 )
 
-func TestMergeGenerateClient(t *testing.T) {
-	client := &GenerateClient{
-		clusterName:        "test",
-		proxyURL:           testGetURL(t, "https://www.google.com"),
-		resource:           "https://fake",
-		kubeConfig:         "/tmp/kubeconfig",
-		tokenCacheDir:      "/tmp/tokencache",
-		overwrite:          false,
-		insecureSkipVerify: false,
-		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
-			excludeAzureCLICredential:    false,
-			excludeEnvironmentCredential: false,
-			excludeMSICredential:         false,
-		},
+func TestRunGenerate(t *testing.T) {
+	ctx := logr.NewContext(context.Background(), logr.Discard())
+
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	}))
+	defer srv.Close()
+
+	tmpDir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	tokenCacheDir := tmpDir
+	kubeConfigFile := fmt.Sprintf("%s/kubeconfig", tmpDir)
+
+	cfg := generateConfig{
+		ClusterName:           "ze-cluster",
+		ProxyURL:              srv.URL,
+		Resource:              "ze-resource",
+		KubeConfig:            kubeConfigFile,
+		TokenCacheDir:         tokenCacheDir,
+		Overwrite:             false,
+		TLSInsecureSkipVerify: true,
 	}
-
-	client.Merge(GenerateClient{
-		clusterName:        "test2",
-		proxyURL:           testGetURL(t, "https://www.example.com"),
-		resource:           "https://fake2",
-		kubeConfig:         "/tmp2/kubeconfig",
-		tokenCacheDir:      "/tmp2/tokencache",
-		overwrite:          true,
-		insecureSkipVerify: true,
-	})
-
-	require.Equal(t, "test2", client.clusterName)
-	require.Equal(t, "https://www.example.com", client.proxyURL.String())
-	require.Equal(t, "https://fake2", client.resource)
-	require.Equal(t, "/tmp2/kubeconfig", client.kubeConfig)
-	require.Equal(t, "/tmp2/tokencache", client.tokenCacheDir)
-	require.Equal(t, true, client.overwrite)
-	require.Equal(t, true, client.insecureSkipVerify)
+	authCfg := authConfig{
+		excludeAzureCLIAuth:    false,
+		excludeEnvironmentAuth: true,
+		excludeMSIAuth:         true,
+	}
+	err = runGenerate(ctx, cfg, authCfg)
+	require.NoError(t, err)
 }
 
 func TestGenerate(t *testing.T) {
@@ -52,10 +52,10 @@ func TestGenerate(t *testing.T) {
 
 	tmpDir, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
 
 	tokenCacheDir := tmpDir
 	kubeConfigFile := fmt.Sprintf("%s/kubeconfig", tmpDir)
-	defer testDeleteFile(t, kubeConfigFile)
 
 	client := &GenerateClient{
 		clusterName:        "test",
@@ -116,6 +116,41 @@ func TestGenerate(t *testing.T) {
 		require.NotEmpty(t, kubeCfg.Clusters[c.GenerateClient.clusterName].CertificateAuthorityData)
 
 	}
+}
+
+func TestMergeGenerateClient(t *testing.T) {
+	client := &GenerateClient{
+		clusterName:        "test",
+		proxyURL:           testGetURL(t, "https://www.google.com"),
+		resource:           "https://fake",
+		kubeConfig:         "/tmp/kubeconfig",
+		tokenCacheDir:      "/tmp/tokencache",
+		overwrite:          false,
+		insecureSkipVerify: false,
+		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
+			excludeAzureCLICredential:    false,
+			excludeEnvironmentCredential: false,
+			excludeMSICredential:         false,
+		},
+	}
+
+	client.Merge(GenerateClient{
+		clusterName:        "test2",
+		proxyURL:           testGetURL(t, "https://www.example.com"),
+		resource:           "https://fake2",
+		kubeConfig:         "/tmp2/kubeconfig",
+		tokenCacheDir:      "/tmp2/tokencache",
+		overwrite:          true,
+		insecureSkipVerify: true,
+	})
+
+	require.Equal(t, "test2", client.clusterName)
+	require.Equal(t, "https://www.example.com", client.proxyURL.String())
+	require.Equal(t, "https://fake2", client.resource)
+	require.Equal(t, "/tmp2/kubeconfig", client.kubeConfig)
+	require.Equal(t, "/tmp2/tokencache", client.tokenCacheDir)
+	require.Equal(t, true, client.overwrite)
+	require.Equal(t, true, client.insecureSkipVerify)
 }
 
 func testGetURL(t *testing.T, s string) url.URL {

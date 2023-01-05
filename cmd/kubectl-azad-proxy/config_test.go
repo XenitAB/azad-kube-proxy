@@ -40,8 +40,7 @@ func TestNewConfig(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, cfg.Discover)
 		expectedDiscoverConfig := discoverConfig{
-			Output:     "TABLE",
-			AuthMethod: "CLI",
+			Output: "TABLE",
 		}
 		require.Equal(t, expectedDiscoverConfig, *cfg.Discover)
 	})
@@ -139,8 +138,7 @@ func TestNewConfig(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, cfg.Menu)
 		expectedMenuConfig := menuConfig{
-			Output:     "TABLE",
-			AuthMethod: "CLI",
+			Output: "TABLE",
 		}
 		require.Equal(t, expectedMenuConfig, *cfg.Menu)
 	})

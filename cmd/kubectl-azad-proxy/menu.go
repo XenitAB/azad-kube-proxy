@@ -26,7 +26,6 @@ func runMenu(ctx context.Context, cfg menuConfig, authCfg authConfig) error {
 func newMenuClient(ctx context.Context, cfg menuConfig, authCfg authConfig) (*MenuClient, error) {
 	discoverCfg := discoverConfig{
 		Output:            cfg.Output,
-		AuthMethod:        cfg.AuthMethod,
 		AzureTenantID:     cfg.AzureTenantID,
 		AzureClientID:     cfg.AzureClientID,
 		AzureClientSecret: cfg.AzureClientSecret,
