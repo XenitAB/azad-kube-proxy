@@ -15,6 +15,141 @@ import (
 	"github.com/xenitab/azad-kube-proxy/pkg/util"
 )
 
+// `arg:"" default:"" help:""`
+type NewConfigStruct struct {
+	AzureClientID string `arg:"--client-id,env:CLIENT_ID,required" help:"Azure AD Application Client ID"`
+	AzureClientSecret string `arg:"--client-secret,env:CLIENT_SECRET,required" help:"Azure AD Application Client Secret"`
+	AzureTenantID string `arg:"--tenant-id,env:TENANT_ID,required" help:"Azure AD Tenant ID"`
+
+	ListenerAddress        string `arg:"--address,env:ADDRESS" default:"0.0.0.0" help:"Address to listen on"`
+	ListenerPort int `arg:"--port,env:PORT" default:"8080" help:"Port number to listen on"`
+	MetricsListenerAddress string `arg:"--metrics-address,env:METRICS_ADDRESS" default:"0.0.0.0" help:"Address to listen on"`
+	MetricsListenerPort int `arg:"--metrics-port,env:METRICS_PORT" default:"8081" help:"Port number for metrics and health checks to listen on"`
+	ListenerTLSConfigEnabled         bool `arg:"--tls-enabled,env:TLS_ENABLED" default:"false" help:"Should TLS be enabled for the listner?"`
+	ListenerTLSConfigCertificatePath string `arg:"--tls-certificate-path,env:TLS_CERTIFICATE_PATH" help:"Path for the TLS Certificate"`
+	ListenerTLSConfigKeyPath         string `arg:"--tls-key-path,env:TLS_KEY_PATH" help:"Path for the TLS KEY"`
+	AzureADGroupPrefix     string `arg:"" default:"" help:""`
+	AzureADMaxGroupCount   int `arg:"" default:"" help:""`
+
+
+	&cli.BoolFlag{
+		Name:     "oidc-validate-cert",
+		Usage:    "Should the OpenID Connect CA Certificate be validated?",
+		Required: false,
+		EnvVars:  []string{"OIDC_VALIDATE_CERT"},
+		Value:    true,
+	},
+	&cli.StringFlag{
+		Name:     "kubernetes-api-host",
+		Usage:    "The host for the Kubernetes API",
+		Required: false,
+		EnvVars:  []string{"KUBERNETES_API_HOST", "KUBERNETES_SERVICE_HOST"},
+		Value:    "kubernetes.default",
+	},
+	&cli.IntFlag{
+		Name:     "kubernetes-api-port",
+		Usage:    "The port for the Kubernetes API",
+		Required: false,
+		EnvVars:  []string{"KUBERNETES_API_PORT", "KUBERNETES_SERVICE_PORT"},
+		Value:    443,
+	},
+	&cli.BoolFlag{
+		Name:     "kubernetes-api-tls",
+		Usage:    "Use TLS to communicate with the Kubernetes API?",
+		Required: false,
+		EnvVars:  []string{"KUBERNETES_API_TLS"},
+		Value:    true,
+	},
+	&cli.BoolFlag{
+		Name:     "kubernetes-api-validate-cert",
+		Usage:    "Should the Kubernetes API Certificate be validated?",
+		Required: false,
+		EnvVars:  []string{"KUBERNETES_API_VALIDATE_CERT"},
+		Value:    true,
+	},
+	&cli.StringFlag{
+		Name:     "kubernetes-api-ca-cert-path",
+		Usage:    "The ca certificate path for communication to the Kubernetes API",
+		Required: false,
+		EnvVars:  []string{"KUBERNETES_API_CA_CERT_PATH"},
+		Value:    "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+	},
+	&cli.StringFlag{
+		Name:     "kubernetes-api-token-path",
+		Usage:    "The token for communication to the Kubernetes API",
+		Required: false,
+		EnvVars:  []string{"KUBERNETES_API_TOKEN_PATH"},
+		Value:    "/var/run/secrets/kubernetes.io/serviceaccount/token",
+	},
+	&cli.StringFlag{
+		Name:     "azure-ad-group-prefix",
+		Usage:    "The prefix of the Azure AD groups to be passed to the Kubernetes API",
+		Required: false,
+		EnvVars:  []string{"AZURE_AD_GROUP_PREFIX"},
+		Value:    "",
+	},
+	&cli.IntFlag{
+		Name:     "azure-ad-max-group-count",
+		Usage:    "The maximum of groups allowed to be passed to the Kubernetes API before the proxy will return unauthorized",
+		Required: false,
+		EnvVars:  []string{"AZURE_AD_MAX_GROUP_COUNT"},
+		Value:    50,
+	},
+	&cli.IntFlag{
+		Name:     "group-sync-interval",
+		Usage:    "The interval groups will be synchronized (in minutes)",
+		Required: false,
+		EnvVars:  []string{"GROUP_SYNC_INTERVAL"},
+		Value:    5,
+	},
+	&cli.StringFlag{
+		Name:     "group-identifier",
+		Usage:    "What group identifier to use",
+		Required: false,
+		EnvVars:  []string{"GROUP_IDENTIFIER"},
+		Value:    "NAME",
+	},
+	&cli.StringFlag{
+		Name:     "metrics",
+		Usage:    "What metrics library to use",
+		Required: false,
+		EnvVars:  []string{"METRICS"},
+		Value:    "PROMETHEUS",
+	},
+	&cli.BoolFlag{
+		Name:     "cors-enabled",
+		Usage:    "Should CORS be enabled for the proxy?",
+		Required: false,
+		EnvVars:  []string{"CORS_ENABLED"},
+		Value:    true,
+	},
+	&cli.StringSliceFlag{
+		Name:     "cors-allowed-origins",
+		Usage:    "The allowed origins for CORS (Access-Control-Allow-Origin). Defaults to the current host (based on host header - https://<host>).",
+		Required: false,
+		EnvVars:  []string{"CORS_ALLOWED_ORIGINS"},
+	},
+	&cli.StringFlag{
+		Name:     "cors-allowed-origins-default-scheme",
+		Usage:    "If cors-allowed-origins is left to default, what scheme should be used? (https for https://<host>)",
+		Required: false,
+		EnvVars:  []string{"CORS_ALLOWED_ORIGINS_DEFAULT_SCHEME"},
+		Value:    "https",
+	},
+	&cli.StringSliceFlag{
+		Name:     "cors-allowed-headers",
+		Usage:    "The allowed headers for CORS (Access-Control-Allow-Headers). Defaults to: *",
+		Required: false,
+		EnvVars:  []string{"CORS_ALLOWED_HEADERS"},
+	},
+	&cli.StringSliceFlag{
+		Name:     "cors-allowed-methods",
+		Usage:    "The allowed methods for CORS (Access-Control-Allow-Methods). Defaults to: GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS",
+		Required: false,
+		EnvVars:  []string{"CORS_ALLOWED_METHODS"},
+	},
+}
+
 // Config contains the configuration that is used for the application
 type Config struct {
 	ClientID               string `validate:"required,uuid"`
