@@ -30,11 +30,20 @@ func main() {
 
 	zapLog, err := zap.NewProduction()
 	if err != nil {
-		panic(fmt.Sprintf("who watches the watchmen (%v)?", err))
+		fmt.Fprintf(os.Stderr, "unable to configure logging: %v\n", err)
+		os.Exit(1)
 	}
 	log = zapr.NewLogger(zapLog)
 	ctx := logr.NewContext(context.Background(), log)
 
+	err = run(ctx)
+	if err != nil {
+		log.Error(err, "application returned an error")
+		os.Exit(1)
+	}
+}
+
+func run(ctx context.Context) error {
 	// Generate config
 	cli.VersionPrinter = func(c *cli.Context) {
 		fmt.Printf("version=%s revision=%s created=%s\n", c.App.Version, Revision, Created)
@@ -57,24 +66,22 @@ func main() {
 		},
 	}
 
-	err = app.Run(os.Args)
+	err := app.Run(os.Args)
 	if err != nil {
-		log.Error(err, "Unable to generate config")
-		os.Exit(1)
+		return fmt.Errorf("unable to generate config: %w", err)
 	}
 
 	// Start reverse proxy
 	server, err := proxy.NewProxyClient(ctx, cfg)
 	if err != nil {
-		log.Error(err, "Unable to initialize proxy server")
-		os.Exit(1)
+		return fmt.Errorf("unable to initialize proxy server: %w", err)
+
 	}
 
 	err = server.Start(ctx)
 	if err != nil {
-		log.Error(err, "Proxy server returned error")
-		os.Exit(1)
+		return fmt.Errorf("proxy server returned an error: %w", err)
 	}
 
-	os.Exit(0)
+	return nil
 }
