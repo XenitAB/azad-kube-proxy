@@ -15,8 +15,13 @@ type ClientInterface interface {
 }
 
 // NewMetricsClient ...
-func NewMetricsClient(ctx context.Context, config config.Config) (ClientInterface, error) {
-	switch config.Metrics {
+func NewMetricsClient(ctx context.Context, cfg *config.Config) (ClientInterface, error) {
+	metricsType, err := models.GetMetrics(cfg.Metrics)
+	if err != nil {
+		return nil, err
+	}
+
+	switch metricsType {
 	case models.NoneMetrics:
 		client := newNoneClient(ctx)
 		return &client, nil
@@ -24,6 +29,6 @@ func NewMetricsClient(ctx context.Context, config config.Config) (ClientInterfac
 		client := newPrometheusClient(ctx)
 		return &client, nil
 	default:
-		return nil, fmt.Errorf("Unexpected metrics: %s", config.Metrics)
+		return nil, fmt.Errorf("Unexpected metrics: %s", cfg.Metrics)
 	}
 }

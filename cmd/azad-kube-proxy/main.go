@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
-	"github.com/urfave/cli/v2"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"github.com/xenitab/azad-kube-proxy/pkg/proxy"
 	"go.uber.org/zap"
@@ -44,31 +43,9 @@ func main() {
 }
 
 func run(ctx context.Context) error {
-	// Generate config
-	cli.VersionPrinter = func(c *cli.Context) {
-		fmt.Printf("version=%s revision=%s created=%s\n", c.App.Version, Revision, Created)
-	}
-
-	var cfg config.Config
-
-	app := &cli.App{
-		Name:    "azad-kube-proxy",
-		Usage:   "Azure AD Kubernetes API Proxy",
-		Version: Version,
-		Flags:   config.Flags(ctx),
-		Action: func(c *cli.Context) error {
-			var err error
-			cfg, err = config.NewConfig(ctx, c)
-			if err != nil {
-				return err
-			}
-			return nil
-		},
-	}
-
-	err := app.Run(os.Args)
+	cfg, err := config.NewConfig(os.Args[1:], Version, Revision, Created)
 	if err != nil {
-		return fmt.Errorf("unable to generate config: %w", err)
+		return err
 	}
 
 	// Start reverse proxy

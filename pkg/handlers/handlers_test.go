@@ -37,17 +37,14 @@ func TestNewHandlersClient(t *testing.T) {
 	testFakeCacheClient := newTestFakeCacheClient(t, "", "", nil, false, nil)
 	testFakeUserClient := newTestFakeUserClient(t, "", "", nil, nil)
 	testFakeHealthClient := newTestFakeHealthClient(t, true, nil, true, nil)
-	fakeURL, err := url.Parse("https://fake-url")
-	require.NoError(t, err)
 
-	cfg := config.Config{
-		TenantID: tenantID,
-		KubernetesConfig: config.KubernetesConfig{
-			URL: fakeURL,
-		},
+	cfg := &config.Config{
+		AzureTenantID:     tenantID,
+		KubernetesAPIHost: "fake-url",
+		KubernetesAPITLS:  true,
 	}
 
-	_, err = NewHandlersClient(ctx, cfg, testFakeCacheClient, testFakeUserClient, testFakeHealthClient)
+	_, err := NewHandlersClient(ctx, cfg, testFakeCacheClient, testFakeUserClient, testFakeHealthClient)
 	require.NoError(t, err)
 }
 
