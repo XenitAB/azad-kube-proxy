@@ -236,16 +236,18 @@ func (client *Client) listenAndServe(httpServer *http.Server) error {
 }
 
 func (client *Client) getHTTPServer(handler http.Handler) *http.Server {
+	addr := fmt.Sprintf("%s:%d", client.cfg.ListenerAddress, client.cfg.ListenerPort)
 	return &http.Server{
-		Addr:              client.cfg.ListenerAddress,
+		Addr:              addr,
 		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 }
 
 func (client *Client) getHTTPMetricsServer(handler http.Handler) *http.Server {
+	addr := fmt.Sprintf("%s:%d", client.cfg.MetricsListenerAddress, client.cfg.MetricsListenerPort)
 	return &http.Server{
-		Addr:              client.cfg.MetricsListenerAddress,
+		Addr:              addr,
 		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
