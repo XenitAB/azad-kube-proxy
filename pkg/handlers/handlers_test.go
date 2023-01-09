@@ -11,6 +11,8 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -55,14 +57,10 @@ func TestReadinessHandler(t *testing.T) {
 	req, err := http.NewRequest("GET", "/readyz", nil)
 	require.NoError(t, err)
 
-	fakeURL, err := url.Parse("https://fake-url")
-	require.NoError(t, err)
-
-	cfg := config.Config{
-		TenantID: tenantID,
-		KubernetesConfig: config.KubernetesConfig{
-			URL: fakeURL,
-		},
+	cfg := &config.Config{
+		AzureTenantID:     tenantID,
+		KubernetesAPIHost: "fake-url",
+		KubernetesAPITLS:  true,
 	}
 
 	testFakeCacheClient := newTestFakeCacheClient(t, "", "", nil, true, nil)
@@ -105,14 +103,10 @@ func TestLivenessHandler(t *testing.T) {
 	req, err := http.NewRequest("GET", "/healthz", nil)
 	require.NoError(t, err)
 
-	fakeURL, err := url.Parse("https://fake-url")
-	require.NoError(t, err)
-
-	cfg := config.Config{
-		TenantID: tenantID,
-		KubernetesConfig: config.KubernetesConfig{
-			URL: fakeURL,
-		},
+	cfg := &config.Config{
+		AzureTenantID:     tenantID,
+		KubernetesAPIHost: "fake-url",
+		KubernetesAPITLS:  true,
 	}
 
 	testFakeCacheClient := newTestFakeCacheClient(t, "", "", nil, true, nil)
@@ -172,23 +166,32 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 	defer fakeBackend.Close()
 	fakeBackendURL, err := url.Parse(fakeBackend.URL)
 	require.NoError(t, err)
+	fakeBackendPort, err := strconv.Atoi(fakeBackendURL.Port())
+	require.NoError(t, err)
 
-	cfg := config.Config{
-		ClientID:             clientID,
-		ClientSecret:         clientSecret,
-		TenantID:             tenantID,
-		AzureADMaxGroupCount: testFakeMaxGroups,
-		GroupIdentifier:      models.NameGroupIdentifier,
-		KubernetesConfig: config.KubernetesConfig{
-			URL:   fakeBackendURL,
-			Token: "fake-token",
-		},
+	tmpDir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+	kubernetesAPITokenPath := filepath.Clean(fmt.Sprintf("%s/kubernetes-token", tmpDir))
+	err = os.WriteFile(kubernetesAPITokenPath, []byte("fake-token"), 0644)
+	require.NoError(t, err)
+
+	cfg := &config.Config{
+		AzureClientID:          clientID,
+		AzureClientSecret:      clientSecret,
+		AzureTenantID:          tenantID,
+		AzureADMaxGroupCount:   testFakeMaxGroups,
+		GroupIdentifier:        "NAME",
+		KubernetesAPIHost:      fakeBackendURL.Host,
+		KubernetesAPIPort:      fakeBackendPort,
+		KubernetesAPITLS:       false,
+		KubernetesAPITokenPath: kubernetesAPITokenPath,
 	}
 
 	cases := []struct {
 		testDescription     string
 		request             *http.Request
-		config              config.Config
+		config              *config.Config
 		configFunction      func(oldConfig config.Config) config.Config
 		cacheClient         cache.ClientInterface
 		cacheFunction       func(oldCacheClient cache.ClientInterface) cache.ClientInterface
@@ -432,7 +435,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 			},
 			config: cfg,
 			configFunction: func(oldConfig config.Config) config.Config {
-				oldConfig.GroupIdentifier = models.ObjectIDGroupIdentifier
+				oldConfig.GroupIdentifier = "OBJECTID"
 				return oldConfig
 			},
 			cacheClient:     memCacheClient,
@@ -466,7 +469,8 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 	for i, c := range cases {
 		t.Logf("Test #%d: %s", i, c.testDescription)
 		if c.configFunction != nil {
-			c.config = c.configFunction(c.config)
+			tmpCfg := c.configFunction(*c.config)
+			c.config = &tmpCfg
 		}
 
 		if c.cacheFunction != nil {
@@ -480,7 +484,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 		proxyHandlers, err := NewHandlersClient(ctx, c.config, c.cacheClient, c.userClient, testFakeHealthClient)
 		require.NoError(t, err)
 
-		proxy := httputil.NewSingleHostReverseProxy(c.config.KubernetesConfig.URL)
+		proxy := httputil.NewSingleHostReverseProxy(testGetKubernetesAPIUrl(t, c.config.KubernetesAPIHost, c.config.KubernetesAPIPort, c.config.KubernetesAPITLS))
 		proxy.ErrorHandler = proxyHandlers.ErrorHandler(ctx)
 		rr := httptest.NewRecorder()
 		router := mux.NewRouter()
@@ -705,4 +709,24 @@ func testFileExists(t *testing.T, s string) bool {
 	}
 
 	return true
+}
+
+func testGetKubernetesAPIUrl(t *testing.T, host string, port int, tls bool) *url.URL {
+	t.Helper()
+
+	httpScheme := testGetHTTPScheme(t, tls)
+	u, err := url.Parse(fmt.Sprintf("%s://%s:%d", httpScheme, host, port))
+	require.NoError(t, err)
+
+	return u
+}
+
+func testGetHTTPScheme(t *testing.T, tls bool) string {
+	t.Helper()
+
+	if tls {
+		return "https"
+	}
+
+	return "http"
 }
