@@ -44,6 +44,7 @@ func TestNewHandlersClient(t *testing.T) {
 		AzureTenantID:     tenantID,
 		KubernetesAPIHost: "fake-url",
 		KubernetesAPITLS:  true,
+		GroupIdentifier:   "NAME",
 	}
 
 	_, err := NewHandlersClient(ctx, cfg, testFakeCacheClient, testFakeUserClient, testFakeHealthClient)
@@ -61,6 +62,7 @@ func TestReadinessHandler(t *testing.T) {
 		AzureTenantID:     tenantID,
 		KubernetesAPIHost: "fake-url",
 		KubernetesAPITLS:  true,
+		GroupIdentifier:   "NAME",
 	}
 
 	testFakeCacheClient := newTestFakeCacheClient(t, "", "", nil, true, nil)
@@ -107,6 +109,7 @@ func TestLivenessHandler(t *testing.T) {
 		AzureTenantID:     tenantID,
 		KubernetesAPIHost: "fake-url",
 		KubernetesAPITLS:  true,
+		GroupIdentifier:   "NAME",
 	}
 
 	testFakeCacheClient := newTestFakeCacheClient(t, "", "", nil, true, nil)
