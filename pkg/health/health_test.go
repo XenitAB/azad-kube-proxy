@@ -163,6 +163,6 @@ func (client *testFakeValidator) Valid(ctx context.Context) bool {
 func testCreateTemporaryFile(t *testing.T, path string, content string) {
 	t.Helper()
 
-	err := os.WriteFile(path, []byte(content), 0644)
+	err := os.WriteFile(path, []byte(content), 0600)
 	require.NoError(t, err)
 }

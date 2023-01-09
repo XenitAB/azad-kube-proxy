@@ -173,7 +173,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 	kubernetesAPITokenPath := filepath.Clean(fmt.Sprintf("%s/kubernetes-token", tmpDir))
-	err = os.WriteFile(kubernetesAPITokenPath, []byte("fake-token"), 0644)
+	err = os.WriteFile(kubernetesAPITokenPath, []byte("fake-token"), 0600)
 	require.NoError(t, err)
 
 	cfg := &config.Config{
