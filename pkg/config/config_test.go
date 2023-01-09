@@ -1,12 +1,24 @@
 package config
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewConfig(t *testing.T) {
+	envVarsToClear := []string{
+		"CLIENT_ID",
+		"CLIENT_SECRET",
+		"TENANT_ID",
+	}
+
+	for _, envVar := range envVarsToClear {
+		restore := testTempUnsetEnv(t, envVar)
+		defer restore()
+	}
+
 	t.Run("binary only", func(t *testing.T) {
 		args := []string{
 			"/foo/bar/bin",
@@ -47,4 +59,12 @@ func TestNewConfig(t *testing.T) {
 		}
 		require.Equal(t, expectedCfg, cfg)
 	})
+}
+
+func testTempUnsetEnv(t *testing.T, key string) func() {
+	t.Helper()
+
+	oldEnv := os.Getenv(key)
+	os.Unsetenv(key)
+	return func() { os.Setenv(key, oldEnv) }
 }
