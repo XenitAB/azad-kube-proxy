@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/xenitab/azad-kube-proxy/pkg/azure"
-	"github.com/xenitab/azad-kube-proxy/pkg/cache"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
@@ -16,16 +15,16 @@ type ClientInterface interface {
 
 // Client ...
 type Client struct {
-	Config      config.Config
-	Cache       *cache.ClientInterface
 	AzureClient azure.ClientInterface
+
+	cfg *config.Config
 }
 
 // NewUserClient ...
-func NewUserClient(config config.Config, azureClient azure.ClientInterface) ClientInterface {
+func NewUserClient(cfg *config.Config, azureClient azure.ClientInterface) ClientInterface {
 	return &Client{
-		Config:      config,
 		AzureClient: azureClient,
+		cfg:         cfg,
 	}
 }
 

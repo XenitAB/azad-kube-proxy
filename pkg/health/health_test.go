@@ -2,7 +2,9 @@ package health
 
 import (
 	"context"
-	"net/url"
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -17,28 +19,34 @@ import (
 func TestNewHealthClient(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
+	tmpDir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+	tokenPath := filepath.Clean(fmt.Sprintf("%s/kubernetes-token", tmpDir))
+	caPath := filepath.Clean(fmt.Sprintf("%s/kubernetes-ca", tmpDir))
+	testCreateTemporaryFile(t, tokenPath, "fake-token")
+	testCreateTemporaryFile(t, caPath, "fake-ca-string")
+
 	cases := []struct {
-		config              config.Config
+		config              *config.Config
 		expectedErrContains string
 	}{
 		{
-			config: config.Config{
-				KubernetesConfig: config.KubernetesConfig{
-					ValidateCertificate: true,
-					URL:                 &url.URL{Scheme: "https", Host: "fake-url"},
-					Token:               "fake-token",
-					RootCAString:        "fake-ca-string",
-				},
+			config: &config.Config{
+				KubernetesAPITLS:          true,
+				KubernetesAPIValidateCert: true,
+				KubernetesAPIHost:         "fake-url",
+				KubernetesAPITokenPath:    tokenPath,
+				KubernetesAPICACertPath:   caPath,
 			},
 			expectedErrContains: "unable to load root certificates: unable to parse bytes as PEM block",
 		},
 		{
-			config: config.Config{
-				KubernetesConfig: config.KubernetesConfig{
-					ValidateCertificate: false,
-					URL:                 &url.URL{Scheme: "https", Host: "fake-url"},
-					Token:               "fake-token",
-				},
+			config: &config.Config{
+				KubernetesAPITLS:          true,
+				KubernetesAPIValidateCert: false,
+				KubernetesAPIHost:         "fake-url",
+				KubernetesAPITokenPath:    tokenPath,
 			},
 			expectedErrContains: "",
 		},
@@ -117,14 +125,21 @@ func TestReady(t *testing.T) {
 func TestLive(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
+	tmpDir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+	tokenPath := filepath.Clean(fmt.Sprintf("%s/kubernetes-token", tmpDir))
+	caPath := filepath.Clean(fmt.Sprintf("%s/kubernetes-ca", tmpDir))
+	testCreateTemporaryFile(t, tokenPath, "fake-token")
+	testCreateTemporaryFile(t, caPath, "fake-ca-string")
+
 	validator := &testFakeValidator{t}
-	fakeConfig := config.Config{
-		KubernetesConfig: config.KubernetesConfig{
-			ValidateCertificate: false,
-			URL:                 &url.URL{Scheme: "https", Host: "fake-url"},
-			Token:               "fake-token",
-			RootCAString:        "fake-ca-string",
-		},
+	fakeConfig := &config.Config{
+		KubernetesAPIValidateCert: false,
+		KubernetesAPITLS:          true,
+		KubernetesAPIHost:         "fake-url",
+		KubernetesAPITokenPath:    tokenPath,
+		KubernetesAPICACertPath:   caPath,
 	}
 	client, err := NewHealthClient(ctx, fakeConfig, validator)
 	require.NoError(t, err)
@@ -143,4 +158,11 @@ func (client *testFakeValidator) Valid(ctx context.Context) bool {
 	client.t.Helper()
 
 	return true
+}
+
+func testCreateTemporaryFile(t *testing.T, path string, content string) {
+	t.Helper()
+
+	err := os.WriteFile(path, []byte(content), 0600)
+	require.NoError(t, err)
 }

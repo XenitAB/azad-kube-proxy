@@ -23,21 +23,21 @@ type Client struct {
 }
 
 // NewCORSClient ...
-func NewCORSClient(config config.Config) ClientInterface {
-	allowedHeaders := config.CORSConfig.AllowedHeaders
+func NewCORSClient(config *config.Config) ClientInterface {
+	allowedHeaders := config.CorsAllowedHeaders
 	if len(allowedHeaders) == 0 {
 		allowedHeaders = []string{"*"}
 	}
 
-	allowedMethods := config.CORSConfig.AllowedMethods
+	allowedMethods := config.CorsAllowedMethods
 	if len(allowedMethods) == 0 {
 		allowedMethods = []string{"GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"}
 	}
 
 	return &Client{
-		enabled:                     config.CORSConfig.Enabled,
-		allowedOriginsDefaultScheme: config.CORSConfig.AllowedOriginsDefaultScheme,
-		allowedOrigins:              config.CORSConfig.AllowedOrigins,
+		enabled:                     config.CorsEnabled,
+		allowedOriginsDefaultScheme: config.CorsAllowedOriginsDefaultScheme,
+		allowedOrigins:              config.CorsAllowedOrigins,
 		allowedHeaders:              allowedHeaders,
 		allowedMethods:              allowedMethods,
 	}

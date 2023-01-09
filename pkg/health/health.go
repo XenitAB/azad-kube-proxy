@@ -3,6 +3,7 @@ package health
 import (
 	"context"
 	"fmt"
+	"net/url"
 
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
 	"github.com/xenitab/azad-kube-proxy/pkg/util"
@@ -30,18 +31,33 @@ type Client struct {
 }
 
 // NewHealthClient ...
-func NewHealthClient(ctx context.Context, config config.Config, livenessValidator Validator) (ClientInterface, error) {
+func NewHealthClient(ctx context.Context, cfg *config.Config, livenessValidator Validator) (ClientInterface, error) {
 	k8sTLSConfig := k8sclientrest.TLSClientConfig{Insecure: true}
-	if config.KubernetesConfig.ValidateCertificate {
+	if cfg.KubernetesAPIValidateCert {
+		kubernetesRootCAString, err := util.GetStringFromFile(ctx, cfg.KubernetesAPICACertPath)
+		if err != nil {
+			return nil, err
+		}
+
 		k8sTLSConfig = k8sclientrest.TLSClientConfig{
 			Insecure: false,
-			CAData:   []byte(config.KubernetesConfig.RootCAString),
+			CAData:   []byte(kubernetesRootCAString),
 		}
 	}
 
+	kubernetesAPIUrl, err := getKubernetesAPIUrl(cfg.KubernetesAPIHost, cfg.KubernetesAPIPort, cfg.KubernetesAPITLS)
+	if err != nil {
+		return nil, err
+	}
+
+	kubernetesToken, err := util.GetStringFromFile(ctx, cfg.KubernetesAPITokenPath)
+	if err != nil {
+		return nil, err
+	}
+
 	k8sRestConfig := &k8sclientrest.Config{
-		Host:            config.KubernetesConfig.URL.String(),
-		BearerToken:     config.KubernetesConfig.Token,
+		Host:            kubernetesAPIUrl.String(),
+		BearerToken:     kubernetesToken,
 		TLSClientConfig: k8sTLSConfig,
 	}
 
@@ -89,4 +105,17 @@ func (client *Client) Ready(ctx context.Context) (bool, error) {
 func (client *Client) Live(ctx context.Context) (bool, error) {
 	valid := client.livenessValidator.Valid(ctx)
 	return valid, nil
+}
+
+func getKubernetesAPIUrl(host string, port int, tls bool) (*url.URL, error) {
+	httpScheme := getHTTPScheme(tls)
+	return url.Parse(fmt.Sprintf("%s://%s:%d", httpScheme, host, port))
+}
+
+func getHTTPScheme(tls bool) string {
+	if tls {
+		return "https"
+	}
+
+	return "http"
 }

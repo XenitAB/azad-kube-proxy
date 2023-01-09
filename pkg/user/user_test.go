@@ -14,7 +14,7 @@ import (
 
 func TestGetUser(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
-	config := config.Config{}
+	cfg := &config.Config{}
 	azureClient := &testFakeAzureClient{
 		fakeError: nil,
 		t:         t,
@@ -32,21 +32,21 @@ func TestGetUser(t *testing.T) {
 		expectedErrContains string
 	}{
 		{
-			userClient:          NewUserClient(config, azureClient),
+			userClient:          NewUserClient(cfg, azureClient),
 			username:            "",
 			objectID:            "00000000-0000-0000-0000-000000000000",
 			expectedUserType:    models.ServicePrincipalUserType,
 			expectedErrContains: "",
 		},
 		{
-			userClient:          NewUserClient(config, azureClient),
+			userClient:          NewUserClient(cfg, azureClient),
 			username:            "username",
 			objectID:            "00000000-0000-0000-0000-000000000000",
 			expectedUserType:    models.NormalUserType,
 			expectedErrContains: "",
 		},
 		{
-			userClient:          NewUserClient(config, azureClientError),
+			userClient:          NewUserClient(cfg, azureClientError),
 			username:            "username",
 			objectID:            "00000000-0000-0000-0000-000000000000",
 			expectedUserType:    models.NormalUserType,

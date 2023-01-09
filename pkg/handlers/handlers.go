@@ -35,19 +35,34 @@ type ClientInterface interface {
 
 // Client ...
 type Client struct {
-	Config       config.Config
 	CacheClient  cache.ClientInterface
 	UserClient   user.ClientInterface
 	HealthClient health.ClientInterface
+
+	cfg             *config.Config
+	groupIdentifier models.GroupIdentifier
+	kubernetesToken string
 }
 
 // NewHandlersClient ...
-func NewHandlersClient(ctx context.Context, config config.Config, cacheClient cache.ClientInterface, userClient user.ClientInterface, healthClient health.ClientInterface) (ClientInterface, error) {
+func NewHandlersClient(ctx context.Context, cfg *config.Config, cacheClient cache.ClientInterface, userClient user.ClientInterface, healthClient health.ClientInterface) (ClientInterface, error) {
+	groupIdentifier, err := models.GetGroupIdentifier(cfg.GroupIdentifier)
+	if err != nil {
+		return nil, err
+	}
+
+	kubernetesToken, err := util.GetStringFromFile(ctx, cfg.KubernetesAPITokenPath)
+	if err != nil {
+		return nil, err
+	}
+
 	handlersClient := &Client{
-		Config:       config,
-		CacheClient:  cacheClient,
-		UserClient:   userClient,
-		HealthClient: healthClient,
+		CacheClient:     cacheClient,
+		UserClient:      userClient,
+		HealthClient:    healthClient,
+		cfg:             cfg,
+		groupIdentifier: groupIdentifier,
+		kubernetesToken: kubernetesToken,
 	}
 
 	return handlersClient, nil
@@ -148,8 +163,8 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 			}
 
 			// Check if number of groups more than the configured limit
-			if len(user.Groups) > client.Config.AzureADMaxGroupCount-1 {
-				log.Error(errors.New("max groups reached"), "the user is member of more groups than allowed to be passed to the Kubernetes API", "groupCount", len(user.Groups), "username", user.Username, "config.AzureADMaxGroupCount", client.Config.AzureADMaxGroupCount)
+			if len(user.Groups) > client.cfg.AzureADMaxGroupCount-1 {
+				log.Error(errors.New("max groups reached"), "the user is member of more groups than allowed to be passed to the Kubernetes API", "groupCount", len(user.Groups), "username", user.Username, "config.AzureADMaxGroupCount", client.cfg.AzureADMaxGroupCount)
 				http.Error(w, "Too many groups", http.StatusForbidden)
 				return
 			}
@@ -170,20 +185,20 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 		r.Header.Add("Sec-WebSocket-Protocol", wsProtoString)
 
 		// Add a new Authorization header with the token from the token path
-		r.Header.Add(authorizationHeader, fmt.Sprintf("Bearer %s", client.Config.KubernetesConfig.Token))
+		r.Header.Add(authorizationHeader, fmt.Sprintf("Bearer %s", client.kubernetesToken))
 
 		// Add the impersonation header for the users
 		r.Header.Add(impersonateUserHeader, user.Username)
 
 		// Add a new impersonation header per group
 		for _, group := range user.Groups {
-			switch client.Config.GroupIdentifier {
+			switch client.groupIdentifier {
 			case models.NameGroupIdentifier:
 				r.Header.Add(impersonateGroupHeader, group.Name)
 			case models.ObjectIDGroupIdentifier:
 				r.Header.Add(impersonateGroupHeader, group.ObjectID)
 			default:
-				log.Error(errors.New("unknown groups identifier"), "unknown groups identifier", "GroupIdentifier", client.Config.GroupIdentifier)
+				log.Error(errors.New("unknown groups identifier"), "unknown groups identifier", "GroupIdentifier", client.cfg.GroupIdentifier)
 				http.Error(w, "Unexpected error", http.StatusInternalServerError)
 				return
 			}

@@ -7,28 +7,27 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	"github.com/xenitab/azad-kube-proxy/pkg/config"
-	"github.com/xenitab/azad-kube-proxy/pkg/models"
 )
 
 func TestNewMetricsClient(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 	cases := []struct {
-		config              config.Config
+		config              *config.Config
 		expectedErrContains string
 	}{
 		{
-			config:              config.Config{},
-			expectedErrContains: "Unexpected metrics:",
+			config:              &config.Config{},
+			expectedErrContains: "Unknown metrics",
 		},
 		{
-			config: config.Config{
-				Metrics: models.NoneMetrics,
+			config: &config.Config{
+				Metrics: "NONE",
 			},
 			expectedErrContains: "",
 		},
 		{
-			config: config.Config{
-				Metrics: models.PrometheusMetrics,
+			config: &config.Config{
+				Metrics: "PROMETHEUS",
 			},
 			expectedErrContains: "",
 		},
