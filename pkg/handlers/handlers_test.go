@@ -40,11 +40,15 @@ func TestNewHandlersClient(t *testing.T) {
 	testFakeUserClient := newTestFakeUserClient(t, "", "", nil, nil)
 	testFakeHealthClient := newTestFakeHealthClient(t, true, nil, true, nil)
 
+	kubernetesAPITokenPath, cleanupFn := testGetKubernetesAPITokenPath(t)
+	defer cleanupFn()
+
 	cfg := &config.Config{
-		AzureTenantID:     tenantID,
-		KubernetesAPIHost: "fake-url",
-		KubernetesAPITLS:  true,
-		GroupIdentifier:   "NAME",
+		AzureTenantID:          tenantID,
+		KubernetesAPIHost:      "fake-url",
+		KubernetesAPITLS:       true,
+		KubernetesAPITokenPath: kubernetesAPITokenPath,
+		GroupIdentifier:        "NAME",
 	}
 
 	_, err := NewHandlersClient(ctx, cfg, testFakeCacheClient, testFakeUserClient, testFakeHealthClient)
@@ -58,11 +62,15 @@ func TestReadinessHandler(t *testing.T) {
 	req, err := http.NewRequest("GET", "/readyz", nil)
 	require.NoError(t, err)
 
+	kubernetesAPITokenPath, cleanupFn := testGetKubernetesAPITokenPath(t)
+	defer cleanupFn()
+
 	cfg := &config.Config{
-		AzureTenantID:     tenantID,
-		KubernetesAPIHost: "fake-url",
-		KubernetesAPITLS:  true,
-		GroupIdentifier:   "NAME",
+		AzureTenantID:          tenantID,
+		KubernetesAPIHost:      "fake-url",
+		KubernetesAPITLS:       true,
+		KubernetesAPITokenPath: kubernetesAPITokenPath,
+		GroupIdentifier:        "NAME",
 	}
 
 	testFakeCacheClient := newTestFakeCacheClient(t, "", "", nil, true, nil)
@@ -105,11 +113,15 @@ func TestLivenessHandler(t *testing.T) {
 	req, err := http.NewRequest("GET", "/healthz", nil)
 	require.NoError(t, err)
 
+	kubernetesAPITokenPath, cleanupFn := testGetKubernetesAPITokenPath(t)
+	defer cleanupFn()
+
 	cfg := &config.Config{
-		AzureTenantID:     tenantID,
-		KubernetesAPIHost: "fake-url",
-		KubernetesAPITLS:  true,
-		GroupIdentifier:   "NAME",
+		AzureTenantID:          tenantID,
+		KubernetesAPIHost:      "fake-url",
+		KubernetesAPITLS:       true,
+		KubernetesAPITokenPath: kubernetesAPITokenPath,
+		GroupIdentifier:        "NAME",
 	}
 
 	testFakeCacheClient := newTestFakeCacheClient(t, "", "", nil, true, nil)
@@ -172,12 +184,8 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 	fakeBackendPort, err := strconv.Atoi(fakeBackendURL.Port())
 	require.NoError(t, err)
 
-	tmpDir, err := os.MkdirTemp("", "")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
-	kubernetesAPITokenPath := filepath.Clean(fmt.Sprintf("%s/kubernetes-token", tmpDir))
-	err = os.WriteFile(kubernetesAPITokenPath, []byte("fake-token"), 0600)
-	require.NoError(t, err)
+	kubernetesAPITokenPath, cleanupFn := testGetKubernetesAPITokenPath(t)
+	defer cleanupFn()
 
 	cfg := &config.Config{
 		AzureClientID:          clientID,
@@ -504,6 +512,18 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 			require.Contains(t, rr.Body.String(), c.expectedErrContains)
 		}
 	}
+}
+
+func testGetKubernetesAPITokenPath(t *testing.T) (string, func()) {
+	t.Helper()
+
+	tmpDir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+	cleanupFn := func() { os.RemoveAll(tmpDir) }
+	kubernetesAPITokenPath := filepath.Clean(fmt.Sprintf("%s/kubernetes-token", tmpDir))
+	err = os.WriteFile(kubernetesAPITokenPath, []byte("fake-token"), 0600)
+	require.NoError(t, err)
+	return kubernetesAPITokenPath, cleanupFn
 }
 
 type testFakeUserClient struct {
