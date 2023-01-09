@@ -21,7 +21,7 @@ func TestMiddleware(t *testing.T) {
 	require.NoError(t, err)
 
 	cases := []struct {
-		config          config.Config
+		config          *config.Config
 		reqHost         string
 		reqOrigin       string
 		reqMethod       string
@@ -31,14 +31,12 @@ func TestMiddleware(t *testing.T) {
 		expectedMethods string
 	}{
 		{
-			config: config.Config{
-				CORSConfig: config.CORSConfig{
-					Enabled:                     true,
-					AllowedOriginsDefaultScheme: "http",
-					AllowedOrigins:              []string{},
-					AllowedHeaders:              []string{},
-					AllowedMethods:              []string{},
-				},
+			config: &config.Config{
+				CorsEnabled:                     true,
+				CorsAllowedOriginsDefaultScheme: "http",
+				CorsAllowedOrigins:              []string{},
+				CorsAllowedHeaders:              []string{},
+				CorsAllowedMethods:              []string{},
 			},
 			reqHost:         "localhost",
 			reqOrigin:       "http://localhost",
@@ -48,14 +46,12 @@ func TestMiddleware(t *testing.T) {
 			expectedMethods: "",
 		},
 		{
-			config: config.Config{
-				CORSConfig: config.CORSConfig{
-					Enabled:                     true,
-					AllowedOriginsDefaultScheme: "http",
-					AllowedOrigins:              []string{},
-					AllowedHeaders:              []string{},
-					AllowedMethods:              []string{},
-				},
+			config: &config.Config{
+				CorsEnabled:                     true,
+				CorsAllowedOriginsDefaultScheme: "http",
+				CorsAllowedOrigins:              []string{},
+				CorsAllowedHeaders:              []string{},
+				CorsAllowedMethods:              []string{},
 			},
 			reqHost:         "localhost",
 			reqOrigin:       "http://localhost",
@@ -65,14 +61,12 @@ func TestMiddleware(t *testing.T) {
 			expectedMethods: "",
 		},
 		{
-			config: config.Config{
-				CORSConfig: config.CORSConfig{
-					Enabled:                     false,
-					AllowedOriginsDefaultScheme: "http",
-					AllowedOrigins:              []string{},
-					AllowedHeaders:              []string{},
-					AllowedMethods:              []string{},
-				},
+			config: &config.Config{
+				CorsEnabled:                     false,
+				CorsAllowedOriginsDefaultScheme: "http",
+				CorsAllowedOrigins:              []string{},
+				CorsAllowedHeaders:              []string{},
+				CorsAllowedMethods:              []string{},
 			},
 			reqHost:         "localhost",
 			reqOrigin:       "http://localhost",
@@ -82,14 +76,12 @@ func TestMiddleware(t *testing.T) {
 			expectedMethods: "",
 		},
 		{
-			config: config.Config{
-				CORSConfig: config.CORSConfig{
-					Enabled:                     true,
-					AllowedOriginsDefaultScheme: "http",
-					AllowedOrigins:              []string{},
-					AllowedHeaders:              []string{},
-					AllowedMethods:              []string{},
-				},
+			config: &config.Config{
+				CorsEnabled:                     true,
+				CorsAllowedOriginsDefaultScheme: "http",
+				CorsAllowedOrigins:              []string{},
+				CorsAllowedHeaders:              []string{},
+				CorsAllowedMethods:              []string{},
 			},
 			reqHost:   "localhost",
 			reqOrigin: "http://localhost",
@@ -103,14 +95,12 @@ func TestMiddleware(t *testing.T) {
 			expectedMethods: "GET",
 		},
 		{
-			config: config.Config{
-				CORSConfig: config.CORSConfig{
-					Enabled:                     true,
-					AllowedOriginsDefaultScheme: "http",
-					AllowedOrigins:              []string{},
-					AllowedHeaders:              []string{"X-Fake-Header"},
-					AllowedMethods:              []string{"GET"},
-				},
+			config: &config.Config{
+				CorsEnabled:                     true,
+				CorsAllowedOriginsDefaultScheme: "http",
+				CorsAllowedOrigins:              []string{},
+				CorsAllowedHeaders:              []string{"X-Fake-Header"},
+				CorsAllowedMethods:              []string{"GET"},
 			},
 			reqHost:   "localhost",
 			reqOrigin: "http://localhost",
@@ -124,14 +114,12 @@ func TestMiddleware(t *testing.T) {
 			expectedMethods: "GET",
 		},
 		{
-			config: config.Config{
-				CORSConfig: config.CORSConfig{
-					Enabled:                     true,
-					AllowedOriginsDefaultScheme: "http",
-					AllowedOrigins:              []string{},
-					AllowedHeaders:              []string{"X-Fake-Header"},
-					AllowedMethods:              []string{"GET"},
-				},
+			config: &config.Config{
+				CorsEnabled:                     true,
+				CorsAllowedOriginsDefaultScheme: "http",
+				CorsAllowedOrigins:              []string{},
+				CorsAllowedHeaders:              []string{"X-Fake-Header"},
+				CorsAllowedMethods:              []string{"GET"},
 			},
 			reqHost:   "localhost",
 			reqOrigin: "http://localhost",
@@ -144,14 +132,12 @@ func TestMiddleware(t *testing.T) {
 			expectedMethods: "",
 		},
 		{
-			config: config.Config{
-				CORSConfig: config.CORSConfig{
-					Enabled:                     true,
-					AllowedOriginsDefaultScheme: "http",
-					AllowedOrigins:              []string{},
-					AllowedHeaders:              []string{"X-Fake-Header"},
-					AllowedMethods:              []string{"PATCH"},
-				},
+			config: &config.Config{
+				CorsEnabled:                     true,
+				CorsAllowedOriginsDefaultScheme: "http",
+				CorsAllowedOrigins:              []string{},
+				CorsAllowedHeaders:              []string{"X-Fake-Header"},
+				CorsAllowedMethods:              []string{"PATCH"},
 			},
 			reqHost:   "localhost",
 			reqOrigin: "http://localhost",
@@ -164,14 +150,12 @@ func TestMiddleware(t *testing.T) {
 			expectedMethods: "",
 		},
 		{
-			config: config.Config{
-				CORSConfig: config.CORSConfig{
-					Enabled:                     true,
-					AllowedOriginsDefaultScheme: "http",
-					AllowedOrigins:              []string{},
-					AllowedHeaders:              []string{"X-Fake-Header", "Test-Header", "Abc-Header"},
-					AllowedMethods:              []string{"POST", "GET"},
-				},
+			config: &config.Config{
+				CorsEnabled:                     true,
+				CorsAllowedOriginsDefaultScheme: "http",
+				CorsAllowedOrigins:              []string{},
+				CorsAllowedHeaders:              []string{"X-Fake-Header", "Test-Header", "Abc-Header"},
+				CorsAllowedMethods:              []string{"POST", "GET"},
 			},
 			reqHost:   "localhost",
 			reqOrigin: "http://localhost",
@@ -184,14 +168,12 @@ func TestMiddleware(t *testing.T) {
 			expectedMethods: "",
 		},
 		{
-			config: config.Config{
-				CORSConfig: config.CORSConfig{
-					Enabled:                     true,
-					AllowedOriginsDefaultScheme: "http",
-					AllowedOrigins:              []string{},
-					AllowedHeaders:              []string{"X-Fake-Header", "Test-Header", "Abc-Header"},
-					AllowedMethods:              []string{"POST", "GET"},
-				},
+			config: &config.Config{
+				CorsEnabled:                     true,
+				CorsAllowedOriginsDefaultScheme: "http",
+				CorsAllowedOrigins:              []string{},
+				CorsAllowedHeaders:              []string{"X-Fake-Header", "Test-Header", "Abc-Header"},
+				CorsAllowedMethods:              []string{"POST", "GET"},
 			},
 			reqHost:   "localhost",
 			reqOrigin: "http://localhost",
