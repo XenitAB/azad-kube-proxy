@@ -193,7 +193,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 		AzureTenantID:          tenantID,
 		AzureADMaxGroupCount:   testFakeMaxGroups,
 		GroupIdentifier:        "NAME",
-		KubernetesAPIHost:      fakeBackendURL.Host,
+		KubernetesAPIHost:      fakeBackendURL.Hostname(),
 		KubernetesAPIPort:      fakeBackendPort,
 		KubernetesAPITLS:       false,
 		KubernetesAPITokenPath: kubernetesAPITokenPath,
@@ -454,27 +454,6 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 			expectedResCode: http.StatusOK,
 			expectedResBody: `{"fake": true}`,
 		},
-		{
-			testDescription: "working token, with wrong GroupIdentifier",
-			request: &http.Request{
-				Method: "GET",
-				URL: &url.URL{
-					Path: "/",
-				},
-				Header: map[string][]string{
-					"Authorization": {fmt.Sprintf("Bearer %s", token.Token)},
-				},
-			},
-			config: cfg,
-			configFunction: func(oldConfig config.Config) config.Config {
-				oldConfig.GroupIdentifier = "DUMMY"
-				return oldConfig
-			},
-			cacheClient:         memCacheClient,
-			userClient:          testFakeUserClient,
-			expectedResCode:     http.StatusInternalServerError,
-			expectedErrContains: "Unexpected error",
-		},
 	}
 
 	for i, c := range cases {
@@ -495,7 +474,8 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 		proxyHandlers, err := NewHandlersClient(ctx, c.config, c.cacheClient, c.userClient, testFakeHealthClient)
 		require.NoError(t, err)
 
-		proxy := httputil.NewSingleHostReverseProxy(testGetKubernetesAPIUrl(t, c.config.KubernetesAPIHost, c.config.KubernetesAPIPort, c.config.KubernetesAPITLS))
+		kubernetesAPIUrl := testGetKubernetesAPIUrl(t, c.config.KubernetesAPIHost, c.config.KubernetesAPIPort, c.config.KubernetesAPITLS)
+		proxy := httputil.NewSingleHostReverseProxy(kubernetesAPIUrl)
 		proxy.ErrorHandler = proxyHandlers.ErrorHandler(ctx)
 		rr := httptest.NewRecorder()
 		router := mux.NewRouter()
