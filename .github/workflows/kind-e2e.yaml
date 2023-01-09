@@ -83,7 +83,7 @@ jobs:
           set -e
 
           if [ $EXIT_CODE -ne 0 ]; then
-            kubectl --namespace ${{ env.NAME }} deployment ${{ env.NAME }}
+            kubectl --namespace ${{ env.NAME }} logs -l app.kubernetes.io/name=${{ env.NAME }}
             echo helm install failed 1>&2
             exit 1
           fi
