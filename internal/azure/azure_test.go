@@ -8,8 +8,8 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
-	"github.com/xenitab/azad-kube-proxy/pkg/cache"
-	"github.com/xenitab/azad-kube-proxy/pkg/models"
+	"github.com/xenitab/azad-kube-proxy/internal/cache"
+	"github.com/xenitab/azad-kube-proxy/internal/models"
 )
 
 func TestNewAzureClient(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	gocache "github.com/patrickmn/go-cache"
-	"github.com/xenitab/azad-kube-proxy/pkg/models"
+	"github.com/xenitab/azad-kube-proxy/internal/models"
 )
 
 // MemoryCache ...

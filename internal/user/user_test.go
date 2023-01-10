@@ -8,8 +8,8 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
-	"github.com/xenitab/azad-kube-proxy/pkg/config"
-	"github.com/xenitab/azad-kube-proxy/pkg/models"
+	"github.com/xenitab/azad-kube-proxy/internal/config"
+	"github.com/xenitab/azad-kube-proxy/internal/models"
 )
 
 func TestGetUser(t *testing.T) {

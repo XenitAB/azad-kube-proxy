@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/xenitab/azad-kube-proxy/pkg/config"
-	"github.com/xenitab/azad-kube-proxy/pkg/util"
+	"github.com/xenitab/azad-kube-proxy/internal/config"
+	"github.com/xenitab/azad-kube-proxy/internal/util"
 	k8sapiauthorization "k8s.io/api/authorization/v1"
 	k8sapimachinerymetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"

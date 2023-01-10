@@ -9,8 +9,8 @@ import (
 	hamiltonAuth "github.com/manicminer/hamilton/auth"
 	hamiltonEnvironments "github.com/manicminer/hamilton/environments"
 	hamiltonMsgraph "github.com/manicminer/hamilton/msgraph"
-	"github.com/xenitab/azad-kube-proxy/pkg/cache"
-	"github.com/xenitab/azad-kube-proxy/pkg/models"
+	"github.com/xenitab/azad-kube-proxy/internal/cache"
+	"github.com/xenitab/azad-kube-proxy/internal/models"
 )
 
 type userInterface interface {

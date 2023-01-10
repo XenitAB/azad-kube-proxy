@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/gorilla/mux"
-	"github.com/xenitab/azad-kube-proxy/pkg/config"
-	"github.com/xenitab/azad-kube-proxy/pkg/models"
+	"github.com/xenitab/azad-kube-proxy/internal/config"
+	"github.com/xenitab/azad-kube-proxy/internal/models"
 )
 
 // ClientInterface ...

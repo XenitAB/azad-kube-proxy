@@ -22,11 +22,11 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
-	"github.com/xenitab/azad-kube-proxy/pkg/cache"
-	"github.com/xenitab/azad-kube-proxy/pkg/config"
-	"github.com/xenitab/azad-kube-proxy/pkg/health"
-	"github.com/xenitab/azad-kube-proxy/pkg/models"
-	"github.com/xenitab/azad-kube-proxy/pkg/user"
+	"github.com/xenitab/azad-kube-proxy/internal/cache"
+	"github.com/xenitab/azad-kube-proxy/internal/config"
+	"github.com/xenitab/azad-kube-proxy/internal/health"
+	"github.com/xenitab/azad-kube-proxy/internal/models"
+	"github.com/xenitab/azad-kube-proxy/internal/user"
 )
 
 var (

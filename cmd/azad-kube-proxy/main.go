@@ -7,8 +7,8 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
-	"github.com/xenitab/azad-kube-proxy/pkg/config"
-	"github.com/xenitab/azad-kube-proxy/pkg/proxy"
+	"github.com/xenitab/azad-kube-proxy/internal/config"
+	"github.com/xenitab/azad-kube-proxy/internal/proxy"
 	"go.uber.org/zap"
 )
 

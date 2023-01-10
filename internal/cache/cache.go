@@ -3,7 +3,7 @@ package cache
 import (
 	"context"
 
-	"github.com/xenitab/azad-kube-proxy/pkg/models"
+	"github.com/xenitab/azad-kube-proxy/internal/models"
 )
 
 // ClientInterface ...
