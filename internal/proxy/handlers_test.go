@@ -1,4 +1,4 @@
-package handlers
+package proxy
 
 import (
 	"context"
@@ -51,7 +51,7 @@ func TestNewHandlersClient(t *testing.T) {
 		GroupIdentifier:        "NAME",
 	}
 
-	_, err := NewHandlersClient(ctx, cfg, testFakeCacheClient, testFakeUserClient, testFakeHealthClient)
+	_, err := newHandlersClient(ctx, cfg, testFakeCacheClient, testFakeUserClient, testFakeHealthClient)
 	require.NoError(t, err)
 }
 
@@ -94,7 +94,7 @@ func TestReadinessHandler(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		proxyHandlers, err := NewHandlersClient(ctx, cfg, testFakeCacheClient, testFakeUserClient, c.healthClient)
+		proxyHandlers, err := newHandlersClient(ctx, cfg, testFakeCacheClient, testFakeUserClient, c.healthClient)
 		require.NoError(t, err)
 
 		rr := httptest.NewRecorder()
@@ -145,7 +145,7 @@ func TestLivenessHandler(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		proxyHandlers, err := NewHandlersClient(ctx, cfg, testFakeCacheClient, testFakeUserClient, c.healthClient)
+		proxyHandlers, err := newHandlersClient(ctx, cfg, testFakeCacheClient, testFakeUserClient, c.healthClient)
 		require.NoError(t, err)
 
 		rr := httptest.NewRecorder()
@@ -471,7 +471,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 			c.userClient = c.userFunction(c.userClient)
 		}
 
-		proxyHandlers, err := NewHandlersClient(ctx, c.config, c.cacheClient, c.userClient, testFakeHealthClient)
+		proxyHandlers, err := newHandlersClient(ctx, c.config, c.cacheClient, c.userClient, testFakeHealthClient)
 		require.NoError(t, err)
 
 		kubernetesAPIUrl := testGetKubernetesAPIUrl(t, c.config.KubernetesAPIHost, c.config.KubernetesAPIPort, c.config.KubernetesAPITLS)
@@ -480,7 +480,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 		rr := httptest.NewRecorder()
 		router := mux.NewRouter()
 
-		oidcHandler := NewOIDCHandler(proxyHandlers.AzadKubeProxyHandler(ctx, proxy), tenantID, clientID)
+		oidcHandler := newOIDCHandler(proxyHandlers.AzadKubeProxyHandler(ctx, proxy), tenantID, clientID)
 		router.PathPrefix("/").Handler(oidcHandler)
 
 		router.ServeHTTP(rr, c.request)

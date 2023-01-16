@@ -19,7 +19,6 @@ import (
 	"github.com/xenitab/azad-kube-proxy/internal/cache"
 	"github.com/xenitab/azad-kube-proxy/internal/config"
 	"github.com/xenitab/azad-kube-proxy/internal/cors"
-	"github.com/xenitab/azad-kube-proxy/internal/handlers"
 	"github.com/xenitab/azad-kube-proxy/internal/health"
 	"github.com/xenitab/azad-kube-proxy/internal/metrics"
 	"github.com/xenitab/azad-kube-proxy/internal/user"
@@ -127,7 +126,7 @@ func (client *Client) Start(ctx context.Context) error {
 	defer stopGroupSync()
 
 	// Configure reverse proxy and http server
-	proxyHandlers, err := handlers.NewHandlersClient(ctx, client.cfg, client.CacheClient, client.UserClient, client.HealthClient)
+	proxyHandlers, err := newHandlersClient(ctx, client.cfg, client.CacheClient, client.UserClient, client.HealthClient)
 	if err != nil {
 		return err
 	}
@@ -161,7 +160,7 @@ func (client *Client) Start(ctx context.Context) error {
 	// Setup http router
 	router := mux.NewRouter()
 
-	oidcHandler := handlers.NewOIDCHandler(proxyHandlers.AzadKubeProxyHandler(ctx, proxy), client.cfg.AzureTenantID, client.cfg.AzureClientID)
+	oidcHandler := newOIDCHandler(proxyHandlers.AzadKubeProxyHandler(ctx, proxy), client.cfg.AzureTenantID, client.cfg.AzureClientID)
 
 	router.PathPrefix("/").Handler(oidcHandler)
 

@@ -1,4 +1,4 @@
-package handlers
+package proxy
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 )
 
 // NewOIDCHandler returns a http.Handler to take care of the JWT validation
-func NewOIDCHandler(h http.HandlerFunc, tenantID string, clientID string) http.Handler {
+func newOIDCHandler(h http.HandlerFunc, tenantID string, clientID string) http.Handler {
 	oidcHandler := oidchttp.New(h,
 		newAzureADClaimsValidationFn(tenantID),
 		options.WithIssuer(fmt.Sprintf("https://login.microsoftonline.com/%s/v2.0", tenantID)),

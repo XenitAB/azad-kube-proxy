@@ -1,4 +1,4 @@
-package handlers
+package proxy
 
 import (
 	"testing"
@@ -26,18 +26,14 @@ func TestNewAzureADClaimsValidationFn(t *testing.T) {
 		err := fn(&externalAzureADClaims{})
 		require.ErrorContains(t, err, "tid claim missing")
 	})
-
 	t.Run("required tenant id with wrong tid", func(t *testing.T) {
 		fn := newAzureADClaimsValidationFn("ze-tenant")
-		err := fn(&externalAzureADClaims{
-			TenantId: testToPtr(t, "wrong-tenant"),
-		})
+		err := fn(&externalAzureADClaims{TenantId: testToPtr(t, "wrong-tenant")})
 		require.ErrorContains(t, err, "tid claim is required to be \"ze-tenant\" but was: wrong-tenant")
 	})
 }
 
 func testToPtr[P any](t *testing.T, v P) *P {
 	t.Helper()
-
 	return &v
 }

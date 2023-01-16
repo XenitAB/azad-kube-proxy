@@ -1,4 +1,4 @@
-package handlers
+package proxy
 
 import (
 	"context"
@@ -25,16 +25,14 @@ const (
 	impersonateUserExtraHeaderPrefix = "Impersonate-Extra-"
 )
 
-// ClientInterface ...
-type ClientInterface interface {
+type Handler interface {
 	ReadinessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request)
 	LivenessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request)
 	AzadKubeProxyHandler(ctx context.Context, p *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request)
 	ErrorHandler(ctx context.Context) func(w http.ResponseWriter, r *http.Request, err error)
 }
 
-// Client ...
-type Client struct {
+type handler struct {
 	CacheClient  cache.ClientInterface
 	UserClient   user.ClientInterface
 	HealthClient health.ClientInterface
@@ -44,8 +42,7 @@ type Client struct {
 	kubernetesToken string
 }
 
-// NewHandlersClient ...
-func NewHandlersClient(ctx context.Context, cfg *config.Config, cacheClient cache.ClientInterface, userClient user.ClientInterface, healthClient health.ClientInterface) (ClientInterface, error) {
+func newHandlersClient(ctx context.Context, cfg *config.Config, cacheClient cache.ClientInterface, userClient user.ClientInterface, healthClient health.ClientInterface) (*handler, error) {
 	groupIdentifier, err := models.GetGroupIdentifier(cfg.GroupIdentifier)
 	if err != nil {
 		return nil, err
@@ -56,7 +53,7 @@ func NewHandlersClient(ctx context.Context, cfg *config.Config, cacheClient cach
 		return nil, err
 	}
 
-	handlersClient := &Client{
+	handlersClient := &handler{
 		CacheClient:     cacheClient,
 		UserClient:      userClient,
 		HealthClient:    healthClient,
@@ -69,11 +66,11 @@ func NewHandlersClient(ctx context.Context, cfg *config.Config, cacheClient cach
 }
 
 // ReadinessHandler ...
-func (client *Client) ReadinessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request) {
+func (c *handler) ReadinessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		ready, err := client.HealthClient.Ready(ctx)
+		ready, err := c.HealthClient.Ready(ctx)
 		if !ready {
 			log.Error(err, "Ready check failed")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -93,11 +90,11 @@ func (client *Client) ReadinessHandler(ctx context.Context) func(http.ResponseWr
 }
 
 // LivenessHandler ...
-func (client *Client) LivenessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request) {
+func (h *handler) LivenessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		live, err := client.HealthClient.Live(ctx)
+		live, err := h.HealthClient.Live(ctx)
 		if !live {
 			log.Error(err, "Live check failed")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -117,7 +114,7 @@ func (client *Client) LivenessHandler(ctx context.Context) func(http.ResponseWri
 }
 
 // AzadKubeProxyHandler ...
-func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
+func (h *handler) AzadKubeProxyHandler(ctx context.Context, p *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -136,7 +133,7 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 		}
 
 		// Use the token hash to get the user object from cache
-		user, found, err := client.CacheClient.GetUser(ctx, claims.sub)
+		user, found, err := h.CacheClient.GetUser(ctx, claims.sub)
 		if err != nil {
 			log.Error(err, "Unable to get cached user object")
 			http.Error(w, "Unexpected error", http.StatusInternalServerError)
@@ -155,7 +152,7 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 		// Get the user from the token if no cache was found
 		if !found {
 			// Get the user object
-			user, err = client.UserClient.GetUser(ctx, claims.username, claims.objectID)
+			user, err = h.UserClient.GetUser(ctx, claims.username, claims.objectID)
 			if err != nil {
 				log.Error(err, "Unable to get user")
 				http.Error(w, "Unable to get user", http.StatusForbidden)
@@ -163,13 +160,13 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 			}
 
 			// Check if number of groups more than the configured limit
-			if len(user.Groups) > client.cfg.AzureADMaxGroupCount-1 {
-				log.Error(errors.New("max groups reached"), "the user is member of more groups than allowed to be passed to the Kubernetes API", "groupCount", len(user.Groups), "username", user.Username, "config.AzureADMaxGroupCount", client.cfg.AzureADMaxGroupCount)
+			if len(user.Groups) > h.cfg.AzureADMaxGroupCount-1 {
+				log.Error(errors.New("max groups reached"), "the user is member of more groups than allowed to be passed to the Kubernetes API", "groupCount", len(user.Groups), "username", user.Username, "config.AzureADMaxGroupCount", h.cfg.AzureADMaxGroupCount)
 				http.Error(w, "Too many groups", http.StatusForbidden)
 				return
 			}
 
-			err = client.CacheClient.SetUser(ctx, claims.sub, user)
+			err = h.CacheClient.SetUser(ctx, claims.sub, user)
 			if err != nil {
 				log.Error(err, "Unable to set cache for user object")
 				http.Error(w, "Unexpected error", http.StatusInternalServerError)
@@ -185,20 +182,20 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 		r.Header.Add("Sec-WebSocket-Protocol", wsProtoString)
 
 		// Add a new Authorization header with the token from the token path
-		r.Header.Add(authorizationHeader, fmt.Sprintf("Bearer %s", client.kubernetesToken))
+		r.Header.Add(authorizationHeader, fmt.Sprintf("Bearer %s", h.kubernetesToken))
 
 		// Add the impersonation header for the users
 		r.Header.Add(impersonateUserHeader, user.Username)
 
 		// Add a new impersonation header per group
 		for _, group := range user.Groups {
-			switch client.groupIdentifier {
+			switch h.groupIdentifier {
 			case models.NameGroupIdentifier:
 				r.Header.Add(impersonateGroupHeader, group.Name)
 			case models.ObjectIDGroupIdentifier:
 				r.Header.Add(impersonateGroupHeader, group.ObjectID)
 			default:
-				log.Error(errors.New("unknown groups identifier"), "unknown groups identifier", "GroupIdentifier", client.cfg.GroupIdentifier)
+				log.Error(errors.New("unknown groups identifier"), "unknown groups identifier", "GroupIdentifier", h.cfg.GroupIdentifier)
 				http.Error(w, "Unexpected error", http.StatusInternalServerError)
 				return
 			}
@@ -213,7 +210,7 @@ func (client *Client) AzadKubeProxyHandler(ctx context.Context, p *httputil.Reve
 }
 
 // ErrorHandler ...
-func (client *Client) ErrorHandler(ctx context.Context) func(w http.ResponseWriter, r *http.Request, err error) {
+func (h *handler) ErrorHandler(ctx context.Context) func(w http.ResponseWriter, r *http.Request, err error) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request, err error) {
