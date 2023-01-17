@@ -18,7 +18,6 @@ import (
 	"github.com/xenitab/azad-kube-proxy/internal/azure"
 	"github.com/xenitab/azad-kube-proxy/internal/cache"
 	"github.com/xenitab/azad-kube-proxy/internal/config"
-	"github.com/xenitab/azad-kube-proxy/internal/cors"
 	"github.com/xenitab/azad-kube-proxy/internal/health"
 	"github.com/xenitab/azad-kube-proxy/internal/metrics"
 	"github.com/xenitab/azad-kube-proxy/internal/user"
@@ -40,7 +39,7 @@ type proxy struct {
 	AzureClient   azure.ClientInterface
 	MetricsClient metrics.ClientInterface
 	HealthClient  health.ClientInterface
-	CORSClient    cors.ClientInterface
+	cors          Cors
 
 	cfg              *config.Config
 	kubernetesURL    *url.URL
@@ -70,7 +69,7 @@ func New(ctx context.Context, cfg *config.Config) (*proxy, error) {
 		return nil, err
 	}
 
-	corsClient := cors.NewCORSClient(cfg)
+	corsClient := newCors(cfg)
 
 	kubernetesURL, err := getKubernetesAPIUrl(cfg.KubernetesAPIHost, cfg.KubernetesAPIPort, cfg.KubernetesAPITLS)
 	if err != nil {
@@ -88,7 +87,7 @@ func New(ctx context.Context, cfg *config.Config) (*proxy, error) {
 		AzureClient:      azureClient,
 		MetricsClient:    metricsClient,
 		HealthClient:     healthClient,
-		CORSClient:       corsClient,
+		cors:             corsClient,
 		cfg:              cfg,
 		kubernetesURL:    kubernetesURL,
 		kubernetesRootCA: kubernetesRootCA,
@@ -161,7 +160,7 @@ func (p *proxy) Start(ctx context.Context) error {
 
 	router.PathPrefix("/").Handler(oidcHandler)
 
-	router.Use(p.CORSClient.Middleware)
+	router.Use(p.cors.Middleware)
 
 	httpServer := p.getHTTPServer(router)
 
