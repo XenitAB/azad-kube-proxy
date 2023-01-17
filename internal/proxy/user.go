@@ -11,27 +11,27 @@ type User interface {
 	GetUser(ctx context.Context, username, objectID string) (models.User, error)
 }
 
-type Client struct {
+type user struct {
 	azure Azure
 
 	cfg *config.Config
 }
 
-func newUserClient(cfg *config.Config, azureClient Azure) User {
-	return &Client{
+func newUser(cfg *config.Config, azureClient Azure) User {
+	return &user{
 		azure: azureClient,
 		cfg:   cfg,
 	}
 }
 
-func (client *Client) GetUser(ctx context.Context, username, objectID string) (models.User, error) {
+func (u *user) GetUser(ctx context.Context, username, objectID string) (models.User, error) {
 	userType := models.NormalUserType
 	if username == "" {
 		username = objectID
 		userType = models.ServicePrincipalUserType
 	}
 
-	groups, err := client.azure.GetUserGroups(ctx, objectID, userType)
+	groups, err := u.azure.GetUserGroups(ctx, objectID, userType)
 	if err != nil {
 		return models.User{}, err
 	}

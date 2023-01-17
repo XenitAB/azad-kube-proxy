@@ -14,7 +14,7 @@ type azureUser struct {
 	usersClient *hamiltonMsgraph.UsersClient
 }
 
-func newUser(ctx context.Context, cacheClient Cache, usersClient *hamiltonMsgraph.UsersClient) *azureUser {
+func newAzureUser(ctx context.Context, cacheClient Cache, usersClient *hamiltonMsgraph.UsersClient) *azureUser {
 	return &azureUser{
 		cache:       cacheClient,
 		usersClient: usersClient,

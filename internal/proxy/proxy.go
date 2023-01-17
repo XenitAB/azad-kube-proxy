@@ -16,7 +16,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
 	"github.com/xenitab/azad-kube-proxy/internal/config"
-	"github.com/xenitab/azad-kube-proxy/internal/health"
 	"github.com/xenitab/azad-kube-proxy/internal/metrics"
 	"github.com/xenitab/azad-kube-proxy/internal/util"
 	"golang.org/x/sync/errgroup"
@@ -35,7 +34,7 @@ type proxy struct {
 	user          User
 	azure         Azure
 	MetricsClient metrics.ClientInterface
-	HealthClient  health.ClientInterface
+	health        Health
 	cors          Cors
 
 	cfg              *config.Config
@@ -54,14 +53,14 @@ func New(ctx context.Context, cfg *config.Config) (*proxy, error) {
 		return nil, err
 	}
 
-	userClient := newUserClient(cfg, azureClient)
+	userClient := newUser(cfg, azureClient)
 
 	metricsClient, err := metrics.NewMetricsClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	healthClient, err := health.NewHealthClient(ctx, cfg, azureClient)
+	healthClient, err := newHealthClient(ctx, cfg, azureClient)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +82,7 @@ func New(ctx context.Context, cfg *config.Config) (*proxy, error) {
 		user:             userClient,
 		azure:            azureClient,
 		MetricsClient:    metricsClient,
-		HealthClient:     healthClient,
+		health:           healthClient,
 		cors:             corsClient,
 		cfg:              cfg,
 		kubernetesURL:    kubernetesURL,
@@ -119,7 +118,7 @@ func (p *proxy) Start(ctx context.Context) error {
 	defer stopGroupSync()
 
 	// Configure reverse proxy and http server
-	proxyHandlers, err := newHandlers(ctx, p.cfg, p.cache, p.user, p.HealthClient)
+	proxyHandlers, err := newHandlers(ctx, p.cfg, p.cache, p.user, p.health)
 	if err != nil {
 		return err
 	}

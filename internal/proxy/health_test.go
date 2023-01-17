@@ -1,4 +1,4 @@
-package health
+package proxy
 
 import (
 	"context"
@@ -54,7 +54,7 @@ func TestNewHealthClient(t *testing.T) {
 
 	for _, c := range cases {
 		validator := &testFakeValidator{t}
-		_, err := NewHealthClient(ctx, c.config, validator)
+		_, err := newHealthClient(ctx, c.config, validator)
 		if c.expectedErrContains != "" {
 			require.ErrorContains(t, err, c.expectedErrContains)
 			continue
@@ -67,7 +67,7 @@ func TestNewHealthClient(t *testing.T) {
 func TestReady(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
-	fakeClient := &Client{
+	fakeClient := &health{
 		k8sClient: k8sfake.NewSimpleClientset(),
 	}
 
@@ -86,20 +86,20 @@ func TestReady(t *testing.T) {
 	})
 
 	cases := []struct {
-		clientFunc          func(c *Client) ClientInterface
+		clientFunc          func(h *health) Health
 		expectedErrContains string
 		expectedReady       bool
 	}{
 		{
-			clientFunc: func(c *Client) ClientInterface {
-				return c
+			clientFunc: func(h *health) Health {
+				return h
 			},
 			expectedErrContains: "",
 			expectedReady:       true,
 		},
 		{
-			clientFunc: func(c *Client) ClientInterface {
-				return &Client{
+			clientFunc: func(h *health) Health {
+				return &health{
 					k8sClient: k8sfake.NewSimpleClientset(),
 				}
 			},
@@ -141,7 +141,7 @@ func TestLive(t *testing.T) {
 		KubernetesAPITokenPath:    tokenPath,
 		KubernetesAPICACertPath:   caPath,
 	}
-	client, err := NewHealthClient(ctx, fakeConfig, validator)
+	client, err := newHealthClient(ctx, fakeConfig, validator)
 	require.NoError(t, err)
 
 	live, err := client.Live(ctx)

@@ -10,7 +10,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/xenitab/azad-kube-proxy/internal/config"
-	"github.com/xenitab/azad-kube-proxy/internal/health"
 	"github.com/xenitab/azad-kube-proxy/internal/models"
 	"github.com/xenitab/azad-kube-proxy/internal/util"
 	"github.com/xenitab/go-oidc-middleware/options"
@@ -31,16 +30,16 @@ type Handler interface {
 }
 
 type handler struct {
-	cache        Cache
-	user         User
-	HealthClient health.ClientInterface
+	cache  Cache
+	user   User
+	health Health
 
 	cfg             *config.Config
 	groupIdentifier models.GroupIdentifier
 	kubernetesToken string
 }
 
-func newHandlers(ctx context.Context, cfg *config.Config, cacheClient Cache, userClient User, healthClient health.ClientInterface) (*handler, error) {
+func newHandlers(ctx context.Context, cfg *config.Config, cacheClient Cache, userClient User, healthClient Health) (*handler, error) {
 	groupIdentifier, err := models.GetGroupIdentifier(cfg.GroupIdentifier)
 	if err != nil {
 		return nil, err
@@ -54,7 +53,7 @@ func newHandlers(ctx context.Context, cfg *config.Config, cacheClient Cache, use
 	handlersClient := &handler{
 		cache:           cacheClient,
 		user:            userClient,
-		HealthClient:    healthClient,
+		health:          healthClient,
 		cfg:             cfg,
 		groupIdentifier: groupIdentifier,
 		kubernetesToken: kubernetesToken,
@@ -67,7 +66,7 @@ func (h *handler) readiness(ctx context.Context) func(http.ResponseWriter, *http
 	log := logr.FromContextOrDiscard(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		ready, err := h.HealthClient.Ready(ctx)
+		ready, err := h.health.Ready(ctx)
 		if !ready {
 			log.Error(err, "Ready check failed")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -90,7 +89,7 @@ func (h *handler) liveness(ctx context.Context) func(http.ResponseWriter, *http.
 	log := logr.FromContextOrDiscard(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		live, err := h.HealthClient.Live(ctx)
+		live, err := h.health.Live(ctx)
 		if !live {
 			log.Error(err, "Live check failed")
 			w.WriteHeader(http.StatusInternalServerError)

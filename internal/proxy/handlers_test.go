@@ -23,7 +23,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
 	"github.com/xenitab/azad-kube-proxy/internal/config"
-	"github.com/xenitab/azad-kube-proxy/internal/health"
 	"github.com/xenitab/azad-kube-proxy/internal/models"
 )
 
@@ -75,7 +74,7 @@ func TestReadinessHandler(t *testing.T) {
 	testFakeUserClient := newTestFakeUserClient(t, "", "", nil, nil)
 
 	cases := []struct {
-		healthClient    health.ClientInterface
+		healthClient    Health
 		expectedString  string
 		expectedResCode int
 	}{
@@ -126,7 +125,7 @@ func TestLivenessHandler(t *testing.T) {
 	testFakeUserClient := newTestFakeUserClient(t, "", "", nil, nil)
 
 	cases := []struct {
-		healthClient    health.ClientInterface
+		healthClient    Health
 		expectedString  string
 		expectedResCode int
 	}{
@@ -611,7 +610,7 @@ type testFakeHealthClient struct {
 	t          *testing.T
 }
 
-func newTestFakeHealthClient(t *testing.T, ready bool, readyError error, live bool, liveError error) health.ClientInterface {
+func newTestFakeHealthClient(t *testing.T, ready bool, readyError error, live bool, liveError error) Health {
 	t.Helper()
 
 	return &testFakeHealthClient{

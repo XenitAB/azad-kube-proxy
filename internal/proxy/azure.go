@@ -70,7 +70,7 @@ func newAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graph
 		tenantID:             tenantID,
 		graphFilter:          graphFilter,
 		cache:                cacheClient,
-		user:                 newUser(ctx, cacheClient, usersClient),
+		user:                 newAzureUser(ctx, cacheClient, usersClient),
 		servicePrincipalUser: newServicePrincipalUser(ctx, cacheClient, servicePrincipalsClient),
 		groups:               newGroups(ctx, cacheClient, groupsClient, graphFilter),
 		authorizer:           authorizer,

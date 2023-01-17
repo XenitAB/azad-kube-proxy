@@ -1,9 +1,8 @@
-package health
+package proxy
 
 import (
 	"context"
 	"fmt"
-	"net/url"
 
 	"github.com/xenitab/azad-kube-proxy/internal/config"
 	"github.com/xenitab/azad-kube-proxy/internal/util"
@@ -13,25 +12,21 @@ import (
 	k8sclientrest "k8s.io/client-go/rest"
 )
 
-// ClientInterface ...
-type ClientInterface interface {
+type Health interface {
 	Ready(ctx context.Context) (bool, error)
 	Live(ctx context.Context) (bool, error)
 }
 
-// Validator ...
-type Validator interface {
+type HealthValidator interface {
 	Valid(ctx context.Context) bool
 }
 
-// Client ...
-type Client struct {
+type health struct {
 	k8sClient         k8s.Interface
-	livenessValidator Validator
+	livenessValidator HealthValidator
 }
 
-// NewHealthClient ...
-func NewHealthClient(ctx context.Context, cfg *config.Config, livenessValidator Validator) (ClientInterface, error) {
+func newHealthClient(ctx context.Context, cfg *config.Config, livenessValidator HealthValidator) (*health, error) {
 	k8sTLSConfig := k8sclientrest.TLSClientConfig{Insecure: true}
 	if cfg.KubernetesAPIValidateCert {
 		kubernetesRootCAString, err := util.GetStringFromFile(ctx, cfg.KubernetesAPICACertPath)
@@ -66,7 +61,7 @@ func NewHealthClient(ctx context.Context, cfg *config.Config, livenessValidator 
 		return nil, err
 	}
 
-	healthClient := &Client{
+	healthClient := &health{
 		k8sClient:         k8sClient,
 		livenessValidator: livenessValidator,
 	}
@@ -74,13 +69,12 @@ func NewHealthClient(ctx context.Context, cfg *config.Config, livenessValidator 
 	return healthClient, nil
 }
 
-// Ready ...
-func (client *Client) Ready(ctx context.Context) (bool, error) {
+func (h *health) Ready(ctx context.Context) (bool, error) {
 	ready := false
 
 	selfSubjectRulesReview := &k8sapiauthorization.SelfSubjectRulesReview{Spec: k8sapiauthorization.SelfSubjectRulesReviewSpec{Namespace: "default"}}
 	createOptions := k8sapimachinerymetav1.CreateOptions{}
-	res, err := client.k8sClient.AuthorizationV1().SelfSubjectRulesReviews().Create(ctx, selfSubjectRulesReview, createOptions)
+	res, err := h.k8sClient.AuthorizationV1().SelfSubjectRulesReviews().Create(ctx, selfSubjectRulesReview, createOptions)
 	if err != nil {
 		return false, err
 	}
@@ -101,21 +95,7 @@ func (client *Client) Ready(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-// Live ...
-func (client *Client) Live(ctx context.Context) (bool, error) {
-	valid := client.livenessValidator.Valid(ctx)
+func (h *health) Live(ctx context.Context) (bool, error) {
+	valid := h.livenessValidator.Valid(ctx)
 	return valid, nil
-}
-
-func getKubernetesAPIUrl(host string, port int, tls bool) (*url.URL, error) {
-	httpScheme := getHTTPScheme(tls)
-	return url.Parse(fmt.Sprintf("%s://%s:%d", httpScheme, host, port))
-}
-
-func getHTTPScheme(tls bool) string {
-	if tls {
-		return "https"
-	}
-
-	return "http"
 }
