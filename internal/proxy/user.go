@@ -1,34 +1,29 @@
-package user
+package proxy
 
 import (
 	"context"
 
-	"github.com/xenitab/azad-kube-proxy/internal/azure"
 	"github.com/xenitab/azad-kube-proxy/internal/config"
 	"github.com/xenitab/azad-kube-proxy/internal/models"
 )
 
-// ClientInterface ...
-type ClientInterface interface {
+type User interface {
 	GetUser(ctx context.Context, username, objectID string) (models.User, error)
 }
 
-// Client ...
 type Client struct {
-	AzureClient azure.ClientInterface
+	azure Azure
 
 	cfg *config.Config
 }
 
-// NewUserClient ...
-func NewUserClient(cfg *config.Config, azureClient azure.ClientInterface) ClientInterface {
+func newUserClient(cfg *config.Config, azureClient Azure) User {
 	return &Client{
-		AzureClient: azureClient,
-		cfg:         cfg,
+		azure: azureClient,
+		cfg:   cfg,
 	}
 }
 
-// GetUser returns the user or an error
 func (client *Client) GetUser(ctx context.Context, username, objectID string) (models.User, error) {
 	userType := models.NormalUserType
 	if username == "" {
@@ -36,7 +31,7 @@ func (client *Client) GetUser(ctx context.Context, username, objectID string) (m
 		userType = models.ServicePrincipalUserType
 	}
 
-	groups, err := client.AzureClient.GetUserGroups(ctx, objectID, userType)
+	groups, err := client.azure.GetUserGroups(ctx, objectID, userType)
 	if err != nil {
 		return models.User{}, err
 	}

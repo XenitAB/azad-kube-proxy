@@ -1,65 +1,180 @@
 package proxy
 
 import (
+	"context"
 	"testing"
+	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
+	"github.com/xenitab/azad-kube-proxy/internal/models"
 )
 
-func TestToInternalAzureADClaims(t *testing.T) {
-	t.Run("external claims nil", func(t *testing.T) {
-		_, err := toInternalAzureADClaims(nil)
-		require.ErrorContains(t, err, "external claims nil")
-	})
+func TestNewAzureClient(t *testing.T) {
+	clientID := testGetEnvOrSkip(t, "CLIENT_ID")
+	clientSecret := testGetEnvOrSkip(t, "CLIENT_SECRET")
+	tenantID := testGetEnvOrSkip(t, "TENANT_ID")
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 
-	t.Run("subject nil", func(t *testing.T) {
-		_, err := toInternalAzureADClaims(&externalAzureADClaims{})
-		require.ErrorContains(t, err, "unable to find sub claim")
-	})
+	memCache, err := newMemoryCache(5 * time.Minute)
+	require.NoError(t, err)
 
-	t.Run("object id nil", func(t *testing.T) {
-		_, err := toInternalAzureADClaims(&externalAzureADClaims{
-			Subject: testToPtr(t, "ze-subject"),
-		})
-		require.ErrorContains(t, err, "unable to find oid claim")
-	})
+	cases := []struct {
+		clientID            string
+		clientSecret        string
+		tenantID            string
+		graphFilter         string
+		cacheClient         Cache
+		expectedErrContains string
+	}{
+		{
+			clientID:            clientID,
+			clientSecret:        clientSecret,
+			tenantID:            tenantID,
+			graphFilter:         "",
+			cacheClient:         memCache,
+			expectedErrContains: "",
+		},
+		{
+			clientID:            clientID,
+			clientSecret:        clientSecret,
+			tenantID:            tenantID,
+			graphFilter:         "prefix",
+			cacheClient:         memCache,
+			expectedErrContains: "",
+		},
+		{
+			clientID:            clientID,
+			clientSecret:        clientSecret,
+			tenantID:            "",
+			graphFilter:         "",
+			cacheClient:         memCache,
+			expectedErrContains: "no Authorizer could be configured, please check your configuration",
+		},
+		{
+			clientID:            "",
+			clientSecret:        "",
+			tenantID:            tenantID,
+			graphFilter:         "",
+			cacheClient:         memCache,
+			expectedErrContains: "no Authorizer could be configured, please check your configuration",
+		},
+	}
 
-	t.Run("username nil", func(t *testing.T) {
-		internalClaims, err := toInternalAzureADClaims(&externalAzureADClaims{
-			Subject:  testToPtr(t, "ze-subject"),
-			ObjectId: testToPtr(t, "ze-object-id"),
-		})
+	for _, c := range cases {
+		_, err := newAzureClient(ctx, c.clientID, c.clientSecret, c.tenantID, c.graphFilter, c.cacheClient)
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+			continue
+		}
 		require.NoError(t, err)
-		require.Equal(t, "ze-subject", internalClaims.sub)
-		require.Equal(t, "ze-object-id", internalClaims.objectID)
-		require.Empty(t, internalClaims.username)
-		require.Empty(t, internalClaims.groups)
-	})
+	}
+}
 
-	t.Run("groups nil", func(t *testing.T) {
-		internalClaims, err := toInternalAzureADClaims(&externalAzureADClaims{
-			Subject:           testToPtr(t, "ze-subject"),
-			ObjectId:          testToPtr(t, "ze-object-id"),
-			PreferredUsername: testToPtr(t, "ze-username"),
-		})
-		require.NoError(t, err)
-		require.Equal(t, "ze-subject", internalClaims.sub)
-		require.Equal(t, "ze-object-id", internalClaims.objectID)
-		require.Equal(t, "ze-username", internalClaims.username)
-		require.Empty(t, internalClaims.groups)
-	})
+func TestValid(t *testing.T) {
+	clientID := testGetEnvOrSkip(t, "CLIENT_ID")
+	clientSecret := testGetEnvOrSkip(t, "CLIENT_SECRET")
+	tenantID := testGetEnvOrSkip(t, "TENANT_ID")
+	graphFilter := ""
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 
-	t.Run("every parameter has a value", func(t *testing.T) {
-		internalClaims, err := toInternalAzureADClaims(&externalAzureADClaims{
-			Subject:           testToPtr(t, "ze-subject"),
-			ObjectId:          testToPtr(t, "ze-object-id"),
-			PreferredUsername: testToPtr(t, "ze-username"),
-			Groups:            testToPtr(t, []string{"ze-group"}),
-		})
+	memCache, err := newMemoryCache(5 * time.Minute)
+	require.NoError(t, err)
+
+	azureClient, err := newAzureClient(ctx, clientID, clientSecret, tenantID, graphFilter, memCache)
+	require.NoError(t, err)
+
+	cases := []struct {
+		client      *azure
+		expectedRes bool
+	}{
+		{
+			client:      azureClient,
+			expectedRes: true,
+		},
+	}
+
+	for _, c := range cases {
+		valid := c.client.Valid(ctx)
+		require.True(t, valid)
+	}
+}
+
+func TestGetUserGroups(t *testing.T) {
+	clientID := testGetEnvOrSkip(t, "CLIENT_ID")
+	clientSecret := testGetEnvOrSkip(t, "CLIENT_SECRET")
+	tenantID := testGetEnvOrSkip(t, "TENANT_ID")
+	userObjectID := testGetEnvOrSkip(t, "TEST_USER_OBJECT_ID")
+	spObjectID := testGetEnvOrSkip(t, "TEST_USER_SP_OBJECT_ID")
+	graphFilter := ""
+	ctx := logr.NewContext(context.Background(), logr.Discard())
+
+	memCache, err := newMemoryCache(5 * time.Minute)
+	require.NoError(t, err)
+
+	azureClient, err := newAzureClient(ctx, clientID, clientSecret, tenantID, graphFilter, memCache)
+	require.NoError(t, err)
+
+	cases := []struct {
+		objectID            string
+		userType            models.UserType
+		expectedErrContains string
+	}{
+		{
+			objectID:            userObjectID,
+			userType:            models.NormalUserType,
+			expectedErrContains: "",
+		},
+		{
+			objectID:            spObjectID,
+			userType:            models.ServicePrincipalUserType,
+			expectedErrContains: "",
+		},
+		{
+			objectID:            "",
+			userType:            models.NormalUserType,
+			expectedErrContains: "unexpected status 404 with OData error: Request_ResourceNotFound:",
+		},
+		{
+			objectID:            "",
+			userType:            models.ServicePrincipalUserType,
+			expectedErrContains: "unexpected status 400 with OData error: Request_BadRequest:",
+		},
+	}
+
+	for _, c := range cases {
+		_, err := azureClient.GetUserGroups(ctx, c.objectID, c.userType)
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+			continue
+		}
 		require.NoError(t, err)
-		require.Equal(t, "ze-subject", internalClaims.sub)
-		require.Equal(t, "ze-object-id", internalClaims.objectID)
-		require.Equal(t, "ze-username", internalClaims.username)
-		require.Equal(t, []string{"ze-group"}, internalClaims.groups)
-	})
+	}
+
+	emptyAzureClient := azure{}
+	_, err = emptyAzureClient.GetUserGroups(ctx, "", "FAKE")
+	require.ErrorContains(t, err, "Unknown userType: FAKE")
+}
+
+func TestStartSyncGroups(t *testing.T) {
+	clientID := testGetEnvOrSkip(t, "CLIENT_ID")
+	clientSecret := testGetEnvOrSkip(t, "CLIENT_SECRET")
+	tenantID := testGetEnvOrSkip(t, "TENANT_ID")
+	graphFilter := ""
+	ctx := logr.NewContext(context.Background(), logr.Discard())
+
+	memCache, err := newMemoryCache(5 * time.Minute)
+	require.NoError(t, err)
+
+	azureClient, err := newAzureClient(ctx, clientID, clientSecret, tenantID, graphFilter, memCache)
+	require.NoError(t, err)
+
+	groupSyncTicker, groupSyncChan, err := azureClient.StartSyncGroups(ctx, 1*time.Second)
+	require.NoError(t, err)
+	time.Sleep(2 * time.Second)
+	var stopGroupSync func() = func() {
+		groupSyncTicker.Stop()
+		groupSyncChan <- true
+	}
+	defer stopGroupSync()
 }

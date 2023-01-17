@@ -1,4 +1,4 @@
-package azure
+package proxy
 
 import (
 	"context"
@@ -6,25 +6,24 @@ import (
 	"github.com/go-logr/logr"
 	hamiltonMsgraph "github.com/manicminer/hamilton/msgraph"
 	hamiltonOdata "github.com/manicminer/hamilton/odata"
-	"github.com/xenitab/azad-kube-proxy/internal/cache"
 	"github.com/xenitab/azad-kube-proxy/internal/models"
 )
 
-type groups struct {
-	cacheClient  cache.ClientInterface
+type azureGroups struct {
+	cache        Cache
 	groupsClient *hamiltonMsgraph.GroupsClient
 	graphFilter  string
 }
 
-func newGroups(ctx context.Context, cacheClient cache.ClientInterface, groupsClient *hamiltonMsgraph.GroupsClient, graphFilter string) *groups {
-	return &groups{
-		cacheClient:  cacheClient,
+func newGroups(ctx context.Context, cacheClient Cache, groupsClient *hamiltonMsgraph.GroupsClient, graphFilter string) *azureGroups {
+	return &azureGroups{
+		cache:        cacheClient,
 		groupsClient: groupsClient,
 		graphFilter:  graphFilter,
 	}
 }
 
-func (groups *groups) getAllGroups(ctx context.Context) (*[]hamiltonMsgraph.Group, error) {
+func (groups *azureGroups) getAllGroups(ctx context.Context) (*[]hamiltonMsgraph.Group, error) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	odataQuery := hamiltonOdata.Query{
@@ -40,7 +39,7 @@ func (groups *groups) getAllGroups(ctx context.Context) (*[]hamiltonMsgraph.Grou
 	return groupsResponse, nil
 }
 
-func (groups *groups) syncAzureADGroupsCache(ctx context.Context, syncReason string) error {
+func (groups *azureGroups) syncAzureADGroupsCache(ctx context.Context, syncReason string) error {
 	log := logr.FromContextOrDiscard(ctx)
 
 	groupsResponse, err := groups.getAllGroups(ctx)
@@ -50,7 +49,7 @@ func (groups *groups) syncAzureADGroupsCache(ctx context.Context, syncReason str
 	}
 
 	for _, group := range *groupsResponse {
-		err := groups.cacheClient.SetGroup(ctx, *group.ID(), models.Group{
+		err := groups.cache.SetGroup(ctx, *group.ID(), models.Group{
 			Name:     *group.DisplayName,
 			ObjectID: *group.ID(),
 		})

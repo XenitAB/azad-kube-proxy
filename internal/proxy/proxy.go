@@ -15,12 +15,9 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
-	"github.com/xenitab/azad-kube-proxy/internal/azure"
-	"github.com/xenitab/azad-kube-proxy/internal/cache"
 	"github.com/xenitab/azad-kube-proxy/internal/config"
 	"github.com/xenitab/azad-kube-proxy/internal/health"
 	"github.com/xenitab/azad-kube-proxy/internal/metrics"
-	"github.com/xenitab/azad-kube-proxy/internal/user"
 	"github.com/xenitab/azad-kube-proxy/internal/util"
 	"golang.org/x/sync/errgroup"
 )
@@ -34,9 +31,9 @@ type Proxy interface {
 }
 
 type proxy struct {
-	CacheClient   cache.ClientInterface
-	UserClient    user.ClientInterface
-	AzureClient   azure.ClientInterface
+	cache         Cache
+	user          User
+	azure         Azure
 	MetricsClient metrics.ClientInterface
 	HealthClient  health.ClientInterface
 	cors          Cors
@@ -47,17 +44,17 @@ type proxy struct {
 }
 
 func New(ctx context.Context, cfg *config.Config) (*proxy, error) {
-	cacheClient, err := cache.NewMemoryCache(time.Duration(cfg.GroupSyncInterval) * time.Minute)
+	cacheClient, err := newMemoryCache(time.Duration(cfg.GroupSyncInterval) * time.Minute)
 	if err != nil {
 		return nil, err
 	}
 
-	azureClient, err := azure.NewAzureClient(ctx, cfg.AzureClientID, cfg.AzureClientSecret, cfg.AzureTenantID, cfg.AzureADGroupPrefix, cacheClient)
+	azureClient, err := newAzureClient(ctx, cfg.AzureClientID, cfg.AzureClientSecret, cfg.AzureTenantID, cfg.AzureADGroupPrefix, cacheClient)
 	if err != nil {
 		return nil, err
 	}
 
-	userClient := user.NewUserClient(cfg, azureClient)
+	userClient := newUserClient(cfg, azureClient)
 
 	metricsClient, err := metrics.NewMetricsClient(ctx, cfg)
 	if err != nil {
@@ -82,9 +79,9 @@ func New(ctx context.Context, cfg *config.Config) (*proxy, error) {
 	}
 
 	proxyClient := proxy{
-		CacheClient:      cacheClient,
-		UserClient:       userClient,
-		AzureClient:      azureClient,
+		cache:            cacheClient,
+		user:             userClient,
+		azure:            azureClient,
 		MetricsClient:    metricsClient,
 		HealthClient:     healthClient,
 		cors:             corsClient,
@@ -111,7 +108,7 @@ func (p *proxy) Start(ctx context.Context) error {
 
 	// Initiate group sync
 	log.Info("Starting group sync")
-	syncTicker, syncChan, err := p.AzureClient.StartSyncGroups(ctx, time.Duration(p.cfg.GroupSyncInterval)*time.Minute)
+	syncTicker, syncChan, err := p.azure.StartSyncGroups(ctx, time.Duration(p.cfg.GroupSyncInterval)*time.Minute)
 	if err != nil {
 		return err
 	}
@@ -122,7 +119,7 @@ func (p *proxy) Start(ctx context.Context) error {
 	defer stopGroupSync()
 
 	// Configure reverse proxy and http server
-	proxyHandlers, err := newHandlers(ctx, p.cfg, p.CacheClient, p.UserClient, p.HealthClient)
+	proxyHandlers, err := newHandlers(ctx, p.cfg, p.cache, p.user, p.HealthClient)
 	if err != nil {
 		return err
 	}

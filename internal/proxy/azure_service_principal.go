@@ -1,4 +1,4 @@
-package azure
+package proxy
 
 import (
 	"context"
@@ -6,23 +6,22 @@ import (
 	"github.com/go-logr/logr"
 	hamiltonMsgraph "github.com/manicminer/hamilton/msgraph"
 	hamiltonOdata "github.com/manicminer/hamilton/odata"
-	"github.com/xenitab/azad-kube-proxy/internal/cache"
 	"github.com/xenitab/azad-kube-proxy/internal/models"
 )
 
-type servicePrincipalUser struct {
-	cacheClient             cache.ClientInterface
+type azureServicePrincipalUser struct {
+	cache                   Cache
 	servicePrincipalsClient *hamiltonMsgraph.ServicePrincipalsClient
 }
 
-func newServicePrincipalUser(ctx context.Context, cacheClient cache.ClientInterface, servicePrincipalsClient *hamiltonMsgraph.ServicePrincipalsClient) *servicePrincipalUser {
-	return &servicePrincipalUser{
-		cacheClient:             cacheClient,
+func newServicePrincipalUser(ctx context.Context, cacheClient Cache, servicePrincipalsClient *hamiltonMsgraph.ServicePrincipalsClient) *azureServicePrincipalUser {
+	return &azureServicePrincipalUser{
+		cache:                   cacheClient,
 		servicePrincipalsClient: servicePrincipalsClient,
 	}
 }
 
-func (user *servicePrincipalUser) getGroups(ctx context.Context, objectID string) ([]models.Group, error) {
+func (user *azureServicePrincipalUser) getGroups(ctx context.Context, objectID string) ([]models.Group, error) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	odataQuery := hamiltonOdata.Query{}
@@ -35,7 +34,7 @@ func (user *servicePrincipalUser) getGroups(ctx context.Context, objectID string
 
 	var groups []models.Group
 	for _, group := range *groupsResponse {
-		group, found, err := user.cacheClient.GetGroup(ctx, *group.ID())
+		group, found, err := user.cache.GetGroup(ctx, *group.ID())
 		if err != nil {
 			return nil, err
 		}

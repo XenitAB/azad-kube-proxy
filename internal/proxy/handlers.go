@@ -9,11 +9,9 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	"github.com/xenitab/azad-kube-proxy/internal/cache"
 	"github.com/xenitab/azad-kube-proxy/internal/config"
 	"github.com/xenitab/azad-kube-proxy/internal/health"
 	"github.com/xenitab/azad-kube-proxy/internal/models"
-	"github.com/xenitab/azad-kube-proxy/internal/user"
 	"github.com/xenitab/azad-kube-proxy/internal/util"
 	"github.com/xenitab/go-oidc-middleware/options"
 )
@@ -33,8 +31,8 @@ type Handler interface {
 }
 
 type handler struct {
-	CacheClient  cache.ClientInterface
-	UserClient   user.ClientInterface
+	cache        Cache
+	user         User
 	HealthClient health.ClientInterface
 
 	cfg             *config.Config
@@ -42,7 +40,7 @@ type handler struct {
 	kubernetesToken string
 }
 
-func newHandlers(ctx context.Context, cfg *config.Config, cacheClient cache.ClientInterface, userClient user.ClientInterface, healthClient health.ClientInterface) (*handler, error) {
+func newHandlers(ctx context.Context, cfg *config.Config, cacheClient Cache, userClient User, healthClient health.ClientInterface) (*handler, error) {
 	groupIdentifier, err := models.GetGroupIdentifier(cfg.GroupIdentifier)
 	if err != nil {
 		return nil, err
@@ -54,8 +52,8 @@ func newHandlers(ctx context.Context, cfg *config.Config, cacheClient cache.Clie
 	}
 
 	handlersClient := &handler{
-		CacheClient:     cacheClient,
-		UserClient:      userClient,
+		cache:           cacheClient,
+		user:            userClient,
 		HealthClient:    healthClient,
 		cfg:             cfg,
 		groupIdentifier: groupIdentifier,
@@ -130,7 +128,7 @@ func (h *handler) proxy(ctx context.Context, p *httputil.ReverseProxy) func(http
 		}
 
 		// Use the token hash to get the user object from cache
-		user, found, err := h.CacheClient.GetUser(ctx, claims.sub)
+		user, found, err := h.cache.GetUser(ctx, claims.sub)
 		if err != nil {
 			log.Error(err, "Unable to get cached user object")
 			http.Error(w, "Unexpected error", http.StatusInternalServerError)
@@ -149,7 +147,7 @@ func (h *handler) proxy(ctx context.Context, p *httputil.ReverseProxy) func(http
 		// Get the user from the token if no cache was found
 		if !found {
 			// Get the user object
-			user, err = h.UserClient.GetUser(ctx, claims.username, claims.objectID)
+			user, err = h.user.GetUser(ctx, claims.username, claims.objectID)
 			if err != nil {
 				log.Error(err, "Unable to get user")
 				http.Error(w, "Unable to get user", http.StatusForbidden)
@@ -163,7 +161,7 @@ func (h *handler) proxy(ctx context.Context, p *httputil.ReverseProxy) func(http
 				return
 			}
 
-			err = h.CacheClient.SetUser(ctx, claims.sub, user)
+			err = h.cache.SetUser(ctx, claims.sub, user)
 			if err != nil {
 				log.Error(err, "Unable to set cache for user object")
 				http.Error(w, "Unexpected error", http.StatusInternalServerError)

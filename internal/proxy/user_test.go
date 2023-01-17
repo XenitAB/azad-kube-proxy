@@ -1,19 +1,4 @@
-package user
-
-import (
-	"context"
-	"errors"
-	"testing"
-	"time"
-
-	"github.com/go-logr/logr"
-	"github.com/stretchr/testify/require"
-	"github.com/xenitab/azad-kube-proxy/internal/config"
-	"github.com/xenitab/azad-kube-proxy/internal/models"
-)
-
-func TestGetUser(t *testing.T) {
-	ctx := logr.NewContext(context.Background(), logr.Discard())
+package proxyimport (	"context"	"errors"	"testing"	"time"	"github.com/go-logr/logr"	"github.com/stretchr/testify/require"	"github.com/xenitab/azad-kube-proxy/internal/config"	"github.com/xenitab/azad-kube-proxy/internal/models")func TestGetUser(t *testing.T) {	ctx := logr.NewContext(context.Background(), logr.Discard())
 	cfg := &config.Config{}
 	azureClient := &testFakeAzureClient{
 		fakeError: nil,
@@ -25,28 +10,28 @@ func TestGetUser(t *testing.T) {
 	}
 
 	cases := []struct {
-		userClient          ClientInterface
+		userClient          User
 		username            string
 		objectID            string
 		expectedUserType    models.UserType
 		expectedErrContains string
 	}{
 		{
-			userClient:          NewUserClient(cfg, azureClient),
+			userClient:          newUserClient(cfg, azureClient),
 			username:            "",
 			objectID:            "00000000-0000-0000-0000-000000000000",
 			expectedUserType:    models.ServicePrincipalUserType,
 			expectedErrContains: "",
 		},
 		{
-			userClient:          NewUserClient(cfg, azureClient),
+			userClient:          newUserClient(cfg, azureClient),
 			username:            "username",
 			objectID:            "00000000-0000-0000-0000-000000000000",
 			expectedUserType:    models.NormalUserType,
 			expectedErrContains: "",
 		},
 		{
-			userClient:          NewUserClient(cfg, azureClientError),
+			userClient:          newUserClient(cfg, azureClientError),
 			username:            "username",
 			objectID:            "00000000-0000-0000-0000-000000000000",
 			expectedUserType:    models.NormalUserType,
@@ -75,19 +60,4 @@ type testFakeAzureClient struct {
 func (client *testFakeAzureClient) GetUserGroups(ctx context.Context, objectID string, userType models.UserType) ([]models.Group, error) {
 	client.t.Helper()
 
-	return nil, client.fakeError
-}
-
-// StartSyncGroups ...
-func (client *testFakeAzureClient) StartSyncGroups(ctx context.Context, syncInterval time.Duration) (*time.Ticker, chan bool, error) {
-	client.t.Helper()
-
-	return nil, nil, nil
-}
-
-// Valid ...
-func (client *testFakeAzureClient) Valid(ctx context.Context) bool {
-	client.t.Helper()
-
-	return true
-}
+	return nil, client.fakeError}// StartSyncGroups ...func (client *testFakeAzureClient) StartSyncGroups(ctx context.Context, syncInterval time.Duration) (*time.Ticker, chan bool, error) {	client.t.Helper()	return nil, nil, nil}// Valid ...func (client *testFakeAzureClient) Valid(ctx context.Context) bool {	client.t.Helper()	return true}

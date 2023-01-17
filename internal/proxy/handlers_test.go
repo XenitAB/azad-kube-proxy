@@ -22,11 +22,9 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
-	"github.com/xenitab/azad-kube-proxy/internal/cache"
 	"github.com/xenitab/azad-kube-proxy/internal/config"
 	"github.com/xenitab/azad-kube-proxy/internal/health"
 	"github.com/xenitab/azad-kube-proxy/internal/models"
-	"github.com/xenitab/azad-kube-proxy/internal/user"
 )
 
 var (
@@ -169,7 +167,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 
 	token := testGetAccessToken(t, ctx, tenantID, spClientID, spClientSecret, fmt.Sprintf("%s/.default", spResource))
 
-	memCacheClient, err := cache.NewMemoryCache(5 * time.Minute)
+	memCacheClient, err := newMemoryCache(5 * time.Minute)
 	require.NoError(t, err)
 	testFakeCacheClient := newTestFakeCacheClient(t, "", "", nil, false, nil)
 	testFakeUserClient := newTestFakeUserClient(t, "", "", nil, nil)
@@ -204,10 +202,10 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 		request             *http.Request
 		config              *config.Config
 		configFunction      func(oldConfig config.Config) config.Config
-		cacheClient         cache.ClientInterface
-		cacheFunction       func(oldCacheClient cache.ClientInterface) cache.ClientInterface
-		userClient          user.ClientInterface
-		userFunction        func(oldUserClient user.ClientInterface) user.ClientInterface
+		cacheClient         Cache
+		cacheFunction       func(oldCacheClient Cache) Cache
+		userClient          User
+		userFunction        func(oldUserClient User) User
 		expectedResCode     int
 		expectedResBody     string
 		expectedErrContains string
@@ -418,7 +416,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 			config:      cfg,
 			cacheClient: testFakeCacheClient,
 			userClient:  testFakeUserClient,
-			userFunction: func(oldUserClient user.ClientInterface) user.ClientInterface {
+			userFunction: func(oldUserClient User) User {
 				i := 1
 				groups := []models.Group{}
 				for i < testFakeMaxGroups+1 {
