@@ -2,7 +2,6 @@ package proxy
 
 import "fmt"
 
-// azureClaims contains the claims used by the Azure AD Access Token (v2)
 type internalAzureADClaims struct {
 	sub      string
 	username string
@@ -10,7 +9,6 @@ type internalAzureADClaims struct {
 	groups   []string
 }
 
-// toInternalAzureADClaims converts the externalAzureADClaims from context.Value() to externalAzureADClaims
 func toInternalAzureADClaims(externalClaims *externalAzureADClaims) (internalAzureADClaims, error) {
 	if externalClaims == nil {
 		return internalAzureADClaims{}, fmt.Errorf("external claims nil")

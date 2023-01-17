@@ -42,7 +42,7 @@ type handler struct {
 	kubernetesToken string
 }
 
-func newHandlersClient(ctx context.Context, cfg *config.Config, cacheClient cache.ClientInterface, userClient user.ClientInterface, healthClient health.ClientInterface) (*handler, error) {
+func newHandlers(ctx context.Context, cfg *config.Config, cacheClient cache.ClientInterface, userClient user.ClientInterface, healthClient health.ClientInterface) (*handler, error) {
 	groupIdentifier, err := models.GetGroupIdentifier(cfg.GroupIdentifier)
 	if err != nil {
 		return nil, err
@@ -65,12 +65,11 @@ func newHandlersClient(ctx context.Context, cfg *config.Config, cacheClient cach
 	return handlersClient, nil
 }
 
-// ReadinessHandler ...
-func (c *handler) ReadinessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request) {
+func (h *handler) readiness(ctx context.Context) func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		ready, err := c.HealthClient.Ready(ctx)
+		ready, err := h.HealthClient.Ready(ctx)
 		if !ready {
 			log.Error(err, "Ready check failed")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -89,8 +88,7 @@ func (c *handler) ReadinessHandler(ctx context.Context) func(http.ResponseWriter
 	}
 }
 
-// LivenessHandler ...
-func (h *handler) LivenessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request) {
+func (h *handler) liveness(ctx context.Context) func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -113,8 +111,7 @@ func (h *handler) LivenessHandler(ctx context.Context) func(http.ResponseWriter,
 	}
 }
 
-// AzadKubeProxyHandler ...
-func (h *handler) AzadKubeProxyHandler(ctx context.Context, p *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
+func (h *handler) proxy(ctx context.Context, p *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -209,8 +206,7 @@ func (h *handler) AzadKubeProxyHandler(ctx context.Context, p *httputil.ReverseP
 	}
 }
 
-// ErrorHandler ...
-func (h *handler) ErrorHandler(ctx context.Context) func(w http.ResponseWriter, r *http.Request, err error) {
+func (h *handler) error(ctx context.Context) func(w http.ResponseWriter, r *http.Request, err error) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request, err error) {

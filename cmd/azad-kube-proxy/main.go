@@ -49,7 +49,7 @@ func run(ctx context.Context) error {
 	}
 
 	// Start reverse proxy
-	server, err := proxy.NewProxyClient(ctx, cfg)
+	server, err := proxy.New(ctx, cfg)
 	if err != nil {
 		return fmt.Errorf("unable to initialize proxy server: %w", err)
 

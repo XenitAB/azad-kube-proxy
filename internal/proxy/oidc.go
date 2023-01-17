@@ -9,7 +9,6 @@ import (
 	"github.com/xenitab/go-oidc-middleware/options"
 )
 
-// NewOIDCHandler returns a http.Handler to take care of the JWT validation
 func newOIDCHandler(h http.HandlerFunc, tenantID string, clientID string) http.Handler {
 	oidcHandler := oidchttp.New(h,
 		newAzureADClaimsValidationFn(tenantID),

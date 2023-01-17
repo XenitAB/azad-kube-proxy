@@ -26,8 +26,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// ClientInterface ...
-type ClientInterface interface {
+type Proxy interface {
 	Start(ctx context.Context) error
 	listenAndServe(httpServer *http.Server) error
 	getHTTPServer(handler http.Handler) *http.Server
@@ -35,8 +34,7 @@ type ClientInterface interface {
 	getProxyTransport() *http.Transport
 }
 
-// Client ...
-type Client struct {
+type proxy struct {
 	CacheClient   cache.ClientInterface
 	UserClient    user.ClientInterface
 	AzureClient   azure.ClientInterface
@@ -49,8 +47,7 @@ type Client struct {
 	kubernetesRootCA *x509.CertPool
 }
 
-// NewProxyClient ...
-func NewProxyClient(ctx context.Context, cfg *config.Config) (ClientInterface, error) {
+func New(ctx context.Context, cfg *config.Config) (*proxy, error) {
 	cacheClient, err := cache.NewMemoryCache(time.Duration(cfg.GroupSyncInterval) * time.Minute)
 	if err != nil {
 		return nil, err
@@ -85,7 +82,7 @@ func NewProxyClient(ctx context.Context, cfg *config.Config) (ClientInterface, e
 		return nil, err
 	}
 
-	proxyClient := Client{
+	proxyClient := proxy{
 		CacheClient:      cacheClient,
 		UserClient:       userClient,
 		AzureClient:      azureClient,
@@ -101,7 +98,7 @@ func NewProxyClient(ctx context.Context, cfg *config.Config) (ClientInterface, e
 }
 
 // Start launches the reverse proxy
-func (client *Client) Start(ctx context.Context) error {
+func (p *proxy) Start(ctx context.Context) error {
 	log := logr.FromContextOrDiscard(ctx)
 
 	// Signal handler
@@ -115,7 +112,7 @@ func (client *Client) Start(ctx context.Context) error {
 
 	// Initiate group sync
 	log.Info("Starting group sync")
-	syncTicker, syncChan, err := client.AzureClient.StartSyncGroups(ctx, time.Duration(client.cfg.GroupSyncInterval)*time.Minute)
+	syncTicker, syncChan, err := p.AzureClient.StartSyncGroups(ctx, time.Duration(p.cfg.GroupSyncInterval)*time.Minute)
 	if err != nil {
 		return err
 	}
@@ -126,30 +123,30 @@ func (client *Client) Start(ctx context.Context) error {
 	defer stopGroupSync()
 
 	// Configure reverse proxy and http server
-	proxyHandlers, err := newHandlersClient(ctx, client.cfg, client.CacheClient, client.UserClient, client.HealthClient)
+	proxyHandlers, err := newHandlers(ctx, p.cfg, p.CacheClient, p.UserClient, p.HealthClient)
 	if err != nil {
 		return err
 	}
-	log.Info("Initializing reverse proxy", "ListenerAddress", client.cfg.ListenerAddress, "MetricsListenerAddress", client.cfg.MetricsListenerAddress, "ListenerTLSConfigEnabled", client.cfg.ListenerTLSConfigEnabled)
-	proxy := client.getReverseProxy(ctx)
-	proxy.ErrorHandler = proxyHandlers.ErrorHandler(ctx)
+	log.Info("Initializing reverse proxy", "ListenerAddress", p.cfg.ListenerAddress, "MetricsListenerAddress", p.cfg.MetricsListenerAddress, "ListenerTLSConfigEnabled", p.cfg.ListenerTLSConfigEnabled)
+	proxy := p.getReverseProxy(ctx)
+	proxy.ErrorHandler = proxyHandlers.error(ctx)
 
 	// Setup metrics router
 	metricsRouter := mux.NewRouter()
 
-	metricsRouter.HandleFunc("/readyz", proxyHandlers.ReadinessHandler(ctx)).Methods("GET")
-	metricsRouter.HandleFunc("/healthz", proxyHandlers.LivenessHandler(ctx)).Methods("GET")
+	metricsRouter.HandleFunc("/readyz", proxyHandlers.readiness(ctx)).Methods("GET")
+	metricsRouter.HandleFunc("/healthz", proxyHandlers.liveness(ctx)).Methods("GET")
 
-	metricsRouter, err = client.MetricsClient.MetricsHandler(ctx, metricsRouter)
+	metricsRouter, err = p.MetricsClient.MetricsHandler(ctx, metricsRouter)
 	if err != nil {
 		return err
 	}
 
-	metricsHttpServer := client.getHTTPMetricsServer(metricsRouter)
+	metricsHttpServer := p.getHTTPMetricsServer(metricsRouter)
 
 	// Start metrics server
 	g.Go(func() error {
-		err := client.listenAndServe(metricsHttpServer)
+		err := p.listenAndServe(metricsHttpServer)
 		if err != nil && err != http.ErrServerClosed {
 			return err
 		}
@@ -160,17 +157,17 @@ func (client *Client) Start(ctx context.Context) error {
 	// Setup http router
 	router := mux.NewRouter()
 
-	oidcHandler := newOIDCHandler(proxyHandlers.AzadKubeProxyHandler(ctx, proxy), client.cfg.AzureTenantID, client.cfg.AzureClientID)
+	oidcHandler := newOIDCHandler(proxyHandlers.proxy(ctx, proxy), p.cfg.AzureTenantID, p.cfg.AzureClientID)
 
 	router.PathPrefix("/").Handler(oidcHandler)
 
-	router.Use(client.CORSClient.Middleware)
+	router.Use(p.CORSClient.Middleware)
 
-	httpServer := client.getHTTPServer(router)
+	httpServer := p.getHTTPServer(router)
 
 	// Start HTTP server
 	g.Go(func() error {
-		err := client.listenAndServe(httpServer)
+		err := p.listenAndServe(httpServer)
 		if err != nil && err != http.ErrServerClosed {
 			return err
 		}
@@ -226,7 +223,7 @@ func (client *Client) Start(ctx context.Context) error {
 	return nil
 }
 
-func (client *Client) listenAndServe(httpServer *http.Server) error {
+func (client *proxy) listenAndServe(httpServer *http.Server) error {
 	if client.cfg.ListenerTLSConfigEnabled {
 		return httpServer.ListenAndServeTLS(client.cfg.ListenerTLSConfigCertificatePath, client.cfg.ListenerTLSConfigKeyPath)
 	}
@@ -234,7 +231,7 @@ func (client *Client) listenAndServe(httpServer *http.Server) error {
 	return httpServer.ListenAndServe()
 }
 
-func (client *Client) getHTTPServer(handler http.Handler) *http.Server {
+func (client *proxy) getHTTPServer(handler http.Handler) *http.Server {
 	addr := fmt.Sprintf("%s:%d", client.cfg.ListenerAddress, client.cfg.ListenerPort)
 	return &http.Server{
 		Addr:              addr,
@@ -243,7 +240,7 @@ func (client *Client) getHTTPServer(handler http.Handler) *http.Server {
 	}
 }
 
-func (client *Client) getHTTPMetricsServer(handler http.Handler) *http.Server {
+func (client *proxy) getHTTPMetricsServer(handler http.Handler) *http.Server {
 	addr := fmt.Sprintf("%s:%d", client.cfg.MetricsListenerAddress, client.cfg.MetricsListenerPort)
 	return &http.Server{
 		Addr:              addr,
@@ -252,13 +249,13 @@ func (client *Client) getHTTPMetricsServer(handler http.Handler) *http.Server {
 	}
 }
 
-func (client *Client) getReverseProxy(ctx context.Context) *httputil.ReverseProxy {
+func (client *proxy) getReverseProxy(ctx context.Context) *httputil.ReverseProxy {
 	reverseProxy := httputil.NewSingleHostReverseProxy(client.kubernetesURL)
 	reverseProxy.Transport = client.getProxyTransport()
 	return reverseProxy
 }
 
-func (client *Client) getProxyTransport() *http.Transport {
+func (client *proxy) getProxyTransport() *http.Transport {
 	return &http.Transport{
 		TLSClientConfig: getProxyTLSClientConfig(client.cfg.KubernetesAPIValidateCert, client.kubernetesRootCA),
 	}
