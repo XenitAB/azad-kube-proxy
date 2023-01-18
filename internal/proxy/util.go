@@ -15,8 +15,7 @@ import (
 	"github.com/go-logr/logr"
 )
 
-// GetCertificate returns a *x509.CertPool or error
-func GetCertificate(ctx context.Context, path string) (*x509.CertPool, error) {
+func getCertificate(ctx context.Context, path string) (*x509.CertPool, error) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	cert, err := os.ReadFile(path) // #nosec
@@ -31,8 +30,7 @@ func GetCertificate(ctx context.Context, path string) (*x509.CertPool, error) {
 	return certPool, nil
 }
 
-// GetStringFromFile returns a string or error
-func GetStringFromFile(ctx context.Context, path string) (string, error) {
+func getStringFromFile(ctx context.Context, path string) (string, error) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	byteContent, err := os.ReadFile(path) // #nosec
@@ -46,15 +44,13 @@ func GetStringFromFile(ctx context.Context, path string) (string, error) {
 	return stringContent, nil
 }
 
-// GetEncodedHash returns the hex encoded sha256 sum of the input string
-func GetEncodedHash(s string) string {
+func getEncodedHash(s string) string {
 	hash := sha256.Sum256([]byte(s))
 	encodedHash := hex.EncodeToString(hash[:])
 	return encodedHash
 }
 
-// GetBearerToken returns the Bearer token or an error
-func GetBearerToken(r *http.Request) (string, error) {
+func getBearerToken(r *http.Request) (string, error) {
 	isWebSocket := false
 	if strings.EqualFold(r.Header.Get("Connection"), "upgrade") && r.Header.Get("Upgrade") == "websocket" {
 		isWebSocket = true
@@ -120,8 +116,7 @@ func GetBearerToken(r *http.Request) (string, error) {
 	return token, nil
 }
 
-// StripWebSocketBearer takes the string from the header Sec-WebSocket-Protocol (r.Header.Get("Sec-WebSocket-Protocol")) and removes any bearer (base64url.bearer.authorization.k8s.io.<bearer>)
-func StripWebSocketBearer(old string) string {
+func stripWebSocketBearer(old string) string {
 	wsProtoArray := []string{}
 	if strings.Contains(old, ",") {
 		a := strings.Split(old, ",")
@@ -141,8 +136,7 @@ func StripWebSocketBearer(old string) string {
 	return strings.Join(wsProtoArray, ", ")
 }
 
-// SliceContains checks if a slice contains a string
-func SliceContains(s []string, str string) bool {
+func sliceContains(s []string, str string) bool {
 	for _, v := range s {
 		if v == str {
 			return true

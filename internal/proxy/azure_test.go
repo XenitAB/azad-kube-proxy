@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
-	"github.com/xenitab/azad-kube-proxy/internal/models"
 )
 
 func TestNewAzureClient(t *testing.T) {
@@ -117,33 +116,33 @@ func TestGetUserGroups(t *testing.T) {
 
 	cases := []struct {
 		objectID            string
-		userType            models.UserType
+		userModelType       userModelType
 		expectedErrContains string
 	}{
 		{
 			objectID:            userObjectID,
-			userType:            models.NormalUserType,
+			userModelType:       normalUserModelType,
 			expectedErrContains: "",
 		},
 		{
 			objectID:            spObjectID,
-			userType:            models.ServicePrincipalUserType,
+			userModelType:       servicePrincipalUserModelType,
 			expectedErrContains: "",
 		},
 		{
 			objectID:            "",
-			userType:            models.NormalUserType,
+			userModelType:       normalUserModelType,
 			expectedErrContains: "unexpected status 404 with OData error: Request_ResourceNotFound:",
 		},
 		{
 			objectID:            "",
-			userType:            models.ServicePrincipalUserType,
+			userModelType:       servicePrincipalUserModelType,
 			expectedErrContains: "unexpected status 400 with OData error: Request_BadRequest:",
 		},
 	}
 
 	for _, c := range cases {
-		_, err := azureClient.GetUserGroups(ctx, c.objectID, c.userType)
+		_, err := azureClient.GetUserGroups(ctx, c.objectID, c.userModelType)
 		if c.expectedErrContains != "" {
 			require.ErrorContains(t, err, c.expectedErrContains)
 			continue
@@ -153,7 +152,7 @@ func TestGetUserGroups(t *testing.T) {
 
 	emptyAzureClient := azure{}
 	_, err = emptyAzureClient.GetUserGroups(ctx, "", "FAKE")
-	require.ErrorContains(t, err, "Unknown userType: FAKE")
+	require.ErrorContains(t, err, "Unknown userModelType: FAKE")
 }
 
 func TestStartSyncGroups(t *testing.T) {

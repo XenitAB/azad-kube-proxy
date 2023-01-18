@@ -6,7 +6,6 @@ import (
 	"github.com/go-logr/logr"
 	hamiltonMsgraph "github.com/manicminer/hamilton/msgraph"
 	hamiltonOdata "github.com/manicminer/hamilton/odata"
-	"github.com/xenitab/azad-kube-proxy/internal/models"
 )
 
 type azureGroups struct {
@@ -49,7 +48,7 @@ func (groups *azureGroups) syncAzureADGroupsCache(ctx context.Context, syncReaso
 	}
 
 	for _, group := range *groupsResponse {
-		err := groups.cache.SetGroup(ctx, *group.ID(), models.Group{
+		err := groups.cache.SetGroup(ctx, *group.ID(), groupModel{
 			Name:     *group.DisplayName,
 			ObjectID: *group.ID(),
 		})

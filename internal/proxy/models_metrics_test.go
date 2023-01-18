@@ -1,4 +1,4 @@
-package models
+package proxy
 
 import (
 	"testing"
@@ -9,17 +9,17 @@ import (
 func TestGetMetrics(t *testing.T) {
 	cases := []struct {
 		metricsString       string
-		expectedMetrics     Metrics
+		expectedMetrics     metricsModel
 		expectedErrContains string
 	}{
 		{
 			metricsString:       "NONE",
-			expectedMetrics:     NoneMetrics,
+			expectedMetrics:     noneMetrics,
 			expectedErrContains: "",
 		},
 		{
 			metricsString:       "PROMETHEUS",
-			expectedMetrics:     PrometheusMetrics,
+			expectedMetrics:     prometheusMetrics,
 			expectedErrContains: "",
 		},
 		{
@@ -35,7 +35,7 @@ func TestGetMetrics(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		resMetrics, err := GetMetrics(c.metricsString)
+		resMetrics, err := getMetrics(c.metricsString)
 		if c.expectedErrContains != "" {
 			require.ErrorContains(t, err, c.expectedErrContains)
 			continue

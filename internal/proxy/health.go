@@ -79,8 +79,8 @@ func (h *health) Ready(ctx context.Context) (bool, error) {
 	}
 
 	for _, rule := range res.Status.ResourceRules {
-		if SliceContains(rule.Verbs, "impersonate") {
-			if SliceContains(rule.Resources, "users") && SliceContains(rule.Resources, "groups") && SliceContains(rule.Resources, "serviceaccounts") {
+		if sliceContains(rule.Verbs, "impersonate") {
+			if sliceContains(rule.Resources, "users") && sliceContains(rule.Resources, "groups") && sliceContains(rule.Resources, "serviceaccounts") {
 				ready = true
 			}
 		}

@@ -1,4 +1,4 @@
-package models
+package proxy
 
 import (
 	"testing"
@@ -9,17 +9,17 @@ import (
 func TestGetCacheEngine(t *testing.T) {
 	cases := []struct {
 		cacheEngineString   string
-		expectedCacheEngine CacheEngine
+		expectedCacheEngine cacheEngineModel
 		expectedErrContains string
 	}{
 		{
 			cacheEngineString:   "MEMORY",
-			expectedCacheEngine: MemoryCacheEngine,
+			expectedCacheEngine: memoryCacheEngine,
 			expectedErrContains: "",
 		},
 		{
 			cacheEngineString:   "REDIS",
-			expectedCacheEngine: RedisCacheEngine,
+			expectedCacheEngine: redisCacheEngine,
 			expectedErrContains: "",
 		},
 		{
@@ -35,7 +35,7 @@ func TestGetCacheEngine(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		resCacheEngine, err := GetCacheEngine(c.cacheEngineString)
+		resCacheEngine, err := getCacheEngine(c.cacheEngineString)
 		if c.expectedErrContains != "" {
 			require.ErrorContains(t, err, c.expectedErrContains)
 			continue

@@ -25,7 +25,7 @@ func TestGetCertificate(t *testing.T) {
 
 	certPath := testGenerateCertificateFile(t)
 
-	certPool, err := GetCertificate(ctx, certPath)
+	certPool, err := getCertificate(ctx, certPath)
 	require.NoError(t, err)
 
 	testDeleteFile(t, certPath)
@@ -33,7 +33,7 @@ func TestGetCertificate(t *testing.T) {
 	// nolint:staticcheck
 	require.Len(t, certPool.Subjects(), 1)
 
-	_, err = GetCertificate(ctx, fmt.Sprintf("%s-does-not-exist", certPath))
+	_, err = getCertificate(ctx, fmt.Sprintf("%s-does-not-exist", certPath))
 	require.Error(t, err)
 }
 
@@ -41,19 +41,19 @@ func TestGetStringFromFile(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 	filePath, expectedFileString := testGenerateRandomFile(t)
 
-	fileString, err := GetStringFromFile(ctx, filePath)
+	fileString, err := getStringFromFile(ctx, filePath)
 	require.NoError(t, err)
 
 	testDeleteFile(t, filePath)
 	require.Equal(t, expectedFileString, fileString)
 
-	_, err = GetStringFromFile(ctx, fmt.Sprintf("%s-does-not-exist", filePath))
+	_, err = getStringFromFile(ctx, fmt.Sprintf("%s-does-not-exist", filePath))
 	require.Error(t, err)
 }
 
 func TestGetEncodedHash(t *testing.T) {
 	testString := "this is a test string"
-	testStringHash := GetEncodedHash(testString)
+	testStringHash := getEncodedHash(testString)
 	expectedHash := "f6774519d1c7a3389ef327e9c04766b999db8cdfb85d1346c471ee86d65885bc"
 	require.Equal(t, expectedHash, testStringHash)
 }
@@ -202,7 +202,7 @@ func TestGetBearerToken(t *testing.T) {
 	for _, c := range cases {
 		req := c.reqFunc(c.token)
 
-		tokenResponse, err := GetBearerToken(req)
+		tokenResponse, err := getBearerToken(req)
 		if c.expectedErrContains != "" {
 			require.ErrorContains(t, err, c.expectedErrContains)
 			continue
@@ -269,7 +269,7 @@ func TestStripWebSocketBearer(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		r := StripWebSocketBearer(c.input)
+		r := stripWebSocketBearer(c.input)
 		require.Equal(t, c.output, r)
 	}
 }
@@ -323,7 +323,7 @@ func TestSliceContains(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		r := SliceContains(c.inputSlice, c.inputString)
+		r := sliceContains(c.inputSlice, c.inputString)
 		require.Equal(t, c.expectedResult, r)
 	}
 }

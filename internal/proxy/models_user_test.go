@@ -1,4 +1,4 @@
-package models
+package proxy
 
 import (
 	"testing"
@@ -26,34 +26,34 @@ func TestUnmarshalBinary(t *testing.T) {
 	testUserCases, testGroupCases := testGetUseCases(t)
 
 	for _, c := range testUserCases {
-		user := User{}
+		user := userModel{}
 		err := user.UnmarshalBinary([]byte(c.expectedString))
 		require.NoError(t, err)
-		require.Equal(t, c.User, user)
+		require.Equal(t, c.userModel, user)
 	}
 
 	for _, c := range testGroupCases {
-		group := Group{}
+		group := groupModel{}
 		err := group.UnmarshalBinary([]byte(c.expectedString))
 		require.NoError(t, err)
-		require.Equal(t, c.Group, group)
+		require.Equal(t, c.groupModel, group)
 	}
 }
 
 func TestGetGroupIdentifier(t *testing.T) {
 	cases := []struct {
 		groupIdentifierString   string
-		expectedGroupIdentifier GroupIdentifier
+		expectedGroupIdentifier groupIdentifier
 		expectedErrContains     string
 	}{
 		{
 			groupIdentifierString:   "NAME",
-			expectedGroupIdentifier: NameGroupIdentifier,
+			expectedGroupIdentifier: nameGroupIdentifier,
 			expectedErrContains:     "",
 		},
 		{
 			groupIdentifierString:   "OBJECTID",
-			expectedGroupIdentifier: ObjectIDGroupIdentifier,
+			expectedGroupIdentifier: objectIDGroupIdentifier,
 			expectedErrContains:     "",
 		},
 		{
@@ -81,12 +81,12 @@ func TestGetGroupIdentifier(t *testing.T) {
 }
 
 type testUserCase struct {
-	User
+	userModel
 	expectedString string
 }
 
 type testGroupCase struct {
-	Group
+	groupModel
 	expectedString string
 }
 
@@ -95,42 +95,42 @@ func testGetUseCases(t *testing.T) ([]testUserCase, []testGroupCase) {
 
 	testUserCases := []testUserCase{
 		{
-			User: User{
+			userModel: userModel{
 				Username: "username",
 				ObjectID: "00000000-0000-0000-0000-000000000000",
-				Groups:   []Group{},
-				Type:     NormalUserType,
+				Groups:   []groupModel{},
+				Type:     normalUserModelType,
 			},
 			expectedString: "{\"Username\":\"username\",\"ObjectID\":\"00000000-0000-0000-0000-000000000000\",\"Groups\":[],\"Type\":\"NormalUser\"}",
 		},
 		{
-			User: User{
+			userModel: userModel{
 				Username: "00000000-0000-0000-0000-000000000000",
 				ObjectID: "00000000-0000-0000-0000-000000000000",
-				Groups:   []Group{},
-				Type:     ServicePrincipalUserType,
+				Groups:   []groupModel{},
+				Type:     servicePrincipalUserModelType,
 			},
 			expectedString: "{\"Username\":\"00000000-0000-0000-0000-000000000000\",\"ObjectID\":\"00000000-0000-0000-0000-000000000000\",\"Groups\":[],\"Type\":\"ServicePrincipal\"}",
 		},
 		{
-			User: User{
+			userModel: userModel{
 				Username: "username",
 				ObjectID: "00000000-0000-0000-0000-000000000000",
-				Groups: []Group{
+				Groups: []groupModel{
 					{
 						Name:     "test1",
 						ObjectID: "00000000-0000-0000-0000-000000000000",
 					},
 				},
-				Type: NormalUserType,
+				Type: normalUserModelType,
 			},
 			expectedString: "{\"Username\":\"username\",\"ObjectID\":\"00000000-0000-0000-0000-000000000000\",\"Groups\":[{\"Name\":\"test1\",\"ObjectID\":\"00000000-0000-0000-0000-000000000000\"}],\"Type\":\"NormalUser\"}",
 		},
 		{
-			User: User{
+			userModel: userModel{
 				Username: "username",
 				ObjectID: "00000000-0000-0000-0000-000000000000",
-				Groups: []Group{
+				Groups: []groupModel{
 					{
 						Name:     "test1",
 						ObjectID: "00000000-0000-0000-0000-000000000000",
@@ -140,7 +140,7 @@ func testGetUseCases(t *testing.T) ([]testUserCase, []testGroupCase) {
 						ObjectID: "00000000-0000-0000-0000-000000000001",
 					},
 				},
-				Type: NormalUserType,
+				Type: normalUserModelType,
 			},
 			expectedString: "{\"Username\":\"username\",\"ObjectID\":\"00000000-0000-0000-0000-000000000000\",\"Groups\":[{\"Name\":\"test1\",\"ObjectID\":\"00000000-0000-0000-0000-000000000000\"},{\"Name\":\"test2\",\"ObjectID\":\"00000000-0000-0000-0000-000000000001\"}],\"Type\":\"NormalUser\"}",
 		},
@@ -148,7 +148,7 @@ func testGetUseCases(t *testing.T) ([]testUserCase, []testGroupCase) {
 
 	testGroupCases := []testGroupCase{
 		{
-			Group: Group{
+			groupModel: groupModel{
 				Name:     "test1",
 				ObjectID: "00000000-0000-0000-0000-000000000000",
 			},

@@ -5,7 +5,6 @@ import (
 	"time"
 
 	gocache "github.com/patrickmn/go-cache"
-	"github.com/xenitab/azad-kube-proxy/internal/models"
 )
 
 type memoryCache struct {
@@ -19,32 +18,32 @@ func newMemoryCache(expirationInterval time.Duration) (*memoryCache, error) {
 }
 
 // GetUser ...
-func (c *memoryCache) GetUser(ctx context.Context, s string) (models.User, bool, error) {
+func (c *memoryCache) GetUser(ctx context.Context, s string) (userModel, bool, error) {
 	u, f := c.CacheClient.Get(s)
 	if !f {
-		return models.User{}, false, nil
+		return userModel{}, false, nil
 	}
-	return u.(models.User), true, nil
+	return u.(userModel), true, nil
 }
 
 // SetUser ...
-func (c *memoryCache) SetUser(ctx context.Context, s string, u models.User) error {
+func (c *memoryCache) SetUser(ctx context.Context, s string, u userModel) error {
 	c.CacheClient.Set(s, u, 0)
 
 	return nil
 }
 
 // GetGroup ...
-func (c *memoryCache) GetGroup(ctx context.Context, s string) (models.Group, bool, error) {
+func (c *memoryCache) GetGroup(ctx context.Context, s string) (groupModel, bool, error) {
 	g, f := c.CacheClient.Get(s)
 	if !f {
-		return models.Group{}, false, nil
+		return groupModel{}, false, nil
 	}
-	return g.(models.Group), true, nil
+	return g.(groupModel), true, nil
 }
 
 // SetGroup ...
-func (c *memoryCache) SetGroup(ctx context.Context, s string, g models.Group) error {
+func (c *memoryCache) SetGroup(ctx context.Context, s string, g groupModel) error {
 	c.CacheClient.Set(s, g, 0)
 
 	return nil

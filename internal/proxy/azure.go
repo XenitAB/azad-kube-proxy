@@ -9,15 +9,14 @@ import (
 	hamiltonAuth "github.com/manicminer/hamilton/auth"
 	hamiltonEnvironments "github.com/manicminer/hamilton/environments"
 	hamiltonMsgraph "github.com/manicminer/hamilton/msgraph"
-	"github.com/xenitab/azad-kube-proxy/internal/models"
 )
 
 type AzureUser interface {
-	getGroups(ctx context.Context, objectID string) ([]models.Group, error)
+	getGroups(ctx context.Context, objectID string) ([]groupModel, error)
 }
 
 type Azure interface {
-	GetUserGroups(ctx context.Context, objectID string, userType models.UserType) ([]models.Group, error)
+	GetUserGroups(ctx context.Context, objectID string, userType userModelType) ([]groupModel, error)
 	StartSyncGroups(ctx context.Context, syncInterval time.Duration) (*time.Ticker, chan bool, error)
 	Valid(ctx context.Context) bool
 }
@@ -100,13 +99,13 @@ func (client *azure) Valid(ctx context.Context) bool {
 }
 
 // GetUserGroups ...
-func (client *azure) GetUserGroups(ctx context.Context, objectID string, userType models.UserType) ([]models.Group, error) {
+func (client *azure) GetUserGroups(ctx context.Context, objectID string, userType userModelType) ([]groupModel, error) {
 	var user AzureUser
 
 	switch userType {
-	case models.NormalUserType:
+	case normalUserModelType:
 		user = client.user
-	case models.ServicePrincipalUserType:
+	case servicePrincipalUserModelType:
 		user = client.servicePrincipalUser
 	default:
 		return nil, fmt.Errorf("Unknown userType: %s", userType)

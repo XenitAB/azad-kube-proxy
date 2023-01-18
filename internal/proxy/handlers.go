@@ -10,7 +10,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/xenitab/azad-kube-proxy/internal/config"
-	"github.com/xenitab/azad-kube-proxy/internal/models"
 	"github.com/xenitab/go-oidc-middleware/options"
 )
 
@@ -34,12 +33,12 @@ type handler struct {
 	health Health
 
 	cfg             *config.Config
-	groupIdentifier models.GroupIdentifier
+	groupIdentifier groupIdentifier
 	kubernetesToken string
 }
 
 func newHandlers(ctx context.Context, cfg *config.Config, cacheClient Cache, userClient User, healthClient Health) (*handler, error) {
-	groupIdentifier, err := models.GetGroupIdentifier(cfg.GroupIdentifier)
+	groupIdentifier, err := GetGroupIdentifier(cfg.GroupIdentifier)
 	if err != nil {
 		return nil, err
 	}
@@ -183,9 +182,9 @@ func (h *handler) proxy(ctx context.Context, p *httputil.ReverseProxy) func(http
 		// Add a new impersonation header per group
 		for _, group := range user.Groups {
 			switch h.groupIdentifier {
-			case models.NameGroupIdentifier:
+			case nameGroupIdentifier:
 				r.Header.Add(impersonateGroupHeader, group.Name)
-			case models.ObjectIDGroupIdentifier:
+			case objectIDGroupIdentifier:
 				r.Header.Add(impersonateGroupHeader, group.ObjectID)
 			default:
 				log.Error(errors.New("unknown groups identifier"), "unknown groups identifier", "GroupIdentifier", h.cfg.GroupIdentifier)

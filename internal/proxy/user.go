@@ -4,11 +4,10 @@ import (
 	"context"
 
 	"github.com/xenitab/azad-kube-proxy/internal/config"
-	"github.com/xenitab/azad-kube-proxy/internal/models"
 )
 
 type User interface {
-	GetUser(ctx context.Context, username, objectID string) (models.User, error)
+	GetUser(ctx context.Context, username, objectID string) (userModel, error)
 }
 
 type user struct {
@@ -24,19 +23,19 @@ func newUser(cfg *config.Config, azureClient Azure) User {
 	}
 }
 
-func (u *user) GetUser(ctx context.Context, username, objectID string) (models.User, error) {
-	userType := models.NormalUserType
+func (u *user) GetUser(ctx context.Context, username, objectID string) (userModel, error) {
+	userType := normalUserModelType
 	if username == "" {
 		username = objectID
-		userType = models.ServicePrincipalUserType
+		userType = servicePrincipalUserModelType
 	}
 
 	groups, err := u.azure.GetUserGroups(ctx, objectID, userType)
 	if err != nil {
-		return models.User{}, err
+		return userModel{}, err
 	}
 
-	user := models.User{
+	user := userModel{
 		Username: username,
 		ObjectID: objectID,
 		Groups:   groups,

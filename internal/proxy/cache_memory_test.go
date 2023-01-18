@@ -8,7 +8,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
-	"github.com/xenitab/azad-kube-proxy/internal/models"
 )
 
 func TestNewMemoryCache(t *testing.T) {
@@ -48,7 +47,7 @@ func TestMemorySetUser(t *testing.T) {
 
 		cacheRes, found := cache.CacheClient.Get(c.Key)
 		require.True(t, found)
-		require.Equal(t, c.User, cacheRes.(models.User))
+		require.Equal(t, c.User, cacheRes.(userModel))
 	}
 }
 
@@ -89,8 +88,8 @@ func TestMemorySetGroup(t *testing.T) {
 			t.Errorf("Expected err to be nil but it was %q", err)
 		}
 		cacheRes, found := cache.CacheClient.Get(c.Key)
-		if !cmp.Equal(c.Group, cacheRes.(models.Group)) {
-			t.Errorf("Expected response was not returned.\nExpected: %s\nActual:   %s", c.Group, cacheRes.(models.Group))
+		if !cmp.Equal(c.Group, cacheRes.(groupModel)) {
+			t.Errorf("Expected response was not returned.\nExpected: %s\nActual:   %s", c.Group, cacheRes.(groupModel))
 		}
 		if err != nil {
 			t.Errorf("Did not expect error: %q", err)
@@ -102,12 +101,12 @@ func TestMemorySetGroup(t *testing.T) {
 }
 
 type testMemoryUserCase struct {
-	User models.User
+	User userModel
 	Key  string
 }
 
 type testMemoryGroupCase struct {
-	Group models.Group
+	Group groupModel
 	Key   string
 }
 
@@ -116,36 +115,36 @@ func testGetMemoryCases(t *testing.T) ([]testMemoryUserCase, []testMemoryGroupCa
 
 	userCases := []testMemoryUserCase{
 		{
-			User: models.User{
+			User: userModel{
 				Username: "user1",
 				ObjectID: "00000000-0000-0000-0000-000000000000",
-				Groups: []models.Group{
+				Groups: []groupModel{
 					{
 						Name: "group1",
 					},
 				},
-				Type: models.NormalUserType,
+				Type: normalUserModelType,
 			},
 			Key: "tokenHash1",
 		},
 		{
-			User: models.User{
+			User: userModel{
 				Username: "user2",
 				ObjectID: "00000000-0000-0000-0000-000000000000",
-				Groups: []models.Group{
+				Groups: []groupModel{
 					{
 						Name: "group2",
 					},
 				},
-				Type: models.NormalUserType,
+				Type: normalUserModelType,
 			},
 			Key: "tokenHash2",
 		},
 		{
-			User: models.User{
+			User: userModel{
 				Username: "00000000-0000-0000-0000-000000000000",
 				ObjectID: "00000000-0000-0000-0000-000000000000",
-				Groups: []models.Group{
+				Groups: []groupModel{
 					{
 						Name: "group1",
 					},
@@ -156,7 +155,7 @@ func testGetMemoryCases(t *testing.T) ([]testMemoryUserCase, []testMemoryGroupCa
 						Name: "group3",
 					},
 				},
-				Type: models.ServicePrincipalUserType,
+				Type: servicePrincipalUserModelType,
 			},
 			Key: "tokenHash3",
 		},
@@ -164,15 +163,15 @@ func testGetMemoryCases(t *testing.T) ([]testMemoryUserCase, []testMemoryGroupCa
 
 	groupCases := []testMemoryGroupCase{
 		{
-			Group: models.Group{Name: "group1"},
+			Group: groupModel{Name: "group1"},
 			Key:   "00000000-0000-0000-0000-000000000000",
 		},
 		{
-			Group: models.Group{Name: "group2"},
+			Group: groupModel{Name: "group2"},
 			Key:   "00000000-0000-0000-0000-000000000001",
 		},
 		{
-			Group: models.Group{Name: "group3"},
+			Group: groupModel{Name: "group3"},
 			Key:   "00000000-0000-0000-0000-000000000002",
 		},
 	}

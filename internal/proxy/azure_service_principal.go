@@ -6,7 +6,6 @@ import (
 	"github.com/go-logr/logr"
 	hamiltonMsgraph "github.com/manicminer/hamilton/msgraph"
 	hamiltonOdata "github.com/manicminer/hamilton/odata"
-	"github.com/xenitab/azad-kube-proxy/internal/models"
 )
 
 type azureServicePrincipalUser struct {
@@ -21,7 +20,7 @@ func newServicePrincipalUser(ctx context.Context, cacheClient Cache, servicePrin
 	}
 }
 
-func (user *azureServicePrincipalUser) getGroups(ctx context.Context, objectID string) ([]models.Group, error) {
+func (user *azureServicePrincipalUser) getGroups(ctx context.Context, objectID string) ([]groupModel, error) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	odataQuery := hamiltonOdata.Query{}
@@ -32,7 +31,7 @@ func (user *azureServicePrincipalUser) getGroups(ctx context.Context, objectID s
 		return nil, err
 	}
 
-	var groups []models.Group
+	var groups []groupModel
 	for _, group := range *groupsResponse {
 		group, found, err := user.cache.GetGroup(ctx, *group.ID())
 		if err != nil {
