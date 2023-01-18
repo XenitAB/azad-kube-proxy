@@ -152,7 +152,7 @@ func TestGetUserGroups(t *testing.T) {
 
 	emptyAzureClient := azure{}
 	_, err = emptyAzureClient.GetUserGroups(ctx, "", "FAKE")
-	require.ErrorContains(t, err, "Unknown userModelType: FAKE")
+	require.ErrorContains(t, err, "Unknown userType: FAKE")
 }
 
 func TestStartSyncGroups(t *testing.T) {
