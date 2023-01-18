@@ -9,7 +9,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
-	"github.com/xenitab/azad-kube-proxy/internal/config"
 	k8sapiauthorization "k8s.io/api/authorization/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
@@ -28,11 +27,11 @@ func TestNewHealthClient(t *testing.T) {
 	testCreateTemporaryFile(t, caPath, "fake-ca-string")
 
 	cases := []struct {
-		config              *config.Config
+		config              *Config
 		expectedErrContains string
 	}{
 		{
-			config: &config.Config{
+			config: &Config{
 				KubernetesAPITLS:          true,
 				KubernetesAPIValidateCert: true,
 				KubernetesAPIHost:         "fake-url",
@@ -42,7 +41,7 @@ func TestNewHealthClient(t *testing.T) {
 			expectedErrContains: "unable to load root certificates: unable to parse bytes as PEM block",
 		},
 		{
-			config: &config.Config{
+			config: &Config{
 				KubernetesAPITLS:          true,
 				KubernetesAPIValidateCert: false,
 				KubernetesAPIHost:         "fake-url",
@@ -134,7 +133,7 @@ func TestLive(t *testing.T) {
 	testCreateTemporaryFile(t, caPath, "fake-ca-string")
 
 	validator := &testFakeValidator{t}
-	fakeConfig := &config.Config{
+	fakeConfig := &Config{
 		KubernetesAPIValidateCert: false,
 		KubernetesAPITLS:          true,
 		KubernetesAPIHost:         "fake-url",

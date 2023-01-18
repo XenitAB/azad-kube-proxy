@@ -5,14 +5,13 @@ import (
 	"fmt"
 
 	"github.com/gorilla/mux"
-	"github.com/xenitab/azad-kube-proxy/internal/config"
 )
 
 type ClientInterface interface {
 	MetricsHandler(ctx context.Context, router *mux.Router) (*mux.Router, error)
 }
 
-func NewMetricsClient(ctx context.Context, cfg *config.Config) (ClientInterface, error) {
+func NewMetricsClient(ctx context.Context, cfg *Config) (ClientInterface, error) {
 	metricsType, err := getMetrics(cfg.Metrics)
 	if err != nil {
 		return nil, err

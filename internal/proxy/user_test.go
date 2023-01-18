@@ -8,12 +8,11 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
-	"github.com/xenitab/azad-kube-proxy/internal/config"
 )
 
 func TestGetUser(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
-	cfg := &config.Config{}
+	cfg := &Config{}
 	azureClient := &testFakeAzureClient{
 		fakeError: nil,
 		t:         t,

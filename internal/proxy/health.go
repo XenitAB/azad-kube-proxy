@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/xenitab/azad-kube-proxy/internal/config"
 	k8sapiauthorization "k8s.io/api/authorization/v1"
 	k8sapimachinerymetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
@@ -25,7 +24,7 @@ type health struct {
 	livenessValidator HealthValidator
 }
 
-func newHealthClient(ctx context.Context, cfg *config.Config, livenessValidator HealthValidator) (*health, error) {
+func newHealthClient(ctx context.Context, cfg *Config, livenessValidator HealthValidator) (*health, error) {
 	k8sTLSConfig := k8sclientrest.TLSClientConfig{Insecure: true}
 	if cfg.KubernetesAPIValidateCert {
 		kubernetesRootCAString, err := getStringFromFile(ctx, cfg.KubernetesAPICACertPath)

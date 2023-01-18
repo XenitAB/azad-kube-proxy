@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	rscors "github.com/rs/cors"
-	"github.com/xenitab/azad-kube-proxy/internal/config"
 )
 
 type Cors interface {
@@ -20,21 +19,21 @@ type cors struct {
 	allowedMethods              []string
 }
 
-func newCors(config *config.Config) *cors {
-	allowedHeaders := config.CorsAllowedHeaders
+func newCors(cfg *Config) *cors {
+	allowedHeaders := cfg.CorsAllowedHeaders
 	if len(allowedHeaders) == 0 {
 		allowedHeaders = []string{"*"}
 	}
 
-	allowedMethods := config.CorsAllowedMethods
+	allowedMethods := cfg.CorsAllowedMethods
 	if len(allowedMethods) == 0 {
 		allowedMethods = []string{"GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"}
 	}
 
 	return &cors{
-		enabled:                     config.CorsEnabled,
-		allowedOriginsDefaultScheme: config.CorsAllowedOriginsDefaultScheme,
-		allowedOrigins:              config.CorsAllowedOrigins,
+		enabled:                     cfg.CorsEnabled,
+		allowedOriginsDefaultScheme: cfg.CorsAllowedOriginsDefaultScheme,
+		allowedOrigins:              cfg.CorsAllowedOrigins,
 		allowedHeaders:              allowedHeaders,
 		allowedMethods:              allowedMethods,
 	}

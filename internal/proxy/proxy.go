@@ -15,7 +15,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
-	"github.com/xenitab/azad-kube-proxy/internal/config"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -35,12 +34,12 @@ type proxy struct {
 	health        Health
 	cors          Cors
 
-	cfg              *config.Config
+	cfg              *Config
 	kubernetesURL    *url.URL
 	kubernetesRootCA *x509.CertPool
 }
 
-func New(ctx context.Context, cfg *config.Config) (*proxy, error) {
+func New(ctx context.Context, cfg *Config) (*proxy, error) {
 	cacheClient, err := newMemoryCache(time.Duration(cfg.GroupSyncInterval) * time.Minute)
 	if err != nil {
 		return nil, err

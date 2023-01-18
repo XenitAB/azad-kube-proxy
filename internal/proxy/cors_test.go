@@ -9,7 +9,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
-	"github.com/xenitab/azad-kube-proxy/internal/config"
 )
 
 func TestMiddleware(t *testing.T) {
@@ -21,7 +20,7 @@ func TestMiddleware(t *testing.T) {
 	require.NoError(t, err)
 
 	cases := []struct {
-		config          *config.Config
+		config          *Config
 		reqHost         string
 		reqOrigin       string
 		reqMethod       string
@@ -31,7 +30,7 @@ func TestMiddleware(t *testing.T) {
 		expectedMethods string
 	}{
 		{
-			config: &config.Config{
+			config: &Config{
 				CorsEnabled:                     true,
 				CorsAllowedOriginsDefaultScheme: "http",
 				CorsAllowedOrigins:              []string{},
@@ -46,7 +45,7 @@ func TestMiddleware(t *testing.T) {
 			expectedMethods: "",
 		},
 		{
-			config: &config.Config{
+			config: &Config{
 				CorsEnabled:                     true,
 				CorsAllowedOriginsDefaultScheme: "http",
 				CorsAllowedOrigins:              []string{},
@@ -61,7 +60,7 @@ func TestMiddleware(t *testing.T) {
 			expectedMethods: "",
 		},
 		{
-			config: &config.Config{
+			config: &Config{
 				CorsEnabled:                     false,
 				CorsAllowedOriginsDefaultScheme: "http",
 				CorsAllowedOrigins:              []string{},
@@ -76,7 +75,7 @@ func TestMiddleware(t *testing.T) {
 			expectedMethods: "",
 		},
 		{
-			config: &config.Config{
+			config: &Config{
 				CorsEnabled:                     true,
 				CorsAllowedOriginsDefaultScheme: "http",
 				CorsAllowedOrigins:              []string{},
@@ -95,7 +94,7 @@ func TestMiddleware(t *testing.T) {
 			expectedMethods: "GET",
 		},
 		{
-			config: &config.Config{
+			config: &Config{
 				CorsEnabled:                     true,
 				CorsAllowedOriginsDefaultScheme: "http",
 				CorsAllowedOrigins:              []string{},
@@ -114,7 +113,7 @@ func TestMiddleware(t *testing.T) {
 			expectedMethods: "GET",
 		},
 		{
-			config: &config.Config{
+			config: &Config{
 				CorsEnabled:                     true,
 				CorsAllowedOriginsDefaultScheme: "http",
 				CorsAllowedOrigins:              []string{},
@@ -132,7 +131,7 @@ func TestMiddleware(t *testing.T) {
 			expectedMethods: "",
 		},
 		{
-			config: &config.Config{
+			config: &Config{
 				CorsEnabled:                     true,
 				CorsAllowedOriginsDefaultScheme: "http",
 				CorsAllowedOrigins:              []string{},
@@ -150,7 +149,7 @@ func TestMiddleware(t *testing.T) {
 			expectedMethods: "",
 		},
 		{
-			config: &config.Config{
+			config: &Config{
 				CorsEnabled:                     true,
 				CorsAllowedOriginsDefaultScheme: "http",
 				CorsAllowedOrigins:              []string{},
@@ -168,7 +167,7 @@ func TestMiddleware(t *testing.T) {
 			expectedMethods: "",
 		},
 		{
-			config: &config.Config{
+			config: &Config{
 				CorsEnabled:                     true,
 				CorsAllowedOriginsDefaultScheme: "http",
 				CorsAllowedOrigins:              []string{},

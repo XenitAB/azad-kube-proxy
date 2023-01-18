@@ -2,8 +2,6 @@ package proxy
 
 import (
 	"context"
-
-	"github.com/xenitab/azad-kube-proxy/internal/config"
 )
 
 type User interface {
@@ -13,10 +11,10 @@ type User interface {
 type user struct {
 	azure Azure
 
-	cfg *config.Config
+	cfg *Config
 }
 
-func newUser(cfg *config.Config, azureClient Azure) User {
+func newUser(cfg *Config, azureClient Azure) User {
 	return &user{
 		azure: azureClient,
 		cfg:   cfg,
