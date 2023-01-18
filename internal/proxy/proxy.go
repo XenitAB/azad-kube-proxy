@@ -17,7 +17,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/xenitab/azad-kube-proxy/internal/config"
 	"github.com/xenitab/azad-kube-proxy/internal/metrics"
-	"github.com/xenitab/azad-kube-proxy/internal/util"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -72,7 +71,7 @@ func New(ctx context.Context, cfg *config.Config) (*proxy, error) {
 		return nil, err
 	}
 
-	kubernetesRootCA, err := util.GetCertificate(ctx, cfg.KubernetesAPICACertPath)
+	kubernetesRootCA, err := getCertificate(ctx, cfg.KubernetesAPICACertPath)
 	if err != nil {
 		return nil, err
 	}

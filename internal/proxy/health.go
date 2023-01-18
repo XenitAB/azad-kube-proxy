@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/xenitab/azad-kube-proxy/internal/config"
-	"github.com/xenitab/azad-kube-proxy/internal/util"
 	k8sapiauthorization "k8s.io/api/authorization/v1"
 	k8sapimachinerymetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
@@ -29,7 +28,7 @@ type health struct {
 func newHealthClient(ctx context.Context, cfg *config.Config, livenessValidator HealthValidator) (*health, error) {
 	k8sTLSConfig := k8sclientrest.TLSClientConfig{Insecure: true}
 	if cfg.KubernetesAPIValidateCert {
-		kubernetesRootCAString, err := util.GetStringFromFile(ctx, cfg.KubernetesAPICACertPath)
+		kubernetesRootCAString, err := getStringFromFile(ctx, cfg.KubernetesAPICACertPath)
 		if err != nil {
 			return nil, err
 		}
@@ -45,7 +44,7 @@ func newHealthClient(ctx context.Context, cfg *config.Config, livenessValidator 
 		return nil, err
 	}
 
-	kubernetesToken, err := util.GetStringFromFile(ctx, cfg.KubernetesAPITokenPath)
+	kubernetesToken, err := getStringFromFile(ctx, cfg.KubernetesAPITokenPath)
 	if err != nil {
 		return nil, err
 	}
@@ -80,8 +79,8 @@ func (h *health) Ready(ctx context.Context) (bool, error) {
 	}
 
 	for _, rule := range res.Status.ResourceRules {
-		if util.SliceContains(rule.Verbs, "impersonate") {
-			if util.SliceContains(rule.Resources, "users") && util.SliceContains(rule.Resources, "groups") && util.SliceContains(rule.Resources, "serviceaccounts") {
+		if SliceContains(rule.Verbs, "impersonate") {
+			if SliceContains(rule.Resources, "users") && SliceContains(rule.Resources, "groups") && SliceContains(rule.Resources, "serviceaccounts") {
 				ready = true
 			}
 		}

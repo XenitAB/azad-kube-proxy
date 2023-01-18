@@ -11,7 +11,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/xenitab/azad-kube-proxy/internal/config"
 	"github.com/xenitab/azad-kube-proxy/internal/models"
-	"github.com/xenitab/azad-kube-proxy/internal/util"
 	"github.com/xenitab/go-oidc-middleware/options"
 )
 
@@ -45,7 +44,7 @@ func newHandlers(ctx context.Context, cfg *config.Config, cacheClient Cache, use
 		return nil, err
 	}
 
-	kubernetesToken, err := util.GetStringFromFile(ctx, cfg.KubernetesAPITokenPath)
+	kubernetesToken, err := getStringFromFile(ctx, cfg.KubernetesAPITokenPath)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +170,7 @@ func (h *handler) proxy(ctx context.Context, p *httputil.ReverseProxy) func(http
 		r.Header.Del(authorizationHeader)
 
 		// Remove WebSocket Authorization header (base64url.bearer.authorization.k8s.io.<bearer>) that is sent to the server
-		wsProtoString := util.StripWebSocketBearer(r.Header.Get("Sec-WebSocket-Protocol"))
+		wsProtoString := stripWebSocketBearer(r.Header.Get("Sec-WebSocket-Protocol"))
 		r.Header.Del("Sec-WebSocket-Protocol")
 		r.Header.Add("Sec-WebSocket-Protocol", wsProtoString)
 
