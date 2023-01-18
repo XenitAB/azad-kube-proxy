@@ -1,28 +1,45 @@
 package proxy
 
 import (
+	"context"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
+	"github.com/xenitab/azad-kube-proxy/internal/config"
 )
 
-func TestUserAgentToKubectlVersion(t *testing.T) {
+func TestNewMetricsClient(t *testing.T) {
+	ctx := logr.NewContext(context.Background(), logr.Discard())
 	cases := []struct {
-		userAgent       string
-		expectedVersion string
+		config              *config.Config
+		expectedErrContains string
 	}{
 		{
-			userAgent:       "kubectl/v1.22.2 (linux/amd64) kubernetes/8b5a191",
-			expectedVersion: "v1.22.2",
+			config:              &config.Config{},
+			expectedErrContains: "Unknown metrics",
 		},
 		{
-			userAgent:       "foobar",
-			expectedVersion: "unknown",
+			config: &config.Config{
+				Metrics: "NONE",
+			},
+			expectedErrContains: "",
+		},
+		{
+			config: &config.Config{
+				Metrics: "PROMETHEUS",
+			},
+			expectedErrContains: "",
 		},
 	}
 
 	for _, c := range cases {
-		result := userAgentToKubectlVersion(c.userAgent)
-		require.Equal(t, c.expectedVersion, result)
+		_, err := NewMetricsClient(ctx, c.config)
+		if c.expectedErrContains != "" {
+			require.ErrorContains(t, err, c.expectedErrContains)
+			continue
+		}
+
+		require.NoError(t, err)
 	}
 }

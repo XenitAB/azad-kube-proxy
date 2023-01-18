@@ -1,34 +1,31 @@
 package proxy
 
 import (
-	"net/http"
-	"strings"
+	"context"
+	"fmt"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/gorilla/mux"
+	"github.com/xenitab/azad-kube-proxy/internal/config"
 )
 
-var (
-	metricsRequestsCount = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "azad_kube_proxy_request_count",
-		Help: "Total number of successful requests to azad-kube-proxy",
-	}, []string{"kubectl_version"})
-)
-
-func incrementRequestCount(req *http.Request) {
-	kubectlVersion := userAgentToKubectlVersion(req.Header.Get("User-Agent"))
-	metricsRequestsCount.With(prometheus.Labels{
-		"kubectl_version": kubectlVersion,
-	}).Inc()
+type ClientInterface interface {
+	MetricsHandler(ctx context.Context, router *mux.Router) (*mux.Router, error)
 }
 
-func userAgentToKubectlVersion(userAgent string) string {
-	parts := strings.SplitN(userAgent, " ", 20)
-	for _, part := range parts {
-		if strings.Contains(part, "kubectl/") {
-			return strings.Replace(part, "kubectl/", "", 1)
-		}
+func NewMetricsClient(ctx context.Context, cfg *config.Config) (ClientInterface, error) {
+	metricsType, err := getMetrics(cfg.Metrics)
+	if err != nil {
+		return nil, err
 	}
 
-	return "unknown"
+	switch metricsType {
+	case noneMetrics:
+		client := newNoneClient(ctx)
+		return &client, nil
+	case prometheusMetrics:
+		client := newPrometheusClient(ctx)
+		return &client, nil
+	default:
+		return nil, fmt.Errorf("Unexpected metrics: %s", cfg.Metrics)
+	}
 }

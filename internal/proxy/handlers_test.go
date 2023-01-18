@@ -23,7 +23,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
 	"github.com/xenitab/azad-kube-proxy/internal/config"
-	"github.com/xenitab/azad-kube-proxy/internal/models"
 )
 
 var (
@@ -417,9 +416,9 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 			userClient:  testFakeUserClient,
 			userFunction: func(oldUserClient User) User {
 				i := 1
-				groups := []models.Group{}
+				groups := []groupModel{}
 				for i < testFakeMaxGroups+1 {
-					groups = append(groups, models.Group{
+					groups = append(groups, groupModel{
 						Name: fmt.Sprintf("group-%d", i),
 					})
 					i++
@@ -505,12 +504,12 @@ func testGetKubernetesAPITokenPath(t *testing.T) (string, func()) {
 
 type testFakeUserClient struct {
 	fakeError error
-	fakeUser  models.User
-	fakeGroup models.Group
+	fakeUser  userModel
+	fakeGroup groupModel
 	t         *testing.T
 }
 
-func newTestFakeUserClient(t *testing.T, username string, objectID string, groups []models.Group, fakeError error) *testFakeUserClient {
+func newTestFakeUserClient(t *testing.T, username string, objectID string, groups []groupModel, fakeError error) *testFakeUserClient {
 	t.Helper()
 
 	if username == "" {
@@ -520,13 +519,13 @@ func newTestFakeUserClient(t *testing.T, username string, objectID string, group
 		objectID = "00000000-0000-0000-0000-000000000000"
 	}
 	if len(groups) == 0 {
-		groups = []models.Group{
+		groups = []groupModel{
 			{Name: "group"},
 		}
 	}
 	return &testFakeUserClient{
 		fakeError: fakeError,
-		fakeUser: models.User{
+		fakeUser: userModel{
 			Username: username,
 			ObjectID: objectID,
 			Groups:   groups,
@@ -536,7 +535,7 @@ func newTestFakeUserClient(t *testing.T, username string, objectID string, group
 	}
 }
 
-func (client *testFakeUserClient) GetUser(ctx context.Context, username, objectID string) (models.User, error) {
+func (client *testFakeUserClient) GetUser(ctx context.Context, username, objectID string) (userModel, error) {
 	client.t.Helper()
 
 	return client.fakeUser, client.fakeError
@@ -545,12 +544,12 @@ func (client *testFakeUserClient) GetUser(ctx context.Context, username, objectI
 type testFakeCacheClient struct {
 	fakeError error
 	fakeFound bool
-	fakeUser  models.User
-	fakeGroup models.Group
+	fakeUser  userModel
+	fakeGroup groupModel
 	t         *testing.T
 }
 
-func newTestFakeCacheClient(t *testing.T, username string, objectID string, groups []models.Group, fakeFound bool, fakeError error) *testFakeCacheClient {
+func newTestFakeCacheClient(t *testing.T, username string, objectID string, groups []groupModel, fakeFound bool, fakeError error) *testFakeCacheClient {
 	t.Helper()
 
 	if username == "" {
@@ -560,7 +559,7 @@ func newTestFakeCacheClient(t *testing.T, username string, objectID string, grou
 		objectID = "00000000-0000-0000-0000-000000000000"
 	}
 	if len(groups) == 0 {
-		groups = []models.Group{
+		groups = []groupModel{
 			{Name: "group"},
 		}
 	}
@@ -568,7 +567,7 @@ func newTestFakeCacheClient(t *testing.T, username string, objectID string, grou
 	return &testFakeCacheClient{
 		fakeError: fakeError,
 		fakeFound: fakeFound,
-		fakeUser: models.User{
+		fakeUser: userModel{
 			Username: username,
 			ObjectID: objectID,
 			Groups:   groups,
@@ -578,25 +577,25 @@ func newTestFakeCacheClient(t *testing.T, username string, objectID string, grou
 	}
 }
 
-func (c *testFakeCacheClient) GetUser(ctx context.Context, s string) (models.User, bool, error) {
+func (c *testFakeCacheClient) GetUser(ctx context.Context, s string) (userModel, bool, error) {
 	c.t.Helper()
 
 	return c.fakeUser, c.fakeFound, c.fakeError
 }
 
-func (c *testFakeCacheClient) SetUser(ctx context.Context, s string, u models.User) error {
+func (c *testFakeCacheClient) SetUser(ctx context.Context, s string, u userModel) error {
 	c.t.Helper()
 
 	return c.fakeError
 }
 
-func (c *testFakeCacheClient) GetGroup(ctx context.Context, s string) (models.Group, bool, error) {
+func (c *testFakeCacheClient) GetGroup(ctx context.Context, s string) (groupModel, bool, error) {
 	c.t.Helper()
 
 	return c.fakeGroup, c.fakeFound, c.fakeError
 }
 
-func (c *testFakeCacheClient) SetGroup(ctx context.Context, s string, g models.Group) error {
+func (c *testFakeCacheClient) SetGroup(ctx context.Context, s string, g groupModel) error {
 	c.t.Helper()
 
 	return c.fakeError

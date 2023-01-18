@@ -16,7 +16,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
 	"github.com/xenitab/azad-kube-proxy/internal/config"
-	"github.com/xenitab/azad-kube-proxy/internal/metrics"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -32,7 +31,7 @@ type proxy struct {
 	cache         Cache
 	user          User
 	azure         Azure
-	MetricsClient metrics.ClientInterface
+	MetricsClient ClientInterface
 	health        Health
 	cors          Cors
 
@@ -54,7 +53,7 @@ func New(ctx context.Context, cfg *config.Config) (*proxy, error) {
 
 	userClient := newUser(cfg, azureClient)
 
-	metricsClient, err := metrics.NewMetricsClient(ctx, cfg)
+	metricsClient, err := NewMetricsClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}

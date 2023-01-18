@@ -9,7 +9,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	"github.com/xenitab/azad-kube-proxy/internal/config"
-	"github.com/xenitab/azad-kube-proxy/internal/models"
 )
 
 func TestGetUser(t *testing.T) {
@@ -28,28 +27,28 @@ func TestGetUser(t *testing.T) {
 		userClient          User
 		username            string
 		objectID            string
-		expectedUserType    models.UserType
+		expectedUserType    userModelType
 		expectedErrContains string
 	}{
 		{
 			userClient:          newUser(cfg, azureClient),
 			username:            "",
 			objectID:            "00000000-0000-0000-0000-000000000000",
-			expectedUserType:    models.ServicePrincipalUserType,
+			expectedUserType:    servicePrincipalUserModelType,
 			expectedErrContains: "",
 		},
 		{
 			userClient:          newUser(cfg, azureClient),
 			username:            "username",
 			objectID:            "00000000-0000-0000-0000-000000000000",
-			expectedUserType:    models.NormalUserType,
+			expectedUserType:    normalUserModelType,
 			expectedErrContains: "",
 		},
 		{
 			userClient:          newUser(cfg, azureClientError),
 			username:            "username",
 			objectID:            "00000000-0000-0000-0000-000000000000",
-			expectedUserType:    models.NormalUserType,
+			expectedUserType:    normalUserModelType,
 			expectedErrContains: "Fake error",
 		},
 	}
@@ -71,7 +70,7 @@ type testFakeAzureClient struct {
 	t         *testing.T
 }
 
-func (client *testFakeAzureClient) GetUserGroups(ctx context.Context, objectID string, userType models.UserType) ([]models.Group, error) {
+func (client *testFakeAzureClient) GetUserGroups(ctx context.Context, objectID string, userType userModelType) ([]groupModel, error) {
 	client.t.Helper()
 
 	return nil, client.fakeError
