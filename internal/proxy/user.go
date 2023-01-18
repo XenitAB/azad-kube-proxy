@@ -11,10 +11,10 @@ type User interface {
 type user struct {
 	azure Azure
 
-	cfg *Config
+	cfg *config
 }
 
-func newUser(cfg *Config, azureClient Azure) User {
+func newUser(cfg *config, azureClient Azure) User {
 	return &user{
 		azure: azureClient,
 		cfg:   cfg,

@@ -19,7 +19,7 @@ type cors struct {
 	allowedMethods              []string
 }
 
-func newCors(cfg *Config) *cors {
+func newCors(cfg *config) *cors {
 	allowedHeaders := cfg.CorsAllowedHeaders
 	if len(allowedHeaders) == 0 {
 		allowedHeaders = []string{"*"}

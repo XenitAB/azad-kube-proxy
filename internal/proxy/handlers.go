@@ -31,12 +31,12 @@ type handler struct {
 	user   User
 	health Health
 
-	cfg             *Config
+	cfg             *config
 	groupIdentifier groupIdentifier
 	kubernetesToken string
 }
 
-func newHandlers(ctx context.Context, cfg *Config, cacheClient Cache, userClient User, healthClient Health) (*handler, error) {
+func newHandlers(ctx context.Context, cfg *config, cacheClient Cache, userClient User, healthClient Health) (*handler, error) {
 	groupIdentifier, err := GetGroupIdentifier(cfg.GroupIdentifier)
 	if err != nil {
 		return nil, err

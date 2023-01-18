@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
-	"github.com/xenitab/azad-kube-proxy/internal/config"
 	"github.com/xenitab/azad-kube-proxy/internal/proxy"
 	"go.uber.org/zap"
 )
@@ -43,7 +42,7 @@ func main() {
 }
 
 func run(ctx context.Context) error {
-	cfg, err := config.NewConfig(os.Args[1:], Version, Revision, Created)
+	cfg, err := proxy.NewConfig(os.Args[1:], Version, Revision, Created)
 	if err != nil {
 		return err
 	}

@@ -34,12 +34,12 @@ type proxy struct {
 	health        Health
 	cors          Cors
 
-	cfg              *Config
+	cfg              *config
 	kubernetesURL    *url.URL
 	kubernetesRootCA *x509.CertPool
 }
 
-func New(ctx context.Context, cfg *Config) (*proxy, error) {
+func New(ctx context.Context, cfg *config) (*proxy, error) {
 	cacheClient, err := newMemoryCache(time.Duration(cfg.GroupSyncInterval) * time.Minute)
 	if err != nil {
 		return nil, err

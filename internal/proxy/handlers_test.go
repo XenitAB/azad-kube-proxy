@@ -38,7 +38,7 @@ func TestNewHandlersClient(t *testing.T) {
 	kubernetesAPITokenPath, cleanupFn := testGetKubernetesAPITokenPath(t)
 	defer cleanupFn()
 
-	cfg := &Config{
+	cfg := &config{
 		AzureTenantID:          tenantID,
 		KubernetesAPIHost:      "fake-url",
 		KubernetesAPITLS:       true,
@@ -60,7 +60,7 @@ func TestReadinessHandler(t *testing.T) {
 	kubernetesAPITokenPath, cleanupFn := testGetKubernetesAPITokenPath(t)
 	defer cleanupFn()
 
-	cfg := &Config{
+	cfg := &config{
 		AzureTenantID:          tenantID,
 		KubernetesAPIHost:      "fake-url",
 		KubernetesAPITLS:       true,
@@ -111,7 +111,7 @@ func TestLivenessHandler(t *testing.T) {
 	kubernetesAPITokenPath, cleanupFn := testGetKubernetesAPITokenPath(t)
 	defer cleanupFn()
 
-	cfg := &Config{
+	cfg := &config{
 		AzureTenantID:          tenantID,
 		KubernetesAPIHost:      "fake-url",
 		KubernetesAPITLS:       true,
@@ -182,7 +182,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 	kubernetesAPITokenPath, cleanupFn := testGetKubernetesAPITokenPath(t)
 	defer cleanupFn()
 
-	cfg := &Config{
+	cfg := &config{
 		AzureClientID:          clientID,
 		AzureClientSecret:      clientSecret,
 		AzureTenantID:          tenantID,
@@ -197,8 +197,8 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 	cases := []struct {
 		testDescription     string
 		request             *http.Request
-		config              *Config
-		configFunction      func(oldConfig Config) Config
+		config              *config
+		configFunction      func(oldConfig config) config
 		cacheClient         Cache
 		cacheFunction       func(oldCacheClient Cache) Cache
 		userClient          User
@@ -440,7 +440,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 				},
 			},
 			config: cfg,
-			configFunction: func(oldConfig Config) Config {
+			configFunction: func(oldConfig config) config {
 				oldConfig.GroupIdentifier = "OBJECTID"
 				return oldConfig
 			},

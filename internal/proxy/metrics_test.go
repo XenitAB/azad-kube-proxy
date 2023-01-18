@@ -11,21 +11,21 @@ import (
 func TestNewMetricsClient(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 	cases := []struct {
-		config              *Config
+		config              *config
 		expectedErrContains string
 	}{
 		{
-			config:              &Config{},
+			config:              &config{},
 			expectedErrContains: "Unknown metrics",
 		},
 		{
-			config: &Config{
+			config: &config{
 				Metrics: "NONE",
 			},
 			expectedErrContains: "",
 		},
 		{
-			config: &Config{
+			config: &config{
 				Metrics: "PROMETHEUS",
 			},
 			expectedErrContains: "",

@@ -24,7 +24,7 @@ type health struct {
 	livenessValidator HealthValidator
 }
 
-func newHealthClient(ctx context.Context, cfg *Config, livenessValidator HealthValidator) (*health, error) {
+func newHealthClient(ctx context.Context, cfg *config, livenessValidator HealthValidator) (*health, error) {
 	k8sTLSConfig := k8sclientrest.TLSClientConfig{Insecure: true}
 	if cfg.KubernetesAPIValidateCert {
 		kubernetesRootCAString, err := getStringFromFile(ctx, cfg.KubernetesAPICACertPath)

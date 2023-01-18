@@ -27,11 +27,11 @@ func TestNewHealthClient(t *testing.T) {
 	testCreateTemporaryFile(t, caPath, "fake-ca-string")
 
 	cases := []struct {
-		config              *Config
+		config              *config
 		expectedErrContains string
 	}{
 		{
-			config: &Config{
+			config: &config{
 				KubernetesAPITLS:          true,
 				KubernetesAPIValidateCert: true,
 				KubernetesAPIHost:         "fake-url",
@@ -41,7 +41,7 @@ func TestNewHealthClient(t *testing.T) {
 			expectedErrContains: "unable to load root certificates: unable to parse bytes as PEM block",
 		},
 		{
-			config: &Config{
+			config: &config{
 				KubernetesAPITLS:          true,
 				KubernetesAPIValidateCert: false,
 				KubernetesAPIHost:         "fake-url",
@@ -133,7 +133,7 @@ func TestLive(t *testing.T) {
 	testCreateTemporaryFile(t, caPath, "fake-ca-string")
 
 	validator := &testFakeValidator{t}
-	fakeConfig := &Config{
+	fakeConfig := &config{
 		KubernetesAPIValidateCert: false,
 		KubernetesAPITLS:          true,
 		KubernetesAPIHost:         "fake-url",

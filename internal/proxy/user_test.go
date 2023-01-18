@@ -12,7 +12,7 @@ import (
 
 func TestGetUser(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
-	cfg := &Config{}
+	cfg := &config{}
 	azureClient := &testFakeAzureClient{
 		fakeError: nil,
 		t:         t,

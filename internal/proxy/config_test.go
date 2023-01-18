@@ -61,7 +61,7 @@ func TestNewConfig(t *testing.T) {
 		}
 		cfg, err := NewConfig(args[1:], "", "", "")
 		require.NoError(t, err)
-		expectedCfg := &Config{
+		expectedCfg := &config{
 			AzureADMaxGroupCount:            50,
 			AzureClientID:                   "ze-client-id",
 			AzureClientSecret:               "ze-client-secret",

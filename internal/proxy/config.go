@@ -6,7 +6,7 @@ import (
 	"github.com/alexflint/go-arg"
 )
 
-type Config struct {
+type config struct {
 	AzureADGroupPrefix               string   `arg:"--azure-ad-group-prefix,env:AZURE_AD_GROUP_PREFIX" help:"The prefix of the Azure AD groups to be passed to the Kubernetes API"`
 	AzureADMaxGroupCount             int      `arg:"--azure-ad-max-group-count,env:AZURE_AD_MAX_GROUP_COUNT" default:"50" help:"The maximum of groups allowed to be passed to the Kubernetes API before the proxy will return unauthorized"`
 	AzureClientID                    string   `arg:"--client-id,env:CLIENT_ID,required" help:"Azure AD Application Client ID"`
@@ -39,12 +39,12 @@ type Config struct {
 	created  string
 }
 
-func (cfg Config) Version() string {
+func (cfg config) Version() string {
 	return fmt.Sprintf("version=%s revision=%s created=%s\n", cfg.version, cfg.revision, cfg.created)
 }
 
-func NewConfig(args []string, version, revision, created string) (*Config, error) {
-	cfg := &Config{
+func NewConfig(args []string, version, revision, created string) (*config, error) {
+	cfg := &config{
 		version:  version,
 		revision: revision,
 		created:  created,
@@ -54,12 +54,12 @@ func NewConfig(args []string, version, revision, created string) (*Config, error
 		IgnoreEnv: false,
 	}, cfg)
 	if err != nil {
-		return &Config{}, err
+		return &config{}, err
 	}
 
 	err = parser.Parse(args)
 	if err != nil {
-		return &Config{}, err
+		return &config{}, err
 	}
 
 	return cfg, err
