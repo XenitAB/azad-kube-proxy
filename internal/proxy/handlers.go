@@ -63,7 +63,7 @@ func (h *handler) readiness(ctx context.Context) func(http.ResponseWriter, *http
 	log := logr.FromContextOrDiscard(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		ready, err := h.health.Ready(ctx)
+		ready, err := h.health.ready(ctx)
 		if !ready {
 			log.Error(err, "Ready check failed")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -86,7 +86,7 @@ func (h *handler) liveness(ctx context.Context) func(http.ResponseWriter, *http.
 	log := logr.FromContextOrDiscard(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		live, err := h.health.Live(ctx)
+		live, err := h.health.live(ctx)
 		if !live {
 			log.Error(err, "Live check failed")
 			w.WriteHeader(http.StatusInternalServerError)

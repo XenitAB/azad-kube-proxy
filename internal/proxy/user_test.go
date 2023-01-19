@@ -69,18 +69,18 @@ type testFakeAzureClient struct {
 	t         *testing.T
 }
 
-func (client *testFakeAzureClient) GetUserGroups(ctx context.Context, objectID string, userType userModelType) ([]groupModel, error) {
+func (client *testFakeAzureClient) getUserGroups(ctx context.Context, objectID string, userType userModelType) ([]groupModel, error) {
 	client.t.Helper()
 
 	return nil, client.fakeError
 }
 
-func (client *testFakeAzureClient) StartSyncGroups(ctx context.Context, syncInterval time.Duration) (*time.Ticker, chan bool, error) {
+func (client *testFakeAzureClient) startSyncGroups(ctx context.Context, syncInterval time.Duration) (*time.Ticker, chan bool, error) {
 	client.t.Helper()
 	return nil, nil, nil
 }
 
-func (client *testFakeAzureClient) Valid(ctx context.Context) bool {
+func (client *testFakeAzureClient) valid(ctx context.Context) bool {
 	client.t.Helper()
 	return true
 }

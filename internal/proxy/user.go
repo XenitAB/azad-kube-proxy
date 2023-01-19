@@ -28,7 +28,7 @@ func (u *user) GetUser(ctx context.Context, username, objectID string) (userMode
 		userType = servicePrincipalUserModelType
 	}
 
-	groups, err := u.azure.GetUserGroups(ctx, objectID, userType)
+	groups, err := u.azure.getUserGroups(ctx, objectID, userType)
 	if err != nil {
 		return userModel{}, err
 	}

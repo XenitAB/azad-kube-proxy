@@ -601,35 +601,35 @@ func (c *testFakeCacheClient) SetGroup(ctx context.Context, s string, g groupMod
 }
 
 type testFakeHealthClient struct {
-	ready      bool
+	isReady    bool
 	readyError error
-	live       bool
+	isLive     bool
 	liveError  error
 	t          *testing.T
 }
 
-func newTestFakeHealthClient(t *testing.T, ready bool, readyError error, live bool, liveError error) Health {
+func newTestFakeHealthClient(t *testing.T, isReady bool, readyError error, isLive bool, liveError error) *testFakeHealthClient {
 	t.Helper()
 
 	return &testFakeHealthClient{
-		ready,
+		isReady,
 		readyError,
-		live,
+		isLive,
 		liveError,
 		t,
 	}
 }
 
-func (client *testFakeHealthClient) Ready(ctx context.Context) (bool, error) {
+func (client *testFakeHealthClient) ready(ctx context.Context) (bool, error) {
 	client.t.Helper()
 
-	return client.ready, client.readyError
+	return client.isReady, client.readyError
 }
 
-func (client *testFakeHealthClient) Live(ctx context.Context) (bool, error) {
+func (client *testFakeHealthClient) live(ctx context.Context) (bool, error) {
 	client.t.Helper()
 
-	return client.live, client.liveError
+	return client.isLive, client.liveError
 }
 
 func testGetEnvOrSkip(t *testing.T, envVar string) string {

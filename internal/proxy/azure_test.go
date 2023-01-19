@@ -94,7 +94,7 @@ func TestValid(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		valid := c.client.Valid(ctx)
+		valid := c.client.valid(ctx)
 		require.True(t, valid)
 	}
 }
@@ -142,7 +142,7 @@ func TestGetUserGroups(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		_, err := azureClient.GetUserGroups(ctx, c.objectID, c.userModelType)
+		_, err := azureClient.getUserGroups(ctx, c.objectID, c.userModelType)
 		if c.expectedErrContains != "" {
 			require.ErrorContains(t, err, c.expectedErrContains)
 			continue
@@ -151,7 +151,7 @@ func TestGetUserGroups(t *testing.T) {
 	}
 
 	emptyAzureClient := azure{}
-	_, err = emptyAzureClient.GetUserGroups(ctx, "", "FAKE")
+	_, err = emptyAzureClient.getUserGroups(ctx, "", "FAKE")
 	require.ErrorContains(t, err, "Unknown userType: FAKE")
 }
 
@@ -168,7 +168,7 @@ func TestStartSyncGroups(t *testing.T) {
 	azureClient, err := newAzureClient(ctx, clientID, clientSecret, tenantID, graphFilter, memCache)
 	require.NoError(t, err)
 
-	groupSyncTicker, groupSyncChan, err := azureClient.StartSyncGroups(ctx, 1*time.Second)
+	groupSyncTicker, groupSyncChan, err := azureClient.startSyncGroups(ctx, 1*time.Second)
 	require.NoError(t, err)
 	time.Sleep(2 * time.Second)
 	var stopGroupSync func() = func() {

@@ -11,12 +11,12 @@ import (
 )
 
 type Health interface {
-	Ready(ctx context.Context) (bool, error)
-	Live(ctx context.Context) (bool, error)
+	ready(ctx context.Context) (bool, error)
+	live(ctx context.Context) (bool, error)
 }
 
 type HealthValidator interface {
-	Valid(ctx context.Context) bool
+	valid(ctx context.Context) bool
 }
 
 type health struct {
@@ -67,7 +67,7 @@ func newHealthClient(ctx context.Context, cfg *config, livenessValidator HealthV
 	return healthClient, nil
 }
 
-func (h *health) Ready(ctx context.Context) (bool, error) {
+func (h *health) ready(ctx context.Context) (bool, error) {
 	ready := false
 
 	selfSubjectRulesReview := &k8sapiauthorization.SelfSubjectRulesReview{Spec: k8sapiauthorization.SelfSubjectRulesReviewSpec{Namespace: "default"}}
@@ -93,7 +93,7 @@ func (h *health) Ready(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-func (h *health) Live(ctx context.Context) (bool, error) {
-	valid := h.livenessValidator.Valid(ctx)
+func (h *health) live(ctx context.Context) (bool, error) {
+	valid := h.livenessValidator.valid(ctx)
 	return valid, nil
 }

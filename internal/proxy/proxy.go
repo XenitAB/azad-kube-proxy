@@ -104,7 +104,7 @@ func (p *proxy) Start(ctx context.Context) error {
 
 	// Initiate group sync
 	log.Info("Starting group sync")
-	syncTicker, syncChan, err := p.azure.StartSyncGroups(ctx, time.Duration(p.cfg.GroupSyncInterval)*time.Minute)
+	syncTicker, syncChan, err := p.azure.startSyncGroups(ctx, time.Duration(p.cfg.GroupSyncInterval)*time.Minute)
 	if err != nil {
 		return err
 	}

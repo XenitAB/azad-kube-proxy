@@ -16,9 +16,9 @@ type AzureUser interface {
 }
 
 type Azure interface {
-	GetUserGroups(ctx context.Context, objectID string, userType userModelType) ([]groupModel, error)
-	StartSyncGroups(ctx context.Context, syncInterval time.Duration) (*time.Ticker, chan bool, error)
-	Valid(ctx context.Context) bool
+	getUserGroups(ctx context.Context, objectID string, userType userModelType) ([]groupModel, error)
+	startSyncGroups(ctx context.Context, syncInterval time.Duration) (*time.Ticker, chan bool, error)
+	valid(ctx context.Context) bool
 }
 
 type azure struct {
@@ -76,9 +76,9 @@ func newAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graph
 	}, nil
 }
 
-func (client *azure) Valid(ctx context.Context) bool {
+func (a *azure) valid(ctx context.Context) bool {
 	log := logr.FromContextOrDiscard(ctx)
-	token, err := client.authorizer.Token()
+	token, err := a.authorizer.Token()
 
 	if err != nil {
 		log.Error(err, "Unable to get token from authorizer")
@@ -98,8 +98,7 @@ func (client *azure) Valid(ctx context.Context) bool {
 	return true
 }
 
-// GetUserGroups ...
-func (client *azure) GetUserGroups(ctx context.Context, objectID string, userType userModelType) ([]groupModel, error) {
+func (client *azure) getUserGroups(ctx context.Context, objectID string, userType userModelType) ([]groupModel, error) {
 	var user AzureUser
 
 	switch userType {
@@ -114,8 +113,7 @@ func (client *azure) GetUserGroups(ctx context.Context, objectID string, userTyp
 	return user.getGroups(ctx, objectID)
 }
 
-// StartSyncGroups initiates a ticker that will sync Azure AD Groups
-func (client *azure) StartSyncGroups(ctx context.Context, syncInterval time.Duration) (*time.Ticker, chan bool, error) {
+func (client *azure) startSyncGroups(ctx context.Context, syncInterval time.Duration) (*time.Ticker, chan bool, error) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	ticker := time.NewTicker(syncInterval)

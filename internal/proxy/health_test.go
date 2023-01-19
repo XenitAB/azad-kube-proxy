@@ -110,7 +110,7 @@ func TestReady(t *testing.T) {
 	for _, c := range cases {
 		client := c.clientFunc(fakeClient)
 
-		ready, err := client.Ready(ctx)
+		ready, err := client.ready(ctx)
 		if c.expectedErrContains != "" {
 			require.ErrorContains(t, err, c.expectedErrContains)
 			continue
@@ -143,7 +143,7 @@ func TestLive(t *testing.T) {
 	client, err := newHealthClient(ctx, fakeConfig, validator)
 	require.NoError(t, err)
 
-	live, err := client.Live(ctx)
+	live, err := client.live(ctx)
 	require.NoError(t, err)
 	require.True(t, live)
 }
@@ -153,7 +153,7 @@ type testFakeValidator struct {
 }
 
 // Valid ...
-func (client *testFakeValidator) Valid(ctx context.Context) bool {
+func (client *testFakeValidator) valid(ctx context.Context) bool {
 	client.t.Helper()
 
 	return true
