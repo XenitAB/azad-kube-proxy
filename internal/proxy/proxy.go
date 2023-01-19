@@ -18,19 +18,11 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type Proxy interface {
-	Start(ctx context.Context) error
-	listenAndServe(httpServer *http.Server) error
-	getHTTPServer(handler http.Handler) *http.Server
-	getReverseProxy(ctx context.Context) *httputil.ReverseProxy
-	getProxyTransport() *http.Transport
-}
-
 type proxy struct {
 	cache         Cache
 	user          User
 	azure         Azure
-	MetricsClient ClientInterface
+	MetricsClient Metrics
 	health        Health
 	cors          Cors
 
@@ -52,7 +44,7 @@ func New(ctx context.Context, cfg *config) (*proxy, error) {
 
 	userClient := newUser(cfg, azureClient)
 
-	metricsClient, err := NewMetricsClient(ctx, cfg)
+	metricsClient, err := newMetricsClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +66,7 @@ func New(ctx context.Context, cfg *config) (*proxy, error) {
 		return nil, err
 	}
 
-	proxyClient := proxy{
+	p := proxy{
 		cache:            cacheClient,
 		user:             userClient,
 		azure:            azureClient,
@@ -86,10 +78,9 @@ func New(ctx context.Context, cfg *config) (*proxy, error) {
 		kubernetesRootCA: kubernetesRootCA,
 	}
 
-	return &proxyClient, nil
+	return &p, nil
 }
 
-// Start launches the reverse proxy
 func (p *proxy) Start(ctx context.Context) error {
 	log := logr.FromContextOrDiscard(ctx)
 
@@ -129,7 +120,7 @@ func (p *proxy) Start(ctx context.Context) error {
 	metricsRouter.HandleFunc("/readyz", proxyHandlers.readiness(ctx)).Methods("GET")
 	metricsRouter.HandleFunc("/healthz", proxyHandlers.liveness(ctx)).Methods("GET")
 
-	metricsRouter, err = p.MetricsClient.MetricsHandler(ctx, metricsRouter)
+	metricsRouter, err = p.MetricsClient.metricsHandler(ctx, metricsRouter)
 	if err != nil {
 		return err
 	}
@@ -215,16 +206,16 @@ func (p *proxy) Start(ctx context.Context) error {
 	return nil
 }
 
-func (client *proxy) listenAndServe(httpServer *http.Server) error {
-	if client.cfg.ListenerTLSConfigEnabled {
-		return httpServer.ListenAndServeTLS(client.cfg.ListenerTLSConfigCertificatePath, client.cfg.ListenerTLSConfigKeyPath)
+func (p *proxy) listenAndServe(httpServer *http.Server) error {
+	if p.cfg.ListenerTLSConfigEnabled {
+		return httpServer.ListenAndServeTLS(p.cfg.ListenerTLSConfigCertificatePath, p.cfg.ListenerTLSConfigKeyPath)
 	}
 
 	return httpServer.ListenAndServe()
 }
 
-func (client *proxy) getHTTPServer(handler http.Handler) *http.Server {
-	addr := fmt.Sprintf("%s:%d", client.cfg.ListenerAddress, client.cfg.ListenerPort)
+func (p *proxy) getHTTPServer(handler http.Handler) *http.Server {
+	addr := fmt.Sprintf("%s:%d", p.cfg.ListenerAddress, p.cfg.ListenerPort)
 	return &http.Server{
 		Addr:              addr,
 		Handler:           handler,
@@ -232,8 +223,8 @@ func (client *proxy) getHTTPServer(handler http.Handler) *http.Server {
 	}
 }
 
-func (client *proxy) getHTTPMetricsServer(handler http.Handler) *http.Server {
-	addr := fmt.Sprintf("%s:%d", client.cfg.MetricsListenerAddress, client.cfg.MetricsListenerPort)
+func (p *proxy) getHTTPMetricsServer(handler http.Handler) *http.Server {
+	addr := fmt.Sprintf("%s:%d", p.cfg.MetricsListenerAddress, p.cfg.MetricsListenerPort)
 	return &http.Server{
 		Addr:              addr,
 		Handler:           handler,
@@ -241,15 +232,15 @@ func (client *proxy) getHTTPMetricsServer(handler http.Handler) *http.Server {
 	}
 }
 
-func (client *proxy) getReverseProxy(ctx context.Context) *httputil.ReverseProxy {
-	reverseProxy := httputil.NewSingleHostReverseProxy(client.kubernetesURL)
-	reverseProxy.Transport = client.getProxyTransport()
+func (p *proxy) getReverseProxy(ctx context.Context) *httputil.ReverseProxy {
+	reverseProxy := httputil.NewSingleHostReverseProxy(p.kubernetesURL)
+	reverseProxy.Transport = p.getProxyTransport()
 	return reverseProxy
 }
 
-func (client *proxy) getProxyTransport() *http.Transport {
+func (p *proxy) getProxyTransport() *http.Transport {
 	return &http.Transport{
-		TLSClientConfig: getProxyTLSClientConfig(client.cfg.KubernetesAPIValidateCert, client.kubernetesRootCA),
+		TLSClientConfig: getProxyTLSClientConfig(p.cfg.KubernetesAPIValidateCert, p.kubernetesRootCA),
 	}
 }
 

@@ -33,7 +33,7 @@ func TestNewMetricsClient(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		_, err := NewMetricsClient(ctx, c.config)
+		_, err := newMetricsClient(ctx, c.config)
 		if c.expectedErrContains != "" {
 			require.ErrorContains(t, err, c.expectedErrContains)
 			continue

@@ -11,7 +11,7 @@ type Metrics interface {
 	metricsHandler(ctx context.Context, router *mux.Router) (*mux.Router, error)
 }
 
-func NewMetricsClient(ctx context.Context, cfg *config) (Metrics, error) {
+func newMetricsClient(ctx context.Context, cfg *config) (Metrics, error) {
 	metricsType, err := getMetrics(cfg.Metrics)
 	if err != nil {
 		return nil, err
