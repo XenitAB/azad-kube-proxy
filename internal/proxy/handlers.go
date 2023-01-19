@@ -124,7 +124,7 @@ func (h *handler) proxy(ctx context.Context, p *httputil.ReverseProxy) func(http
 		}
 
 		// Use the token hash to get the user object from cache
-		user, found, err := h.cache.GetUser(ctx, claims.sub)
+		user, found, err := h.cache.getUser(ctx, claims.sub)
 		if err != nil {
 			log.Error(err, "Unable to get cached user object")
 			http.Error(w, "Unexpected error", http.StatusInternalServerError)
@@ -157,7 +157,7 @@ func (h *handler) proxy(ctx context.Context, p *httputil.ReverseProxy) func(http
 				return
 			}
 
-			err = h.cache.SetUser(ctx, claims.sub, user)
+			err = h.cache.setUser(ctx, claims.sub, user)
 			if err != nil {
 				log.Error(err, "Unable to set cache for user object")
 				http.Error(w, "Unexpected error", http.StatusInternalServerError)

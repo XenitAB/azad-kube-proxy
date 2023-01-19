@@ -17,8 +17,7 @@ func newMemoryCache(expirationInterval time.Duration) (*memoryCache, error) {
 	}, nil
 }
 
-// GetUser ...
-func (c *memoryCache) GetUser(ctx context.Context, s string) (userModel, bool, error) {
+func (c *memoryCache) getUser(ctx context.Context, s string) (userModel, bool, error) {
 	u, f := c.CacheClient.Get(s)
 	if !f {
 		return userModel{}, false, nil
@@ -27,14 +26,14 @@ func (c *memoryCache) GetUser(ctx context.Context, s string) (userModel, bool, e
 }
 
 // SetUser ...
-func (c *memoryCache) SetUser(ctx context.Context, s string, u userModel) error {
+func (c *memoryCache) setUser(ctx context.Context, s string, u userModel) error {
 	c.CacheClient.Set(s, u, 0)
 
 	return nil
 }
 
 // GetGroup ...
-func (c *memoryCache) GetGroup(ctx context.Context, s string) (groupModel, bool, error) {
+func (c *memoryCache) getGroup(ctx context.Context, s string) (groupModel, bool, error) {
 	g, f := c.CacheClient.Get(s)
 	if !f {
 		return groupModel{}, false, nil
@@ -43,7 +42,7 @@ func (c *memoryCache) GetGroup(ctx context.Context, s string) (groupModel, bool,
 }
 
 // SetGroup ...
-func (c *memoryCache) SetGroup(ctx context.Context, s string, g groupModel) error {
+func (c *memoryCache) setGroup(ctx context.Context, s string, g groupModel) error {
 	c.CacheClient.Set(s, g, 0)
 
 	return nil

@@ -576,25 +576,25 @@ func newTestFakeCacheClient(t *testing.T, username string, objectID string, grou
 	}
 }
 
-func (c *testFakeCacheClient) GetUser(ctx context.Context, s string) (userModel, bool, error) {
+func (c *testFakeCacheClient) getUser(ctx context.Context, s string) (userModel, bool, error) {
 	c.t.Helper()
 
 	return c.fakeUser, c.fakeFound, c.fakeError
 }
 
-func (c *testFakeCacheClient) SetUser(ctx context.Context, s string, u userModel) error {
+func (c *testFakeCacheClient) setUser(ctx context.Context, s string, u userModel) error {
 	c.t.Helper()
 
 	return c.fakeError
 }
 
-func (c *testFakeCacheClient) GetGroup(ctx context.Context, s string) (groupModel, bool, error) {
+func (c *testFakeCacheClient) getGroup(ctx context.Context, s string) (groupModel, bool, error) {
 	c.t.Helper()
 
 	return c.fakeGroup, c.fakeFound, c.fakeError
 }
 
-func (c *testFakeCacheClient) SetGroup(ctx context.Context, s string, g groupModel) error {
+func (c *testFakeCacheClient) setGroup(ctx context.Context, s string, g groupModel) error {
 	c.t.Helper()
 
 	return c.fakeError

@@ -24,13 +24,13 @@ func TestMemoryGetUser(t *testing.T) {
 
 	for _, c := range cases {
 		cache.CacheClient.Set(c.Key, c.User, 0)
-		cacheRes, found, err := cache.GetUser(ctx, c.Key)
+		cacheRes, found, err := cache.getUser(ctx, c.Key)
 		require.NoError(t, err)
 		require.True(t, found)
 		require.Equal(t, c.User, cacheRes)
 	}
 
-	_, found, _ := cache.GetUser(ctx, "does-not-exist")
+	_, found, _ := cache.getUser(ctx, "does-not-exist")
 	require.False(t, found)
 }
 
@@ -42,7 +42,7 @@ func TestMemorySetUser(t *testing.T) {
 	cases, _ := testGetMemoryCases(t)
 
 	for _, c := range cases {
-		err := cache.SetUser(ctx, c.Key, c.User)
+		err := cache.setUser(ctx, c.Key, c.User)
 		require.NoError(t, err)
 
 		cacheRes, found := cache.CacheClient.Get(c.Key)
@@ -62,14 +62,14 @@ func TestMemoryGetGroup(t *testing.T) {
 
 	for _, c := range cases {
 		cache.CacheClient.Set(c.Key, c.Group, 0)
-		cacheRes, found, err := cache.GetGroup(ctx, c.Key)
+		cacheRes, found, err := cache.getGroup(ctx, c.Key)
 
 		require.NoError(t, err)
 		require.Equal(t, c.Group, cacheRes)
 		require.True(t, found)
 	}
 
-	_, found, _ := cache.GetGroup(ctx, "does-not-exist")
+	_, found, _ := cache.getGroup(ctx, "does-not-exist")
 	require.False(t, found)
 }
 
@@ -83,7 +83,7 @@ func TestMemorySetGroup(t *testing.T) {
 	_, cases := testGetMemoryCases(t)
 
 	for _, c := range cases {
-		err := cache.SetGroup(ctx, c.Key, c.Group)
+		err := cache.setGroup(ctx, c.Key, c.Group)
 		if err != nil {
 			t.Errorf("Expected err to be nil but it was %q", err)
 		}

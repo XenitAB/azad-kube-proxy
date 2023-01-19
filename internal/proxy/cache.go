@@ -5,8 +5,8 @@ import (
 )
 
 type Cache interface {
-	GetUser(ctx context.Context, s string) (userModel, bool, error)
-	SetUser(ctx context.Context, s string, u userModel) error
-	GetGroup(ctx context.Context, s string) (groupModel, bool, error)
-	SetGroup(ctx context.Context, s string, g groupModel) error
+	getUser(ctx context.Context, s string) (userModel, bool, error)
+	setUser(ctx context.Context, s string, u userModel) error
+	getGroup(ctx context.Context, s string) (groupModel, bool, error)
+	setGroup(ctx context.Context, s string, g groupModel) error
 }

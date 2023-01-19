@@ -33,7 +33,7 @@ func (user *azureUser) getGroups(ctx context.Context, objectID string) ([]groupM
 
 	var groups []groupModel
 	for _, group := range *groupsResponse {
-		group, found, err := user.cache.GetGroup(ctx, *group.ID())
+		group, found, err := user.cache.getGroup(ctx, *group.ID())
 		if err != nil {
 			return nil, err
 		}

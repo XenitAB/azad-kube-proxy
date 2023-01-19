@@ -48,7 +48,7 @@ func (groups *azureGroups) syncAzureADGroupsCache(ctx context.Context, syncReaso
 	}
 
 	for _, group := range *groupsResponse {
-		err := groups.cache.SetGroup(ctx, *group.ID(), groupModel{
+		err := groups.cache.setGroup(ctx, *group.ID(), groupModel{
 			Name:     *group.DisplayName,
 			ObjectID: *group.ID(),
 		})
