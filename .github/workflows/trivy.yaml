@@ -30,7 +30,7 @@ jobs:
         with:
           dockerfile: Dockerfile
       - name: Cache container layers
-        uses: actions/cache@v3.2.2
+        uses: actions/cache@v3.2.3
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
@@ -41,7 +41,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2.2.1
       - name: Build container (multi arch)
-        uses: docker/build-push-action@v3.2.0
+        uses: docker/build-push-action@v3.3.0
         with:
           context: .
           file: ./Dockerfile
