@@ -32,4 +32,4 @@ jobs:
         uses: shogo82148/actions-goveralls@v1.6.0
         with:
           path-to-profile: tmp/coverage.out
-          ignore: cmd/azad-kube-proxy/main.go,pkg/proxy/proxy.go,cmd/kubectl-azad-proxy/main.go
+          ignore: cmd/azad-kube-proxy/main.go,internal/proxy/proxy.go,cmd/kubectl-azad-proxy/main.go

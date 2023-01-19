@@ -16,7 +16,7 @@ RUN go mod download
 
 COPY Makefile Makefile
 COPY cmd/ cmd/
-COPY pkg/ pkg/
+COPY internal/ internal/
 
 RUN make build
 
