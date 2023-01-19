@@ -8,7 +8,7 @@ import (
 )
 
 type Cors interface {
-	Middleware(next http.Handler) http.Handler
+	middleware(next http.Handler) http.Handler
 }
 
 type cors struct {
@@ -39,8 +39,7 @@ func newCors(cfg *config) *cors {
 	}
 }
 
-// Middleware adds CORS to the router
-func (c *cors) Middleware(next http.Handler) http.Handler {
+func (c *cors) middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if c.enabled {
 			allowedOrigins := c.allowedOrigins

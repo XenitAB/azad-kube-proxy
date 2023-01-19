@@ -53,7 +53,7 @@ func TestGetUser(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		user, err := c.userClient.GetUser(ctx, c.username, c.objectID)
+		user, err := c.userClient.getUser(ctx, c.username, c.objectID)
 		if c.expectedErrContains != "" {
 			require.ErrorContains(t, err, c.expectedErrContains)
 			continue

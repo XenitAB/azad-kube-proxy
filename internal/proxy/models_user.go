@@ -32,7 +32,7 @@ var nameGroupIdentifier groupIdentifier = "NAME"
 
 var objectIDGroupIdentifier groupIdentifier = "OBJECTID"
 
-func GetGroupIdentifier(s string) (groupIdentifier, error) {
+func getGroupIdentifier(s string) (groupIdentifier, error) {
 	switch s {
 	case "NAME":
 		return nameGroupIdentifier, nil

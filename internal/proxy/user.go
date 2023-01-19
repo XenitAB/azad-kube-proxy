@@ -5,7 +5,7 @@ import (
 )
 
 type User interface {
-	GetUser(ctx context.Context, username, objectID string) (userModel, error)
+	getUser(ctx context.Context, username, objectID string) (userModel, error)
 }
 
 type user struct {
@@ -21,7 +21,7 @@ func newUser(cfg *config, azureClient Azure) User {
 	}
 }
 
-func (u *user) GetUser(ctx context.Context, username, objectID string) (userModel, error) {
+func (u *user) getUser(ctx context.Context, username, objectID string) (userModel, error) {
 	userType := normalUserModelType
 	if username == "" {
 		username = objectID

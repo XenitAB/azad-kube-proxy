@@ -534,7 +534,7 @@ func newTestFakeUserClient(t *testing.T, username string, objectID string, group
 	}
 }
 
-func (client *testFakeUserClient) GetUser(ctx context.Context, username, objectID string) (userModel, error) {
+func (client *testFakeUserClient) getUser(ctx context.Context, username, objectID string) (userModel, error) {
 	client.t.Helper()
 
 	return client.fakeUser, client.fakeError

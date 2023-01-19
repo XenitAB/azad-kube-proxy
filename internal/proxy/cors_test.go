@@ -202,7 +202,7 @@ func TestMiddleware(t *testing.T) {
 		rr := httptest.NewRecorder()
 		router := mux.NewRouter()
 		router.Handle("/", proxy)
-		router.Use(client.Middleware)
+		router.Use(client.middleware)
 		router.ServeHTTP(rr, req)
 
 		require.Equal(t, c.expectedOrigin, rr.Result().Header.Get("Access-Control-Allow-Origin"))

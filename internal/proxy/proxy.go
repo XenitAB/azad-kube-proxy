@@ -153,7 +153,7 @@ func (p *proxy) Start(ctx context.Context) error {
 
 	router.PathPrefix("/").Handler(oidcHandler)
 
-	router.Use(p.cors.Middleware)
+	router.Use(p.cors.middleware)
 
 	httpServer := p.getHTTPServer(router)
 

@@ -69,7 +69,7 @@ func TestGetGroupIdentifier(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		resGroupIdentifier, err := GetGroupIdentifier(c.groupIdentifierString)
+		resGroupIdentifier, err := getGroupIdentifier(c.groupIdentifierString)
 		if c.expectedErrContains != "" {
 			require.ErrorContains(t, err, c.expectedErrContains)
 			continue

@@ -37,7 +37,7 @@ type handler struct {
 }
 
 func newHandlers(ctx context.Context, cfg *config, cacheClient Cache, userClient User, healthClient Health) (*handler, error) {
-	groupIdentifier, err := GetGroupIdentifier(cfg.GroupIdentifier)
+	groupIdentifier, err := getGroupIdentifier(cfg.GroupIdentifier)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +143,7 @@ func (h *handler) proxy(ctx context.Context, p *httputil.ReverseProxy) func(http
 		// Get the user from the token if no cache was found
 		if !found {
 			// Get the user object
-			user, err = h.user.GetUser(ctx, claims.username, claims.objectID)
+			user, err = h.user.getUser(ctx, claims.username, claims.objectID)
 			if err != nil {
 				log.Error(err, "Unable to get user")
 				http.Error(w, "Unable to get user", http.StatusForbidden)
