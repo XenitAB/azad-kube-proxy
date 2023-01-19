@@ -19,13 +19,6 @@ const (
 	impersonateUserExtraHeaderPrefix = "Impersonate-Extra-"
 )
 
-type Handler interface {
-	ReadinessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request)
-	LivenessHandler(ctx context.Context) func(http.ResponseWriter, *http.Request)
-	AzadKubeProxyHandler(ctx context.Context, p *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request)
-	ErrorHandler(ctx context.Context) func(w http.ResponseWriter, r *http.Request, err error)
-}
-
 type handler struct {
 	cache  Cache
 	user   User

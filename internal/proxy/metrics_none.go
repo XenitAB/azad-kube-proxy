@@ -16,6 +16,6 @@ func newNoneClient(ctx context.Context) noneClient {
 	return noneClient{}
 }
 
-func (client *noneClient) MetricsHandler(ctx context.Context, router *mux.Router) (*mux.Router, error) {
+func (client *noneClient) metricsHandler(ctx context.Context, router *mux.Router) (*mux.Router, error) {
 	return router, nil
 }

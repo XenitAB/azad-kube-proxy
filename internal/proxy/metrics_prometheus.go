@@ -17,7 +17,7 @@ func newPrometheusClient(ctx context.Context) prometheusClient {
 	return prometheusClient{}
 }
 
-func (client *prometheusClient) MetricsHandler(ctx context.Context, router *mux.Router) (*mux.Router, error) {
+func (client *prometheusClient) metricsHandler(ctx context.Context, router *mux.Router) (*mux.Router, error) {
 	router.Handle("/metrics", promhttp.Handler())
 	return router, nil
 }

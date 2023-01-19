@@ -32,7 +32,7 @@ func TestNoneMetricsHandler(t *testing.T) {
 	rr := httptest.NewRecorder()
 	router := mux.NewRouter()
 	router.PathPrefix("/").Handler(proxy)
-	router, err = client.MetricsHandler(ctx, router)
+	router, err = client.metricsHandler(ctx, router)
 	require.NoError(t, err)
 	router.ServeHTTP(rr, req)
 	require.Equal(t, http.StatusOK, rr.Code)
