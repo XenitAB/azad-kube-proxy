@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-type User interface {
+type userGetter interface {
 	getUser(ctx context.Context, username, objectID string) (userModel, error)
 }
 
@@ -14,7 +14,7 @@ type user struct {
 	cfg *config
 }
 
-func newUser(cfg *config, azureClient Azure) User {
+func newUser(cfg *config, azureClient Azure) userGetter {
 	return &user{
 		azure: azureClient,
 		cfg:   cfg,

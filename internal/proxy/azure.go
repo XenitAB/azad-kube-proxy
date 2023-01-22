@@ -26,14 +26,14 @@ type azure struct {
 	clientSecret         string
 	tenantID             string
 	graphFilter          string
-	cache                Cache
+	cache                cacheReadWriter
 	groups               *azureGroups
 	user                 *azureUser
 	servicePrincipalUser *azureServicePrincipalUser
 	authorizer           hamiltonAuth.Authorizer
 }
 
-func newAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graphFilter string, cacheClient Cache) (*azure, error) {
+func newAzureClient(ctx context.Context, clientID, clientSecret, tenantID, graphFilter string, cacheClient cacheReadWriter) (*azure, error) {
 	authConfig := &hamiltonAuth.Config{
 		Environment:            hamiltonEnvironments.Global,
 		TenantID:               tenantID,

@@ -9,11 +9,11 @@ import (
 )
 
 type azureServicePrincipalUser struct {
-	cache                   Cache
+	cache                   cacheReadWriter
 	servicePrincipalsClient *hamiltonMsgraph.ServicePrincipalsClient
 }
 
-func newServicePrincipalUser(ctx context.Context, cacheClient Cache, servicePrincipalsClient *hamiltonMsgraph.ServicePrincipalsClient) *azureServicePrincipalUser {
+func newServicePrincipalUser(ctx context.Context, cacheClient cacheReadWriter, servicePrincipalsClient *hamiltonMsgraph.ServicePrincipalsClient) *azureServicePrincipalUser {
 	return &azureServicePrincipalUser{
 		cache:                   cacheClient,
 		servicePrincipalsClient: servicePrincipalsClient,

@@ -187,7 +187,7 @@ func TestMiddleware(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		client := newCors(c.config)
+		corsMiddleware := newCorsMiddleware(c.config)
 
 		req, err := http.NewRequest(c.reqMethod, "/", nil)
 		require.NoError(t, err)
@@ -202,7 +202,7 @@ func TestMiddleware(t *testing.T) {
 		rr := httptest.NewRecorder()
 		router := mux.NewRouter()
 		router.Handle("/", proxy)
-		router.Use(client.middleware)
+		router.Use(corsMiddleware)
 		router.ServeHTTP(rr, req)
 
 		require.Equal(t, c.expectedOrigin, rr.Result().Header.Get("Access-Control-Allow-Origin"))

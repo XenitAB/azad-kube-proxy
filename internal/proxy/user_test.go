@@ -23,7 +23,7 @@ func TestGetUser(t *testing.T) {
 	}
 
 	cases := []struct {
-		userClient          User
+		userClient          userGetter
 		username            string
 		objectID            string
 		expectedUserType    userModelType

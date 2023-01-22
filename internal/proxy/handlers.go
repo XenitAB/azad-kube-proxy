@@ -20,8 +20,8 @@ const (
 )
 
 type handler struct {
-	cache  Cache
-	user   User
+	cache  cacheReadWriter
+	user   userGetter
 	health Health
 
 	cfg             *config
@@ -29,7 +29,7 @@ type handler struct {
 	kubernetesToken string
 }
 
-func newHandlers(ctx context.Context, cfg *config, cacheClient Cache, userClient User, healthClient Health) (*handler, error) {
+func newHandlers(ctx context.Context, cfg *config, cacheClient cacheReadWriter, userClient userGetter, healthClient Health) (*handler, error) {
 	groupIdentifier, err := getGroupIdentifier(cfg.GroupIdentifier)
 	if err != nil {
 		return nil, err

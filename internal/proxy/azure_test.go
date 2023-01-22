@@ -23,7 +23,7 @@ func TestNewAzureClient(t *testing.T) {
 		clientSecret        string
 		tenantID            string
 		graphFilter         string
-		cacheClient         Cache
+		cacheClient         cacheReadWriter
 		expectedErrContains string
 	}{
 		{

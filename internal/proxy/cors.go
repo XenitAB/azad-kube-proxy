@@ -4,22 +4,11 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	rscors "github.com/rs/cors"
 )
 
-type Cors interface {
-	middleware(next http.Handler) http.Handler
-}
-
-type cors struct {
-	enabled                     bool
-	allowedOriginsDefaultScheme string
-	allowedOrigins              []string
-	allowedHeaders              []string
-	allowedMethods              []string
-}
-
-func newCors(cfg *config) *cors {
+func newCorsMiddleware(cfg *config) mux.MiddlewareFunc {
 	allowedHeaders := cfg.CorsAllowedHeaders
 	if len(allowedHeaders) == 0 {
 		allowedHeaders = []string{"*"}
@@ -30,36 +19,29 @@ func newCors(cfg *config) *cors {
 		allowedMethods = []string{"GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"}
 	}
 
-	return &cors{
-		enabled:                     cfg.CorsEnabled,
-		allowedOriginsDefaultScheme: cfg.CorsAllowedOriginsDefaultScheme,
-		allowedOrigins:              cfg.CorsAllowedOrigins,
-		allowedHeaders:              allowedHeaders,
-		allowedMethods:              allowedMethods,
-	}
-}
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if cfg.CorsEnabled {
+				allowedOrigins := cfg.CorsAllowedOrigins
+				if len(allowedOrigins) == 0 {
+					url := fmt.Sprintf("%s://%s", cfg.CorsAllowedOriginsDefaultScheme, r.Host)
+					allowedOrigins = []string{url}
+				}
 
-func (c *cors) middleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if c.enabled {
-			allowedOrigins := c.allowedOrigins
-			if len(allowedOrigins) == 0 {
-				url := fmt.Sprintf("%s://%s", c.allowedOriginsDefaultScheme, r.Host)
-				allowedOrigins = []string{url}
+				c := rscors.New(rscors.Options{
+					AllowedOrigins:   allowedOrigins,
+					AllowedHeaders:   cfg.CorsAllowedHeaders,
+					AllowedMethods:   cfg.CorsAllowedMethods,
+					AllowCredentials: true,
+				})
+
+				corsHandler := c.Handler(next)
+				corsHandler.ServeHTTP(w, r)
+				return
 			}
 
-			c := rscors.New(rscors.Options{
-				AllowedOrigins:   allowedOrigins,
-				AllowedHeaders:   c.allowedHeaders,
-				AllowedMethods:   c.allowedMethods,
-				AllowCredentials: true,
-			})
+			next.ServeHTTP(w, r)
+		})
+	}
 
-			corsHandler := c.Handler(next)
-			corsHandler.ServeHTTP(w, r)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
 }

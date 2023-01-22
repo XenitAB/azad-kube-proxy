@@ -9,11 +9,11 @@ import (
 )
 
 type azureUser struct {
-	cache       Cache
+	cache       cacheReadWriter
 	usersClient *hamiltonMsgraph.UsersClient
 }
 
-func newAzureUser(ctx context.Context, cacheClient Cache, usersClient *hamiltonMsgraph.UsersClient) *azureUser {
+func newAzureUser(ctx context.Context, cacheClient cacheReadWriter, usersClient *hamiltonMsgraph.UsersClient) *azureUser {
 	return &azureUser{
 		cache:       cacheClient,
 		usersClient: usersClient,

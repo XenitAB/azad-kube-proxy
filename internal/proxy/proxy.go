@@ -19,12 +19,12 @@ import (
 )
 
 type proxy struct {
-	cache         Cache
-	user          User
-	azure         Azure
-	MetricsClient Metrics
-	health        Health
-	cors          Cors
+	cache          cacheReadWriter
+	user           userGetter
+	azure          Azure
+	MetricsClient  Metrics
+	health         Health
+	corsMiddleware mux.MiddlewareFunc
 
 	cfg              *config
 	kubernetesURL    *url.URL
@@ -54,7 +54,7 @@ func New(ctx context.Context, cfg *config) (*proxy, error) {
 		return nil, err
 	}
 
-	corsClient := newCors(cfg)
+	corsMiddleware := newCorsMiddleware(cfg)
 
 	kubernetesURL, err := getKubernetesAPIUrl(cfg.KubernetesAPIHost, cfg.KubernetesAPIPort, cfg.KubernetesAPITLS)
 	if err != nil {
@@ -72,7 +72,7 @@ func New(ctx context.Context, cfg *config) (*proxy, error) {
 		azure:            azureClient,
 		MetricsClient:    metricsClient,
 		health:           healthClient,
-		cors:             corsClient,
+		corsMiddleware:   corsMiddleware,
 		cfg:              cfg,
 		kubernetesURL:    kubernetesURL,
 		kubernetesRootCA: kubernetesRootCA,
@@ -144,7 +144,7 @@ func (p *proxy) Start(ctx context.Context) error {
 
 	router.PathPrefix("/").Handler(oidcHandler)
 
-	router.Use(p.cors.middleware)
+	router.Use(p.corsMiddleware)
 
 	httpServer := p.getHTTPServer(router)
 

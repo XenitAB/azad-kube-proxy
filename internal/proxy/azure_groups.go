@@ -9,12 +9,12 @@ import (
 )
 
 type azureGroups struct {
-	cache        Cache
+	cache        cacheReadWriter
 	groupsClient *hamiltonMsgraph.GroupsClient
 	graphFilter  string
 }
 
-func newGroups(ctx context.Context, cacheClient Cache, groupsClient *hamiltonMsgraph.GroupsClient, graphFilter string) *azureGroups {
+func newGroups(ctx context.Context, cacheClient cacheReadWriter, groupsClient *hamiltonMsgraph.GroupsClient, graphFilter string) *azureGroups {
 	return &azureGroups{
 		cache:        cacheClient,
 		groupsClient: groupsClient,

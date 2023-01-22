@@ -199,10 +199,10 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 		request             *http.Request
 		config              *config
 		configFunction      func(oldConfig config) config
-		cacheClient         Cache
-		cacheFunction       func(oldCacheClient Cache) Cache
-		userClient          User
-		userFunction        func(oldUserClient User) User
+		cacheClient         cacheReadWriter
+		cacheFunction       func(oldCacheClient cacheReadWriter) cacheReadWriter
+		userClient          userGetter
+		userFunction        func(oldUserClient userGetter) userGetter
 		expectedResCode     int
 		expectedResBody     string
 		expectedErrContains string
@@ -413,7 +413,7 @@ func TestAzadKubeProxyHandler(t *testing.T) {
 			config:      cfg,
 			cacheClient: testFakeCacheClient,
 			userClient:  testFakeUserClient,
-			userFunction: func(oldUserClient User) User {
+			userFunction: func(oldUserClient userGetter) userGetter {
 				i := 1
 				groups := []groupModel{}
 				for i < testFakeMaxGroups+1 {
