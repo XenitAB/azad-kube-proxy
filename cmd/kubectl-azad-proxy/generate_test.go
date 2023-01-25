@@ -53,6 +53,11 @@ func TestRunGenerate(t *testing.T) {
 func TestGenerate(t *testing.T) {
 	ctx := logr.NewContext(context.Background(), logr.Discard())
 
+	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "test response")
+	}))
+	defer ts.Close()
+
 	tmpDir, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
@@ -62,12 +67,12 @@ func TestGenerate(t *testing.T) {
 
 	client := &GenerateClient{
 		clusterName:        "test",
-		proxyURL:           testGetURL(t, "https://www.google.com"),
+		proxyURL:           testGetURL(t, ts.URL),
 		resource:           "https://fake",
 		kubeConfig:         kubeConfigFile,
 		tokenCacheDir:      tokenCacheDir,
 		overwrite:          false,
-		insecureSkipVerify: false,
+		insecureSkipVerify: true,
 		defaultAzureCredentialOptions: defaultAzureCredentialOptions{
 			excludeAzureCLICredential:    false,
 			excludeEnvironmentCredential: false,
@@ -76,21 +81,25 @@ func TestGenerate(t *testing.T) {
 	}
 
 	cases := []struct {
-		GenerateClient      *GenerateClient
-		GenerateClientFunc  func(oldCfg *GenerateClient) *GenerateClient
+		testDescription     string
+		generateClient      *GenerateClient
+		generateClientFunc  func(oldCfg *GenerateClient) *GenerateClient
 		expectedErrContains string
 	}{
 		{
-			GenerateClient:      client,
+			testDescription:     "plain",
+			generateClient:      client,
 			expectedErrContains: "",
 		},
 		{
-			GenerateClient:      client,
+			testDescription:     "config error",
+			generateClient:      client,
 			expectedErrContains: "Overwrite config error:",
 		},
 		{
-			GenerateClient: client,
-			GenerateClientFunc: func(oldClient *GenerateClient) *GenerateClient {
+			testDescription: "ca error",
+			generateClient:  client,
+			generateClientFunc: func(oldClient *GenerateClient) *GenerateClient {
 				client := oldClient
 				client.proxyURL = testGetURL(t, "https://localhost:12345")
 				client.overwrite = true
@@ -100,12 +109,13 @@ func TestGenerate(t *testing.T) {
 		},
 	}
 
-	for _, c := range cases {
-		if c.GenerateClientFunc != nil {
-			c.GenerateClient = c.GenerateClientFunc(c.GenerateClient)
+	for i, c := range cases {
+		t.Logf("Test #%d: %s", i, c.testDescription)
+		if c.generateClientFunc != nil {
+			c.generateClient = c.generateClientFunc(c.generateClient)
 		}
 
-		err := c.GenerateClient.Generate(ctx)
+		err := c.generateClient.Generate(ctx)
 		if c.expectedErrContains != "" {
 			require.ErrorContains(t, err, c.expectedErrContains)
 			continue
@@ -113,10 +123,10 @@ func TestGenerate(t *testing.T) {
 
 		require.NoError(t, err)
 
-		kubeCfg, err := k8sclientcmd.LoadFromFile(c.GenerateClient.kubeConfig)
+		kubeCfg, err := k8sclientcmd.LoadFromFile(c.generateClient.kubeConfig)
 		require.NoError(t, err)
-		require.Equal(t, fmt.Sprintf("%s://%s", c.GenerateClient.proxyURL.Scheme, c.GenerateClient.proxyURL.Host), kubeCfg.Clusters[c.GenerateClient.clusterName].Server)
-		require.NotEmpty(t, kubeCfg.Clusters[c.GenerateClient.clusterName].CertificateAuthorityData)
+		require.Equal(t, fmt.Sprintf("%s://%s", c.generateClient.proxyURL.Scheme, c.generateClient.proxyURL.Host), kubeCfg.Clusters[c.generateClient.clusterName].Server)
+		require.NotEmpty(t, kubeCfg.Clusters[c.generateClient.clusterName].CertificateAuthorityData)
 
 	}
 }

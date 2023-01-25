@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/alexflint/go-arg"
 )
@@ -18,7 +19,7 @@ type generateConfig struct {
 	ClusterName           string `arg:"--cluster-name,env:CLUSTER_NAME,required" help:"The name of the Kubernetes cluster / context"`
 	ProxyURL              string `arg:"--proxy-url,env:PROXY_URL,required" help:"The proxy url for azad-kube-proxy"`
 	Resource              string `arg:"--resource,env:RESOURCE,required" help:"The Azure AD App URI / resource"`
-	KubeConfig            string `arg:"--kubeconfig,env:KUBECONFIG" help:"The path of the Kubernetes Config"` // FIXME: Default to fmt.Sprintf("%s/.kube/config", osUserHomeDir)
+	KubeConfig            string `arg:"--kubeconfig,env:KUBECONFIG" help:"The path of the Kubernetes Config"`
 	TokenCacheDir         string `arg:"--token-cache-dir,env:TOKEN_CACHE_DIR" help:"The directory to where the tokens are cached, defaults to the same as KUBECONFIG"`
 	Overwrite             bool   `arg:"--overwrite,env:OVERWRITE_KUBECONFIG" default:"false" help:"If the cluster already exists in the kubeconfig, should it be overwritten?"`
 	TLSInsecureSkipVerify bool   `arg:"--tls-insecure-skip-verify,env:TLS_INSECURE_SKIP_VERIFY" default:"false" help:"Should the proxy url server certificate validation be skipped?"`
@@ -27,7 +28,7 @@ type generateConfig struct {
 type loginConfig struct {
 	ClusterName   string `arg:"--cluster-name,env:CLUSTER_NAME,required" help:"The name of the Kubernetes cluster / context"`
 	Resource      string `arg:"--resource,env:RESOURCE,required" help:"The Azure AD App URI / resource"`
-	KubeConfig    string `arg:"--kubeconfig,env:KUBECONFIG" help:"The path of the Kubernetes Config"` // FIXME: Default to fmt.Sprintf("%s/.kube/config", osUserHomeDir)
+	KubeConfig    string `arg:"--kubeconfig,env:KUBECONFIG" help:"The path of the Kubernetes Config"`
 	TokenCacheDir string `arg:"--token-cache-dir,env:TOKEN_CACHE_DIR" help:"The directory to where the tokens are cached, defaults to the same as KUBECONFIG"`
 }
 
@@ -39,7 +40,7 @@ type menuConfig struct {
 	ClusterName           string `arg:"--cluster-name,env:CLUSTER_NAME" help:"The name of the Kubernetes cluster / context"`
 	ProxyURL              string `arg:"--proxy-url,env:PROXY_URL" help:"The proxy url for azad-kube-proxy"`
 	Resource              string `arg:"--resource,env:RESOURCE" help:"The Azure AD App URI / resource"`
-	KubeConfig            string `arg:"--kubeconfig,env:KUBECONFIG" help:"The path of the Kubernetes Config"` // FIXME: Default to fmt.Sprintf("%s/.kube/config", osUserHomeDir)
+	KubeConfig            string `arg:"--kubeconfig,env:KUBECONFIG" help:"The path of the Kubernetes Config"`
 	TokenCacheDir         string `arg:"--token-cache-dir,env:TOKEN_CACHE_DIR" help:"The directory to where the tokens are cached, defaults to the same as KUBECONFIG"`
 	Overwrite             bool   `arg:"--overwrite,env:OVERWRITE_KUBECONFIG" default:"false" help:"If the cluster already exists in the kubeconfig, should it be overwritten?"`
 	TLSInsecureSkipVerify bool   `arg:"--tls-insecure-skip-verify,env:TLS_INSECURE_SKIP_VERIFY" default:"false" help:"Should the proxy url server certificate validation be skipped?"`
@@ -64,6 +65,29 @@ type config struct {
 	ExcludeMSIAuth         bool `arg:"--exclude-msi-auth,env:EXCLUDE_MSI_AUTH" default:"true" help:"Should MSI be excluded from the authentication?"`
 
 	authConfig authConfig
+}
+
+func (cfg *config) setKubeConfigDefaults() error {
+	userHomeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	defaultKubeConfig := filepath.Clean(fmt.Sprintf("%s/.kube/config", userHomeDir))
+
+	if cfg.Generate != nil && cfg.Generate.KubeConfig == "" {
+		cfg.Generate.KubeConfig = defaultKubeConfig
+	}
+
+	if cfg.Login != nil && cfg.Login.KubeConfig == "" {
+		cfg.Login.KubeConfig = defaultKubeConfig
+	}
+
+	if cfg.Menu != nil && cfg.Menu.KubeConfig == "" {
+		cfg.Menu.KubeConfig = defaultKubeConfig
+	}
+
+	return nil
 }
 
 func (config) Version() string {
@@ -94,6 +118,11 @@ func newConfig(args []string) (config, error) {
 		excludeAzureCLIAuth:    cfg.ExcludeAzureCLIAuth,
 		excludeEnvironmentAuth: cfg.ExcludeEnvironmentAuth,
 		excludeMSIAuth:         cfg.ExcludeMSIAuth,
+	}
+
+	err = cfg.setKubeConfigDefaults()
+	if err != nil {
+		return config{}, err
 	}
 
 	return cfg, err
