@@ -13,7 +13,7 @@ require (
 	github.com/go-logr/zapr v1.2.3
 	github.com/google/go-cmp v0.5.9
 	github.com/gorilla/mux v1.8.0
-	github.com/manicminer/hamilton v0.54.0
+	github.com/manicminer/hamilton v0.56.0
 	github.com/manifoldco/promptui v0.9.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/patrickmn/go-cache v2.1.0+incompatible
@@ -101,4 +101,5 @@ require (
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
+	software.sslmate.com/src/go-pkcs12 v0.2.0 // indirect
 )
