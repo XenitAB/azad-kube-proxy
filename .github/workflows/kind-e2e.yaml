@@ -31,7 +31,7 @@ jobs:
           echo BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') >> $GITHUB_OUTPUT
           echo VERSION=${VERSION} >> $GITHUB_OUTPUT
       - name: Cache container layers
-        uses: actions/cache@v3.2.3
+        uses: actions/cache@v3.2.6
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
