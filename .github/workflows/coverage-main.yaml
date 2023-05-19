@@ -12,9 +12,9 @@ jobs:
       - name: Clone repo
         uses: actions/checkout@v3
       - name: Setup go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
-          go-version: "^1.19"
+          go-version: "^1.20"
       - name: coverage
         env:
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
@@ -29,7 +29,7 @@ jobs:
           mkdir -p tmp
           make cover
       - name: Send coverage to coverall
-        uses: shogo82148/actions-goveralls@v1.6.0
+        uses: shogo82148/actions-goveralls@v1.7.0
         with:
           path-to-profile: tmp/coverage.out
           ignore: cmd/azad-kube-proxy/main.go,internal/proxy/proxy.go,cmd/kubectl-azad-proxy/main.go

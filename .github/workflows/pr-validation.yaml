@@ -14,13 +14,13 @@ jobs:
       - name: Clone repo
         uses: actions/checkout@v3
       - name: Setup go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
-          go-version: "^1.19"
+          go-version: "^1.20"
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3.3.1
+        uses: golangci/golangci-lint-action@v3.4.0
         with:
-          version: v1.48.0
+          version: v1.52.2
 
   fmt:
     runs-on: ubuntu-latest
@@ -28,9 +28,9 @@ jobs:
       - name: Clone repo
         uses: actions/checkout@v3
       - name: Setup go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
-          go-version: "^1.19"
+          go-version: "^1.20"
       - name: Run fmt
         run: |
           make fmt
@@ -48,9 +48,9 @@ jobs:
       - name: Clone repo
         uses: actions/checkout@v3
       - name: Setup go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
-          go-version: "^1.19"
+          go-version: "^1.20"
       - name: Run build
         run: |
           make build
@@ -61,9 +61,9 @@ jobs:
       - name: Clone repo
         uses: actions/checkout@v3
       - name: Setup go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
-          go-version: "^1.19"
+          go-version: "^1.20"
       - name: Run test
         env:
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
@@ -83,9 +83,9 @@ jobs:
       - name: Clone repo
         uses: actions/checkout@v3
       - name: Setup go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
-          go-version: "^1.19"
+          go-version: "^1.20"
       - name: coverage
         env:
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
@@ -100,7 +100,7 @@ jobs:
           mkdir -p tmp
           make cover
       - name: Send coverage to coverall
-        uses: shogo82148/actions-goveralls@v1.6.0
+        uses: shogo82148/actions-goveralls@v1.7.0
         with:
           path-to-profile: tmp/coverage.out
           ignore: cmd/azad-kube-proxy/main.go,internal/proxy/proxy.go,cmd/kubectl-azad-proxy/main.go
@@ -123,7 +123,7 @@ jobs:
         with:
           dockerfile: Dockerfile
       - name: Cache container layers
-        uses: actions/cache@v3.2.3
+        uses: actions/cache@v3.3.1
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
@@ -132,7 +132,7 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2.1.0
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2.2.1
+        uses: docker/setup-buildx-action@v2.5.0
       - name: Build and load (current arch)
         run: |
           docker buildx build --load -t ${{ env.NAME }}:${{ steps.prep.outputs.VERSION }} .
