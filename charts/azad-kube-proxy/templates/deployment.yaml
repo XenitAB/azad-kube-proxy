@@ -59,11 +59,6 @@ spec:
               path: /healthz
               port: metrics
               scheme: {{ .Values.application.scheme }}
-          readinessProbe:
-            httpGet:
-              path: /readyz
-              port: metrics
-              scheme: {{ .Values.application.scheme }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- with .Values.podVolumeMounts }}
