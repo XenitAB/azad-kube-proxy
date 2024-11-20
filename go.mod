@@ -20,7 +20,7 @@ require (
 	github.com/prometheus/client_golang v1.15.1
 	github.com/rs/cors v1.9.0
 	github.com/sirupsen/logrus v1.9.2
-	github.com/stretchr/testify v1.8.3
+	github.com/stretchr/testify v1.8.4
 	github.com/xenitab/go-oidc-middleware v0.0.43
 	github.com/xenitab/go-oidc-middleware/oidchttp v0.0.43
 	go.uber.org/zap v1.24.0
