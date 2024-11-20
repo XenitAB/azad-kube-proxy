@@ -19,7 +19,7 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/prometheus/client_golang v1.15.1
 	github.com/rs/cors v1.9.0
-	github.com/sirupsen/logrus v1.9.2
+	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.8.3
 	github.com/xenitab/go-oidc-middleware v0.0.43
 	github.com/xenitab/go-oidc-middleware/oidchttp v0.0.43
